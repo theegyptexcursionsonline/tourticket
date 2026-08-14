@@ -39,6 +39,7 @@ export async function GET(request: NextRequest) {
         {
           ...(featuredOnly ? { featured: true } : {}),
           isPublished: true,
+          archivedAt: null,
         },
       ],
     })
@@ -50,6 +51,7 @@ export async function GET(request: NextRequest) {
       {
         $match: {
           isPublished: true,
+          archivedAt: null,
           ...DEFAULT_TENANT_FILTER,
           category: { $in: categoryIds },
         },

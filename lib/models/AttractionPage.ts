@@ -41,7 +41,7 @@ export interface IAttractionPage extends Document {
   // Public URL shape (attraction pages only; category-landing pages keep /category/{slug})
   urlType?: UrlType;
   breadcrumbLabel?: string;
-  parentPage?: { id?: string; slug: string; label: string; kind: 'destination' | 'attraction' | 'category' | 'category-2'; href?: string } | null;
+  parentPage?: { id?: string; slug: string; label: string; kind: 'destination' | 'attraction' | 'category' | 'category-2' | 'landing'; href?: string } | null;
   cityDestination?: mongoose.Types.ObjectId;
 
   // Content

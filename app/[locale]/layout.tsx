@@ -16,6 +16,7 @@ import AppToaster from '@/components/ui/AppToaster';
 import dbConnect from "@/lib/dbConnect";
 import Destination from "@/lib/models/Destination";
 import Category from "@/lib/models/Category";
+import Tour from "@/lib/models/Tour";
 import { localizeEntityFields } from "@/lib/i18n/contentLocalization";
 import { selectLocalizedTaxonomyEntries } from "@/lib/i18n/localizedCollections";
 import { DEFAULT_TENANT_FILTER } from "@/lib/tenant/defaultTenantFilter";
@@ -24,6 +25,7 @@ import GoogleTagManager from './GoogleTagManager';
 import EEOSearchConcierge from '@/components/EEOSearchConcierge';
 import { StorefrontThemeProvider } from '@/contexts/StorefrontThemeContext';
 import { STOREFRONT_THEME_BOOTSTRAP } from '@/lib/storefrontTheme';
+import { filterVisibleTaxonomyEntries } from '@/lib/utils/taxonomy';
 
 const inter = Inter({ subsets: ["latin"], variable: '--font-inter' });
 const almarai = Almarai({
@@ -107,27 +109,53 @@ async function getNavData(locale: string): Promise<NavCache> {
     // of magnitude slower than doing the selection in Node and had to run once
     // per SSG page. We still keep the "menu never shows duplicate or wrong-
     // language items" guarantee while staying cheap during build/runtime.
-    const [destinations, categories] = await Promise.all([
-      Destination.find({ isPublished: true, featured: true, ...DEFAULT_TENANT_FILTER })
-        .select('_id name slug image description country featured tourCount translations')
+    const [destinations, categories, destinationCounts, categoryCounts] = await Promise.all([
+      Destination.find({ isPublished: true, featured: true, archivedAt: null, ...DEFAULT_TENANT_FILTER })
+        .select('_id name slug image description country featured urlType parentPage archivedAt translations')
         .sort({ tourCount: -1, name: 1 })
         .lean(),
-      Category.find({ isPublished: true, featured: true })
-        .select('_id name slug icon description order translations')
+      Category.find({ isPublished: true, featured: true, archivedAt: null, ...DEFAULT_TENANT_FILTER })
+        .select('_id name slug icon heroImage description order urlType parentPage archivedAt translations')
         .sort({ order: 1, name: 1 })
         .lean(),
+      Tour.aggregate<{ _id: unknown; tourCount: number }>([
+        { $match: { isPublished: true, archivedAt: null, ...DEFAULT_TENANT_FILTER } },
+        { $group: { _id: '$destination', tourCount: { $sum: 1 } } },
+      ]),
+      Tour.aggregate<{ _id: unknown; tourCount: number }>([
+        { $match: { isPublished: true, archivedAt: null, ...DEFAULT_TENANT_FILTER } },
+        { $unwind: '$category' },
+        { $group: { _id: '$category', tourCount: { $sum: 1 } } },
+      ]),
     ]);
+
+    const destinationCountById = new Map(destinationCounts.map((row) => [String(row._id), row.tourCount]));
+    const categoryCountById = new Map(categoryCounts.map((row) => [String(row._id), row.tourCount]));
+    const visibleDestinations = filterVisibleTaxonomyEntries(
+      destinations.map((destination) => ({
+        ...destination,
+        tourCount: destinationCountById.get(String(destination._id)) || 0,
+      })),
+      { requireTours: true },
+    );
+    const visibleCategories = filterVisibleTaxonomyEntries(
+      categories.map((category) => ({
+        ...category,
+        tourCount: categoryCountById.get(String(category._id)) || 0,
+      })),
+      { requireTours: true },
+    );
 
     const result: NavCache = {
       destinations: selectLocalizedTaxonomyEntries(
-        JSON.parse(JSON.stringify(destinations)) as Record<string, unknown>[],
+        JSON.parse(JSON.stringify(visibleDestinations)) as Record<string, unknown>[],
         locale,
         ['name', 'description', 'country', 'metaTitle', 'metaDescription']
       ).map((destination: Record<string, unknown>) =>
         localizeEntityFields(destination, locale, ['name', 'description', 'country', 'metaTitle', 'metaDescription'])
       ) as unknown as DestinationData[],
       categories: selectLocalizedTaxonomyEntries(
-        JSON.parse(JSON.stringify(categories)) as Record<string, unknown>[],
+        JSON.parse(JSON.stringify(visibleCategories)) as Record<string, unknown>[],
         locale,
         ['name', 'description', 'longDescription', 'metaTitle', 'metaDescription', 'highlights', 'features']
       ).map((category: Record<string, unknown>) =>

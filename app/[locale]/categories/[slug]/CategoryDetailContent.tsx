@@ -254,7 +254,13 @@ export async function renderCategoryDetail(slug: string, locale: string): Promis
       <CollectionSchema
         name={String(category.name || '')}
         description={String(category.description || '')}
-        url={`/categories/${slug}`}
+        url={contentPath(
+          'category',
+          slug,
+          category.urlType as string | undefined,
+          null,
+          (category.parentPage as { slug?: string } | null | undefined)?.slug,
+        )}
         items={categoryTours.map((tour) => ({
           name: String(tour.title || ''),
           url: contentPath('tour', String(tour.slug || ''), (tour as { urlType?: string }).urlType),

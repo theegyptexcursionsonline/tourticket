@@ -47,6 +47,9 @@ interface AlgoliaDestinationSource {
   isPublished?: boolean;
   featured?: boolean;
   tourCount?: number;
+  urlType?: string;
+  parentPage?: { slug?: string } | null;
+  archivedAt?: Date | string | null;
 }
 
 interface AlgoliaCategorySource {
@@ -64,6 +67,10 @@ interface AlgoliaCategorySource {
   featured?: boolean;
   tourCount?: number;
   order?: number;
+  tenantId?: string;
+  urlType?: string;
+  parentPage?: { slug?: string } | null;
+  archivedAt?: Date | string | null;
 }
 
 interface AlgoliaBlogSource {
@@ -411,6 +418,9 @@ export const formatDestinationForAlgolia = (destination: AlgoliaDestinationSourc
     isPublished: destination.isPublished || false,
     featured: destination.featured || false,
     tourCount: destination.tourCount || 0,
+    urlType: destination.urlType || 'default',
+    parentPage: destination.parentPage || null,
+    archivedAt: destination.archivedAt || null,
     _tags: [
       ...(destination.tags || []),
       destination.country || '',
@@ -485,6 +495,7 @@ export const deleteDestinationFromAlgolia = async (destinationId: string) => {
 export const formatCategoryForAlgolia = (category: AlgoliaCategorySource) => {
   return {
     objectID: String(category._id),
+    tenantId: category.tenantId || 'default',
     name: category.name || '',
     slug: category.slug || '',
     description: category.description || '',
@@ -498,6 +509,9 @@ export const formatCategoryForAlgolia = (category: AlgoliaCategorySource) => {
     featured: category.featured || false,
     tourCount: category.tourCount || 0,
     order: category.order || 0,
+    urlType: category.urlType || 'default',
+    parentPage: category.parentPage || null,
+    archivedAt: category.archivedAt || null,
     _tags: [
       category.name || '',
       ...(category.keywords || [])

@@ -57,7 +57,7 @@ export default function ContentNavigationFields({
         <div className="rounded-xl bg-indigo-100 p-2 text-indigo-700"><Link2 className="h-4 w-4" /></div>
         <div>
           <h3 className="text-sm font-bold text-slate-900">Navigation & breadcrumbs</h3>
-          <p className="mt-1 text-xs text-slate-600">Choose Home for a direct main-domain URL, or place this item beneath a destination or page.</p>
+          <p className="mt-1 text-xs text-slate-600">Choose Home for a direct main-domain URL, or place this item beneath a landing page, destination, or content page.</p>
         </div>
       </div>
 
@@ -160,7 +160,7 @@ export default function ContentNavigationFields({
                       <span className="block truncate text-sm font-semibold text-slate-800">{option.label}</span>
                       <span className="block truncate text-xs text-slate-500">/{option.slug}</span>
                     </span>
-                    <span className="rounded-full bg-slate-100 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-slate-600">{option.kind === 'category-2' ? 'Category 2' : option.kind}</span>
+                    <span className="rounded-full bg-slate-100 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-slate-600">{option.kind === 'category-2' ? 'Category 2' : option.kind === 'landing' ? 'Landing page' : option.kind}</span>
                   </button>
                 ))}
               </div>

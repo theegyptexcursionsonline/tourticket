@@ -8,6 +8,7 @@ import { motion } from 'framer-motion';
 import { ICategory } from '@/lib/models/Category';
 import { useLocale } from 'next-intl';
 import { isRTL } from '@/i18n/config';
+import { contentPath } from '@/lib/content/contentUrl';
 
 interface CategoryWithCount extends ICategory {
   tourCount: number;
@@ -19,7 +20,7 @@ interface InterestsClientPageProps {
 }
 
 const CategoryCard = ({ category, rtl }: { category: CategoryWithCount; rtl: boolean }) => (
-  <Link href={`/interests/${category.slug}`} className="group block bg-white rounded-lg shadow-md hover:shadow-xl transition-shadow duration-300 overflow-hidden">
+  <Link href={contentPath('category', category.slug, category.urlType, null, category.parentPage?.slug)} className="group block bg-white rounded-lg shadow-md hover:shadow-xl transition-shadow duration-300 overflow-hidden">
     <div className="relative h-48">
       <Image
         src={category.heroImage || category.image || '/hero2.jpg'}

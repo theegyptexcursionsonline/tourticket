@@ -12,6 +12,7 @@ import remarkGfm from 'remark-gfm';
 import { safeMarkdownRehypePlugins, safeMarkdownUrlTransform } from '@/lib/markdown/safeMarkdown';
 import { IDestination } from '@/lib/models/Destination';
 import { useLocale } from 'next-intl';
+import { contentPath } from '@/lib/content/contentUrl';
 
 // Algolia Configuration for AI
 const ALGOLIA_APP_ID = process.env.NEXT_PUBLIC_ALGOLIA_APP_ID || 'WMDNV9WSOI';
@@ -227,7 +228,7 @@ const DestinationCard = ({
   destination: DestinationWithCount;
   copy: DestinationsCopy;
 }) => (
-  <Link href={`/destinations/${destination.slug}`} className="group block bg-white rounded-lg shadow-md hover:shadow-xl transition-shadow duration-300 overflow-hidden">
+  <Link href={contentPath('destination', destination.slug, destination.urlType, null, destination.parentPage?.slug)} className="group block bg-white rounded-lg shadow-md hover:shadow-xl transition-shadow duration-300 overflow-hidden">
     <div className="relative h-48">
       <Image
         src={destination.image || '/hero2.jpg'}

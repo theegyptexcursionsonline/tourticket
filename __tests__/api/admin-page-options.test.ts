@@ -202,6 +202,18 @@ describe('GET /api/admin/pages/options', () => {
     ]));
   });
 
+  it('keeps the Egypt landing parent discoverable by its name', async () => {
+    const { GET } = await import('@/app/api/admin/pages/options/route');
+    const response = await GET({
+      url: 'https://dashboard2.egypt-excursionsonline.com/api/admin/pages/options?kind=parents&q=Egypt',
+    } as never);
+    await expect(response.json()).resolves.toEqual(expect.objectContaining({
+      data: expect.arrayContaining([
+        expect.objectContaining({ id: 'landing:egypt', href: '/egypt', kind: 'landing' }),
+      ]),
+    }));
+  });
+
   it('excludes the current Category from parent-page results', async () => {
     installListQueryMock(mockCategoryFind, []);
     const categoryId = '64b64c9bfc13ae1f19e8a012';
@@ -213,9 +225,12 @@ describe('GET /api/admin/pages/options', () => {
 
     expect(mockCategoryFind.mock.calls[0][0]).toEqual(expect.objectContaining({
       _id: { $ne: categoryId },
-      $and: [expect.objectContaining({
-        $or: expect.arrayContaining([{ tenantId: 'default' }]),
-      })],
+      $and: expect.arrayContaining([
+        expect.objectContaining({
+          $or: expect.arrayContaining([{ tenantId: 'default' }]),
+        }),
+        { archivedAt: null },
+      ]),
     }));
   });
 });

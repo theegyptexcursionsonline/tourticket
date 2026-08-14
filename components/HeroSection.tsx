@@ -14,9 +14,10 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { safeMarkdownRehypePlugins, safeMarkdownUrlTransform } from '@/lib/markdown/safeMarkdown';
 import { useLocale, useTranslations } from 'next-intl';
-import { dedupeTaxonomyEntries } from '@/lib/utils/taxonomy';
+import { filterVisibleTaxonomyEntries } from '@/lib/utils/taxonomy';
 import type { SearchResponse } from 'algoliasearch';
 import { isPresent, isRecord, isSearchHit, type ChatPart, type SearchHit } from './componentTypes';
+import { contentPath } from '@/lib/content/contentUrl';
 import 'instantsearch.css/themes/satellite.css';
 
 // --- Types and Constants ---
@@ -237,19 +238,15 @@ function getUniqueSearchHits<T extends { slug?: string; objectID?: string; name?
   options?: { requireTours?: boolean }
 ) {
   const requireTours = options?.requireTours ?? false;
-  const uniqueHits = dedupeTaxonomyEntries(
+  const uniqueHits = filterVisibleTaxonomyEntries(
     hits.map((hit) => ({
       ...hit,
       slug: hit.slug || hit.objectID,
       name: hit.name || hit.title,
-    }))
+    })),
+    { requireTours },
   ) as T[];
-
-  if (!requireTours) {
-    return uniqueHits;
-  }
-
-  return uniqueHits.filter((hit) => (Number(hit.tourCount) || 0) > 0);
+  return uniqueHits;
 }
 
 function TourHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limit?: number }) {
@@ -492,7 +489,7 @@ function DestinationHits({ onHitClick, limit = 3 }: { onHitClick?: () => void; l
       {limitedHits.map((hit, index) => (
         <motion.a
           key={hit.objectID}
-          href={`/destinations/${hit.slug || hit.objectID}`}
+          href={contentPath('destination', hit.slug || hit.objectID || '', hit.urlType, null, hit.parentPage?.slug)}
           onClick={onHitClick}
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
@@ -568,7 +565,7 @@ function CategoryHits({ onHitClick, limit = 3 }: { onHitClick?: () => void; limi
       {limitedHits.map((hit, index) => (
         <motion.a
           key={hit.objectID}
-          href={`/categories/${hit.slug || hit.objectID}`}
+          href={contentPath('category', hit.slug || hit.objectID || '', hit.urlType, null, hit.parentPage?.slug)}
           onClick={onHitClick}
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
@@ -894,7 +891,7 @@ const DestinationSlider = ({ destinations }: { destinations: SearchHit[] }) => {
         {destinations.map((destination, idx) => (
           <a
             key={idx}
-            href={`/destinations/${destination.slug}`}
+            href={contentPath('destination', destination.slug || destination.objectID || '', destination.urlType, null, destination.parentPage?.slug)}
             target="_blank"
             rel="noopener noreferrer"
             className="group block flex-shrink-0 w-[280px] bg-white rounded-2xl overflow-hidden border-2 border-gray-100 shadow-md hover:shadow-2xl hover:-translate-y-2 transition-all duration-300"

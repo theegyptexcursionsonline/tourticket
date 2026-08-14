@@ -2280,7 +2280,7 @@ const addItineraryItem = () => {
                                 {/* Itinerary Tab */}
                                 {activeTab === 'itinerary' && (
                                     <div className="space-y-6">
-                                        <FormLabel icon={Map}>Day-by-day Itinerary</FormLabel>
+                                        <FormLabel icon={Map}>Itinerary</FormLabel>
                                         {formData.itinerary.map((day: ItineraryItem, i: number) => (
                                             <div 
                                                 key={i} 
@@ -2297,19 +2297,19 @@ const addItineraryItem = () => {
                                                         <div className="flex items-center justify-center w-8 h-8 bg-indigo-100 text-indigo-600 rounded-lg font-bold text-sm">
                                                             {i + 1}
                                                         </div>
-                                                        <h4 className="font-semibold text-slate-900">{day.title?.trim() || `Stop ${i + 1}`}</h4>
+                                                        <h4 className="font-semibold text-slate-900">{day.title?.trim() || `Step ${i + 1}`}</h4>
                                                     </div>
                                                     <ChevronDown className={`h-5 w-5 text-slate-500 transform transition-transform duration-200 ${expandedItineraryIndex === i ? 'rotate-180' : ''}`} />
                                                 </button>
                                                 <div className={`overflow-hidden transition-all duration-300 ${expandedItineraryIndex === i ? 'max-h-[1000px] opacity-100 p-6' : 'max-h-0 opacity-0 p-0'}`}>
                                                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
   <div className="space-y-2">
-    <label className="text-xs font-medium text-slate-500">Day Title</label>
+    <label className="text-xs font-medium text-slate-500">Title</label>
     <input 
       value={day.title} 
       onChange={(e) => handleItineraryChange(i, 'title', e.target.value)}
       className={inputBase} 
-      placeholder="Day title" 
+      placeholder="Step title"
     />
   </div>
   <div className="space-y-2">
@@ -2334,7 +2334,7 @@ const addItineraryItem = () => {
       onChange={(e) => handleItineraryChange(i, 'description', e.target.value)}
       className={`${textareaBase} resize-none`}
       rows={2}
-      placeholder="Day description"
+      placeholder="Step description"
     />
   </div>
   <div className="space-y-2">
@@ -2383,7 +2383,7 @@ const addItineraryItem = () => {
                                                             className="inline-flex items-center gap-2 text-red-600 font-medium px-4 py-2 rounded-lg hover:bg-red-50 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                                                         >
                                                             <XCircle className="w-5 h-5" />
-                                                            <span>Remove Day</span>
+                                                            <span>Remove Step</span>
                                                         </button>
                                                     </div>
                                                 </div>
@@ -2394,7 +2394,7 @@ const addItineraryItem = () => {
                                             onClick={addItineraryItem} 
                                             className="w-full flex items-center justify-center gap-2 px-4 py-4 text-sm font-semibold text-indigo-600 bg-gradient-to-r from-indigo-50 to-purple-50 border-2 border-dashed border-indigo-300 rounded-xl hover:from-indigo-100 hover:to-purple-100 hover:border-indigo-400 transition-all duration-200"
                                         >
-                                            <Plus className="w-4 h-4" /> Add Day
+                                            <Plus className="w-4 h-4" /> Add Step
                                         </button>
                                     </div>
                                 )}

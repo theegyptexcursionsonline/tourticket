@@ -45,7 +45,7 @@ import { DefaultChatTransport } from 'ai';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { safeMarkdownRehypePlugins, safeMarkdownUrlTransform } from '@/lib/markdown/safeMarkdown';
-import { dedupeTaxonomyEntries } from '@/lib/utils/taxonomy';
+import { filterVisibleTaxonomyEntries } from '@/lib/utils/taxonomy';
 import {
   filterSearchHitsByTenant,
   filterTourSearchHitsByTenant,
@@ -53,6 +53,7 @@ import {
 import { isRecord, isSearchHit, type ChatPart, type SearchHit } from '@/components/componentTypes';
 import 'instantsearch.css/themes/satellite.css';
 import ThemeToggle from '@/components/ThemeToggle';
+import { contentPath } from '@/lib/content/contentUrl';
 
 // =================================================================
 // --- ALGOLIA CONFIGURATION ---
@@ -111,19 +112,15 @@ function getUniqueSearchHits<T extends { slug?: string; objectID?: string; name?
   options?: { requireTours?: boolean }
 ) {
   const requireTours = options?.requireTours ?? false;
-  const uniqueHits = dedupeTaxonomyEntries(
+  const uniqueHits = filterVisibleTaxonomyEntries(
     hits.map((hit) => ({
       ...hit,
       slug: hit.slug || hit.objectID,
       name: hit.name || hit.title,
-    }))
+    })),
+    { requireTours },
   ) as T[];
-
-  if (!requireTours) {
-    return uniqueHits;
-  }
-
-  return uniqueHits.filter((hit) => (Number(hit.tourCount) || 0) > 0);
+  return uniqueHits;
 }
 
 // =================================================================
@@ -254,7 +251,7 @@ function DestinationHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; l
       {limitedHits.map((hit, index) => (
         <Link
           key={hit.objectID}
-          href={`/destinations/${hit.slug || hit.objectID}`}
+          href={contentPath('destination', hit.slug || hit.objectID || '', hit.urlType, null, hit.parentPage?.slug)}
           onClick={onHitClick}
           className="block"
         >
@@ -318,7 +315,7 @@ function CategoryHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limi
       {limitedHits.map((hit, index) => (
         <motion.a
           key={hit.objectID}
-          href={`/categories/${hit.slug || hit.objectID}`}
+          href={contentPath('category', hit.slug || hit.objectID || '', hit.urlType, null, hit.parentPage?.slug)}
           onClick={onHitClick}
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -993,7 +990,7 @@ const MegaMenu: FC<{ isOpen: boolean; onClose: () => void; destinations: Destina
                 <h3 className="text-sm font-bold uppercase tracking-wider text-gray-500 mb-4">{t('header.destinations')}</h3>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                   {destinations.slice(0, 6).map((dest) => (
-                    <Link key={dest._id} href={`/destinations/${dest.slug}`} className="group block">
+                    <Link key={dest._id} href={contentPath('destination', dest.slug, dest.urlType, null, dest.parentPage?.slug)} className="group block">
                       <div className="aspect-square w-full rounded-lg overflow-hidden relative bg-slate-200">
                         <Image src={dest.image} alt={dest.name} fill sizes="(max-width: 768px) 50vw, 33vw" className="object-cover transition-transform duration-300 group-hover:scale-110" />
                         <div className="absolute inset-0 bg-black/20 group-hover:bg-black/40 transition-colors" />
@@ -1012,7 +1009,7 @@ const MegaMenu: FC<{ isOpen: boolean; onClose: () => void; destinations: Destina
                     const Icon = activityIcons[activity.slug] || Ticket;
                     return (
                       <li key={activity._id}>
-                        <Link href={`/categories/${activity.slug}`} className="flex items-center gap-3 text-gray-700 hover:text-red-500 group">
+                        <Link href={contentPath('category', activity.slug, activity.urlType, null, activity.parentPage?.slug)} className="flex items-center gap-3 text-gray-700 hover:text-red-500 group">
                           <Icon size={20} className="text-gray-400 group-hover:text-red-500" />
                           <span className="font-semibold">{activity.name}</span>
                         </Link>
@@ -1189,7 +1186,7 @@ const MobileMenu: FC<{
                   <h3 className="font-bold text-lg text-slate-800 mb-4">{t('header.destinations')}</h3>
                   <div className="space-y-2">
                     {destinations.map((dest) => (
-                      <a key={dest._id} href={`/destinations/${dest.slug}`} className="block py-2 text-slate-700 hover:text-red-500" onClick={onClose}>
+                      <a key={dest._id} href={contentPath('destination', dest.slug, dest.urlType, null, dest.parentPage?.slug)} className="block py-2 text-slate-700 hover:text-red-500" onClick={onClose}>
                         {dest.name}
                       </a>
                     ))}
@@ -1202,7 +1199,7 @@ const MobileMenu: FC<{
                     {categories.map((activity) => {
                       const Icon = activityIcons[activity.slug] || Ticket;
                       return (
-                        <a key={activity._id} href={`/categories/${activity.slug}`} className="flex items-center gap-3 py-2 text-slate-700 hover:text-red-500" onClick={onClose}>
+                        <a key={activity._id} href={contentPath('category', activity.slug, activity.urlType, null, activity.parentPage?.slug)} className="flex items-center gap-3 py-2 text-slate-700 hover:text-red-500" onClick={onClose}>
                           <Icon size={16} />
                           <span>{activity.name}</span>
                         </a>

@@ -5,6 +5,7 @@ import Category from '@/lib/models/Category';
 import Tour from '@/lib/models/Tour';
 import AttractionPage from '@/lib/models/AttractionPage';
 import { escapeRegex } from '@/lib/utils/escapeRegex';
+import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 
 export async function GET() {
   try {
@@ -13,49 +14,35 @@ export async function GET() {
     console.log('Fetching interests with categories and attraction pages...');
 
     // Fetch all categories from the database
-    const categories = await Category.find({}).lean();
+    const categories = await Category.find({ isPublished: true, archivedAt: null, ...DEFAULT_TENANT_FILTER }).lean();
     console.log('Categories found:', categories.length);
 
     // Fetch all published attraction pages
     const attractionPages = await AttractionPage.find({
       isPublished: true,
-      pageType: 'attraction'
+      pageType: 'attraction',
+      archivedAt: null,
+      ...DEFAULT_TENANT_FILTER,
     }).lean();
     console.log('Attraction pages found:', attractionPages.length);
 
-    // For each category, count the number of tours associated with it
-    const categoriesWithCounts = await Promise.all(
-      categories.map(async (category) => {
-        try {
-          // Category is an array field in Tour model, so we need to use $in
-          const tourCount = await Tour.countDocuments({
-            category: { $in: [category._id] },
-            isPublished: true
-          });
-          console.log(`Category ${category.name}: ${tourCount} tours`);
-          return {
-            type: 'category' as const,
-            name: category.name,
-            slug: category.slug,
-            products: tourCount,
-            _id: category._id,
-            image: category.heroImage,
-            featured: category.featured
-          };
-        } catch (error) {
-          console.error(`Error counting tours for category ${category.name}:`, error);
-          return {
-            type: 'category' as const,
-            name: category.name,
-            slug: category.slug,
-            products: 0,
-            _id: category._id,
-            image: category.heroImage,
-            featured: category.featured
-          };
-        }
-      })
-    );
+    const categoryCounts = await Tour.aggregate<{ _id: unknown; tourCount: number }>([
+      { $match: { isPublished: true, archivedAt: null, ...DEFAULT_TENANT_FILTER } },
+      { $unwind: '$category' },
+      { $group: { _id: '$category', tourCount: { $sum: 1 } } },
+    ]);
+    const countByCategory = new Map(categoryCounts.map((row) => [String(row._id), row.tourCount]));
+    const categoriesWithCounts = categories.map((category) => ({
+      type: 'category' as const,
+      name: category.name,
+      slug: category.slug,
+      products: countByCategory.get(String(category._id)) || 0,
+      _id: category._id,
+      image: category.heroImage,
+      featured: category.featured,
+      urlType: category.urlType,
+      parentPage: category.parentPage,
+    }));
 
     // For each attraction page, count matching tours with simplified logic
     const attractionsWithCounts = await Promise.all(
@@ -98,6 +85,8 @@ export async function GET() {
           if (searchQueries.length > 0) {
             tourCount = await Tour.countDocuments({
               isPublished: true,
+              archivedAt: null,
+              ...DEFAULT_TENANT_FILTER,
               $or: searchQueries
             });
           }
@@ -110,7 +99,9 @@ export async function GET() {
             products: tourCount,
             _id: page._id,
             featured: page.featured,
-            image: page.heroImage
+            image: page.heroImage,
+            urlType: page.urlType,
+            parentPage: page.parentPage,
           };
         } catch (error) {
           console.error(`Error counting tours for attraction ${page.title}:`, error);
@@ -128,7 +119,8 @@ export async function GET() {
     );
 
     // Combine categories and attractions
-    const allInterests = [...categoriesWithCounts, ...attractionsWithCounts];
+    const allInterests = [...categoriesWithCounts, ...attractionsWithCounts]
+      .filter((interest) => interest.products > 0);
 
     // Sort by featured first, then by product count, then by name
     allInterests.sort((a, b) => {

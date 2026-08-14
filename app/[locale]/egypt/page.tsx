@@ -9,8 +9,22 @@ import { Tour, Category } from '@/types';
 import dbConnect from '@/lib/dbConnect';
 import TourModel from '@/lib/models/Tour';
 import CategoryModel from '@/lib/models/Category';
+import AttractionPageModel from '@/lib/models/AttractionPage';
 import EgyptHeroClient from './EgyptHeroClient';
 import EgyptToursClient from './EgyptToursClient';
+import { attractionPagePath, contentPath } from '@/lib/content/contentUrl';
+import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
+
+interface EgyptAttractionSummary {
+  _id: string;
+  title: string;
+  slug: string;
+  description?: string;
+  heroImage?: string;
+  urlType?: string;
+  parentPage?: { slug?: string } | null;
+  featured?: boolean;
+}
 
 // Enable ISR with 60 second revalidation for instant page loads
 export const revalidate = 1800; // 30 min — storefront content; edge serves stale-while-revalidate so clicks stay instant
@@ -43,7 +57,7 @@ async function fetchTours(): Promise<Tour[]> {
   try {
     await dbConnect();
 
-    const tours = await TourModel.find({ isPublished: true })
+    const tours = await TourModel.find({ isPublished: true, archivedAt: null, ...DEFAULT_TENANT_FILTER })
       .sort({ createdAt: -1 })
       .limit(12)
       .lean()
@@ -61,31 +75,31 @@ async function fetchCategories(): Promise<Category[]> {
   try {
     await dbConnect();
 
-    const categories = await CategoryModel.find({})
+    const categories = await CategoryModel.find({
+      isPublished: true,
+      archivedAt: null,
+      ...DEFAULT_TENANT_FILTER,
+    })
       .sort({ order: 1, name: 1 })
       .lean()
       .exec();
 
-    // Add tour counts
-    const categoriesWithCounts = await Promise.all(
-      categories.map(async (category) => {
-        const tourCount = await TourModel.countDocuments({
-          category: { $in: [category._id] },
-          isPublished: true
-        });
-
-        return {
-          ...category,
-          tourCount
-        };
-      })
-    );
+    const categoryCounts = await TourModel.aggregate<{ _id: unknown; tourCount: number }>([
+      { $match: { isPublished: true, archivedAt: null, ...DEFAULT_TENANT_FILTER } },
+      { $unwind: '$category' },
+      { $group: { _id: '$category', tourCount: { $sum: 1 } } },
+    ]);
+    const countByCategory = new Map(categoryCounts.map((row) => [String(row._id), row.tourCount]));
+    const categoriesWithCounts = categories.map((category) => ({
+      ...category,
+      tourCount: countByCategory.get(String(category._id)) || 0,
+    }));
 
     const serializedCategories = JSON.parse(JSON.stringify(categoriesWithCounts)) as (Category & { tourCount: number })[];
 
     // Filter published categories with tours
     const publishedCategories = serializedCategories.filter(
-      (category) => category.isPublished !== false && category.tourCount > 0
+      (category) => category.isPublished !== false && category.tourCount > 0 && Boolean(category.heroImage)
     );
 
     // Convert MongoDB documents to plain objects
@@ -96,12 +110,36 @@ async function fetchCategories(): Promise<Category[]> {
   }
 }
 
+async function fetchAttractions(): Promise<EgyptAttractionSummary[]> {
+  try {
+    await dbConnect();
+    const pages = await AttractionPageModel.find({
+      isPublished: true,
+      pageType: 'attraction',
+      archivedAt: null,
+      ...DEFAULT_TENANT_FILTER,
+    })
+      .select('_id title slug description heroImage urlType parentPage featured')
+      .sort({ featured: -1, updatedAt: -1, title: 1 })
+      .limit(24)
+      .lean();
+
+    return (JSON.parse(JSON.stringify(pages)) as EgyptAttractionSummary[])
+      .filter((page) => Boolean(page.heroImage))
+      .slice(0, 8);
+  } catch (error) {
+    console.error('Failed to fetch attraction pages:', error);
+    return [];
+  }
+}
+
 /* ---------- Server Component (Main Page) ---------- */
 export default async function AboutEgyptLanding() {
   // Fetch data in parallel on the server
-  const [tours, categories] = await Promise.all([
+  const [tours, categories, attractions] = await Promise.all([
     fetchTours(),
-    fetchCategories()
+    fetchCategories(),
+    fetchAttractions(),
   ]);
 
   return (
@@ -192,21 +230,26 @@ export default async function AboutEgyptLanding() {
             </div>
 
             {categories.length > 0 ? (
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
                 {categories.map((category) => (
                   <Link
                     key={category._id}
-                    href={`/categories/${category.slug}`}
-                    className="group bg-white rounded-2xl p-6 shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 border border-gray-100"
+                    href={contentPath('category', category.slug, category.urlType, null, category.parentPage?.slug)}
+                    className="group relative min-h-64 overflow-hidden rounded-2xl border border-gray-100 bg-slate-900 shadow-lg transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl"
                   >
-                    <div className="text-center">
-                      <div className="w-12 h-12 mx-auto mb-4 flex items-center justify-center rounded-full bg-amber-100 text-amber-600 text-2xl group-hover:bg-amber-400 group-hover:text-white transition-colors duration-300">
-                        {category.icon || '🎯'}
-                      </div>
-                      <h3 className="text-lg font-bold text-gray-900 mb-2 group-hover:text-amber-600 transition-colors duration-300">
+                    <Image
+                      src={category.heroImage || '/placeholder-category.jpg'}
+                      alt={category.name}
+                      fill
+                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                      className="object-cover transition-transform duration-500 group-hover:scale-105"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-900/35 to-transparent" />
+                    <div className="absolute inset-x-0 bottom-0 p-5">
+                      <h3 className="text-xl font-bold text-white transition-colors group-hover:text-amber-300">
                         {category.name}
                       </h3>
-                      <p className="text-sm text-gray-500">
+                      <p className="mt-1 text-sm font-medium text-slate-200">
                         {category.tourCount || 0} {category.tourCount === 1 ? 'tour' : 'tours'}
                       </p>
                     </div>
@@ -221,8 +264,42 @@ export default async function AboutEgyptLanding() {
           </div>
         </section>
 
+        {attractions.length > 0 ? (
+          <section className="bg-white py-20">
+            <div className="mx-auto max-w-7xl px-6 lg:px-8">
+              <div className="mb-12 text-center">
+                <h2 className="text-3xl font-bold text-gray-900 md:text-4xl">Discover Top Attractions</h2>
+                <p className="mt-4 text-lg text-gray-600">Explore Egypt&apos;s landmark cities, coastlines, and cultural highlights.</p>
+              </div>
+              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+                {attractions.map((attraction) => (
+                  <Link
+                    key={attraction._id}
+                    href={attractionPagePath(attraction.slug, 'attraction', attraction.urlType, null, attraction.parentPage?.slug)}
+                    className="group overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-md transition hover:-translate-y-1 hover:shadow-xl"
+                  >
+                    <div className="relative h-44 bg-slate-200">
+                      <Image
+                        src={attraction.heroImage || '/placeholder-category.jpg'}
+                        alt={attraction.title}
+                        fill
+                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                        className="object-cover transition-transform duration-500 group-hover:scale-105"
+                      />
+                    </div>
+                    <div className="p-5">
+                      <h3 className="text-lg font-bold text-slate-900 group-hover:text-amber-700">{attraction.title}</h3>
+                      {attraction.description ? <p className="mt-2 line-clamp-2 text-sm text-slate-600">{attraction.description}</p> : null}
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          </section>
+        ) : null}
+
         {/* Tour Listings Section */}
-        <section className="py-20 bg-white">
+        <section id="tours" className="scroll-mt-24 bg-white py-20">
           <div className="max-w-7xl mx-auto px-6 lg:px-8">
             <div className="text-center mb-12">
               <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">Featured Tours & Experiences</h2>

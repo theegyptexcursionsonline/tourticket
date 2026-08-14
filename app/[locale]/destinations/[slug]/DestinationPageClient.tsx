@@ -32,6 +32,7 @@ import { curateDestinationTours } from '@/lib/content/destinationTourCuration';
 import { buildContentBreadcrumbs } from '@/lib/content/breadcrumbs';
 import ContentBreadcrumbs from '@/components/navigation/ContentBreadcrumbs';
 import HostedAISearchEntry from '@/components/HostedAISearchEntry';
+import { contentPath } from '@/lib/content/contentUrl';
 
 interface DestinationPageClientProps {
   destination: Destination;
@@ -59,6 +60,8 @@ interface SearchHit {
   discountPrice?: number;
   tourCount?: number;
   isFeatured?: boolean;
+  urlType?: string;
+  parentPage?: { slug?: string } | null;
 }
 
 interface SearchTour {
@@ -82,6 +85,8 @@ interface SearchDestination {
   description?: string;
   tourCount?: number;
   isFeatured?: boolean;
+  urlType?: string;
+  parentPage?: { slug?: string } | null;
 }
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -632,7 +637,7 @@ const DestinationSlider = ({ destinations }: { destinations: SearchDestination[]
         {destinations.map((destination, idx) => (
           <a
             key={idx}
-            href={`/destinations/${destination.slug}`}
+            href={contentPath('destination', destination.slug, destination.urlType, null, destination.parentPage?.slug)}
             target="_blank"
             rel="noopener noreferrer"
             className="group block flex-shrink-0 w-[260px] bg-white rounded-xl overflow-hidden border shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300"
@@ -751,7 +756,7 @@ function DestinationHits({ onHitClick, limit = 3 }: { onHitClick?: () => void; l
       {(limitedHits as unknown as SearchHit[]).map((hit) => (
         <a
           key={hit.objectID}
-          href={`/destinations/${hit.slug || hit.objectID}`}
+          href={contentPath('destination', hit.slug || hit.objectID, hit.urlType, null, hit.parentPage?.slug)}
                 onClick={onHitClick}
           className="block px-4 md:px-6 py-3 md:py-4 hover:bg-gradient-to-r hover:from-emerald-500/5 hover:via-teal-500/5 hover:to-transparent transition-all duration-300 border-b border-white/5 last:border-0 group relative overflow-hidden"
         >
@@ -809,7 +814,7 @@ function CategoryHits({ onHitClick, limit = 3 }: { onHitClick?: () => void; limi
       {(limitedHits as unknown as SearchHit[]).map((hit) => (
         <a
           key={hit.objectID}
-          href={`/categories/${hit.slug || hit.objectID}`}
+          href={contentPath('category', hit.slug || hit.objectID, hit.urlType, null, hit.parentPage?.slug)}
           onClick={onHitClick}
           className="block px-4 md:px-6 py-3 md:py-4 hover:bg-gradient-to-r hover:from-purple-500/5 hover:via-fuchsia-500/5 hover:to-transparent transition-all duration-300 border-b border-white/5 last:border-0 group relative overflow-hidden"
         >
@@ -1117,6 +1122,8 @@ const LegacyHeroSearchBar = ({ suggestion }: { suggestion: string }) => {
             description: dest.description,
             tourCount: Number(dest.tourCount) > 0 ? Number(dest.tourCount) : undefined,
             isFeatured: dest.isFeatured,
+            urlType: dest.urlType,
+            parentPage: dest.parentPage,
           }));
         }
       }
@@ -1878,7 +1885,7 @@ const Top10Card = ({ tour, index, onAddToCartClick }: { tour: Tour, index: numbe
 const InterestCard = ({ category, tourCount }: { category: Category, tourCount: number }) => {
   const copy = useDestinationPageCopy();
   return (
-    <Link href={`/categories/${category.slug}`} className="flex flex-col items-center p-4 sm:p-6 bg-white shadow-sm border border-slate-200 hover:shadow-lg hover:-translate-y-1 transition-all duration-300 rounded-lg">
+    <Link href={contentPath('category', category.slug, category.urlType, null, category.parentPage?.slug)} className="flex flex-col items-center p-4 sm:p-6 bg-white shadow-sm border border-slate-200 hover:shadow-lg hover:-translate-y-1 transition-all duration-300 rounded-lg">
       <div className="text-3xl sm:text-4xl mb-3 sm:mb-4">{category.icon}</div>
       <h3 className="text-sm sm:text-base font-bold text-slate-900 uppercase text-center">{category.name}</h3>
       <p className="text-xs sm:text-sm text-slate-500">{copy.toursCount(tourCount)}</p>
@@ -2273,7 +2280,7 @@ const RelatedDestinationsSection = ({ destinations }: { destinations: Destinatio
           {destinations.slice(0, 4).map((dest) => (
             <a 
               key={dest._id} 
-              href={`/destinations/${dest.slug}`}
+              href={contentPath('destination', dest.slug, dest.urlType, null, dest.parentPage?.slug)}
               className="group block bg-white rounded-xl shadow-md overflow-hidden hover:shadow-2xl transition-all duration-300 hover:-translate-y-2"
             >
               <div className="relative h-40 sm:h-48">

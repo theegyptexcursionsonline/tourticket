@@ -20,7 +20,7 @@ describe('itinerary editor exposes every field the storefront renders', () => {
     const start = form.indexOf('toggleItineraryItem(i)');
     expect(start).toBeGreaterThanOrEqual(0);
     const header = form.slice(start, start + 900);
-    expect(header).toContain('day.title?.trim() || `Stop ${i + 1}`');
+    expect(header).toContain('day.title?.trim() || `Step ${i + 1}`');
     expect(header).not.toContain('Day {day.day}');
   });
 

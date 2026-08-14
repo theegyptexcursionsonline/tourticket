@@ -14,6 +14,7 @@ import type { EeoWindow } from './componentTypes';
 // Import the single, consolidated switcher component
 import CurrencyLanguageSwitcher from '@/components/shared/CurrencyLanguageSwitcher';
 import InternalLinkBlock from '@/components/navigation/InternalLinkBlock';
+import { contentPath } from '@/lib/content/contentUrl';
 
 // =================================================================
 // --- FOOTER-SPECIFIC DATA ---
@@ -389,7 +390,7 @@ export default function Footer() {
                 <li key={destination._id}>
                   <Link 
                     className="hover:text-red-600 transition-colors inline-flex items-center gap-2" 
-                    href={`/destinations/${destination.slug}`}
+                    href={contentPath('destination', destination.slug, destination.urlType, null, destination.parentPage?.slug)}
                   >
                     <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
                     {t('thingsToDoIn', { destination: destination.name })}
@@ -407,7 +408,7 @@ export default function Footer() {
                 <li key={destination._id}>
                   <Link 
                     className="hover:text-red-600 transition-colors inline-flex items-center gap-2" 
-                    href={`/destinations/${destination.slug}`}
+                    href={contentPath('destination', destination.slug, destination.urlType, null, destination.parentPage?.slug)}
                   >
                     <span className="h-1.5 w-1.5 rounded-full bg-blue-500" />
                     {destination.name}

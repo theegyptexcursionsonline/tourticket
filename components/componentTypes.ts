@@ -31,6 +31,9 @@ export interface SearchHit {
   highlights?: string[];
   url?: string;
   pageType?: string;
+  urlType?: string;
+  parentPage?: { slug?: string } | null;
+  archivedAt?: string | Date | null;
   type?: string;
   content?: string;
   readTime?: number;

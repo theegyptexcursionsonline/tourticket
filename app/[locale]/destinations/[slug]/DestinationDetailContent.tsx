@@ -327,6 +327,8 @@ export async function renderDestinationDetail(slug: string, locale: string): Pro
         description={destination.description as string}
         image={destination.image as string}
         country={destination.country as string}
+        urlType={destination.urlType}
+        parentPage={destination.parentPage}
         tours={destinationTours.map((tour) => ({ title: tour.title, slug: tour.slug, image: tour.image, discountPrice: tour.discountPrice, originalPrice: tour.originalPrice, rating: tour.rating, reviewCount: tour.reviewCount }))}
       />
       <DestinationPageClient

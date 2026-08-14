@@ -10,6 +10,7 @@ import { ICategory } from '@/lib/models/Category';
 import { localizeEntityFields } from '@/lib/i18n/contentLocalization';
 import { selectLocalizedTaxonomyEntries } from '@/lib/i18n/localizedCollections';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
+import { filterVisibleTaxonomyEntries } from '@/lib/utils/taxonomy';
 
 // Enable ISR with 60 second revalidation for instant page loads
 export const revalidate = 1800; // 30 min — storefront content; edge serves stale-while-revalidate so clicks stay instant
@@ -41,27 +42,23 @@ async function getCategoriesWithTourCounts(locale: string): Promise<CategoryWith
     await dbConnect();
     
     // Fetch all published categories
-    const categories = await Category.find({ isPublished: true })
+    const categories = await Category.find({ isPublished: true, archivedAt: null, ...DEFAULT_TENANT_FILTER })
       .sort({ order: 1, name: 1 })
       .lean();
     
-    // For each category, count the number of published tours
-    const categoriesWithCounts = await Promise.all(
-      categories.map(async (cat) => {
-        const tourCount = await Tour.countDocuments({
-          category: { $in: [cat._id] },
-          isPublished: true,
-          ...DEFAULT_TENANT_FILTER
-        });
-        return {
-          ...cat,
-          tourCount: tourCount,
-        };
-      })
-    );
+    const categoryCounts = await Tour.aggregate<{ _id: unknown; tourCount: number }>([
+      { $match: { isPublished: true, archivedAt: null, ...DEFAULT_TENANT_FILTER } },
+      { $unwind: '$category' },
+      { $group: { _id: '$category', tourCount: { $sum: 1 } } },
+    ]);
+    const countByCategory = new Map(categoryCounts.map((row) => [String(row._id), row.tourCount]));
+    const categoriesWithCounts = categories.map((category) => ({
+      ...category,
+      tourCount: countByCategory.get(String(category._id)) || 0,
+    }));
 
     // Serialize the data to pass to the client component
-    return selectLocalizedTaxonomyEntries(
+    const localizedCategories = selectLocalizedTaxonomyEntries(
       JSON.parse(JSON.stringify(categoriesWithCounts)) as Record<string, unknown>[],
       locale,
       ['name', 'description', 'longDescription', 'highlights', 'features', 'metaTitle', 'metaDescription']
@@ -76,6 +73,8 @@ async function getCategoriesWithTourCounts(locale: string): Promise<CategoryWith
         'metaDescription',
       ])
     ) as unknown as CategoryWithCount[];
+
+    return filterVisibleTaxonomyEntries(localizedCategories, { requireTours: true });
   } catch (error) {
     console.error('Failed to fetch interests:', error);
     return [];

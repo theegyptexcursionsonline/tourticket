@@ -2,6 +2,7 @@ import { contentPath, attractionPagePath } from '@/lib/content/contentUrl';
 import {
   nestedContentPath,
   sanitizeContentNavigation,
+  systemParentPage,
 } from '@/lib/content/contentNavigation';
 import { practicalDefaultText } from '@/lib/tours/practicalDefaults';
 import { readFileSync } from 'node:fs';
@@ -44,6 +45,20 @@ describe('content navigation', () => {
       .toBe('/hurghada/luxor-day-trip');
     expect(attractionPagePath('desert-safari', 'category', 'default', null, 'hurghada'))
       .toBe('/hurghada/desert-safari');
+  });
+
+  it('accepts only the allowlisted Egypt landing page as a static parent', () => {
+    const egypt = systemParentPage('landing:egypt');
+    expect(egypt).toEqual(expect.objectContaining({ slug: 'egypt', kind: 'landing', href: '/egypt' }));
+    expect(systemParentPage('landing:admin')).toBeNull();
+    expect(sanitizeContentNavigation({ parentPage: egypt })).toEqual({
+      parentPage: {
+        id: 'landing:egypt',
+        slug: 'egypt',
+        label: 'Egypt',
+        kind: 'landing',
+      },
+    });
   });
 });
 

@@ -10,6 +10,7 @@ import { requireAdminAuth } from '@/lib/auth/adminAuth';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 import { findMatchingTourOptionIds } from '@/lib/admin/tourOptionIdentifiers';
 import { hasGermanLikeContent, selectLocalizedTours, TOUR_LOCALE_FIELDS } from '@/lib/i18n/localizedCollections';
+import { SYSTEM_PARENT_PAGES } from '@/lib/content/contentNavigation';
 
 const LIMIT = 20;
 
@@ -85,8 +86,8 @@ export async function GET(request: NextRequest) {
     }
 
     if (kind === 'pages' || kind === 'parents') {
-      const pageConditions: Record<string, unknown>[] = [DEFAULT_TENANT_FILTER];
-      const categoryConditions: Record<string, unknown>[] = [DEFAULT_TENANT_FILTER];
+      const pageConditions: Record<string, unknown>[] = [DEFAULT_TENANT_FILTER, { archivedAt: null }];
+      const categoryConditions: Record<string, unknown>[] = [DEFAULT_TENANT_FILTER, { archivedAt: null }];
       const pageFilter: Record<string, unknown> = { $and: pageConditions };
       const categoryFilter: Record<string, unknown> = { $and: categoryConditions };
       if (excludeId) pageFilter._id = { $ne: excludeId };
@@ -130,9 +131,19 @@ export async function GET(request: NextRequest) {
           : Promise.resolve([]),
       ]);
 
+      const systemParents = kind === 'parents'
+        ? SYSTEM_PARENT_PAGES.filter((parent) => {
+            if (excludeId && parent.id === excludeId) return false;
+            if (ids) return Boolean(parent.id && ids.includes(parent.id));
+            if (!search) return true;
+            return search.test(parent.label) || search.test(parent.slug);
+          })
+        : [];
+
       return NextResponse.json({
         success: true,
         data: [
+          ...systemParents.map((parent) => ({ ...parent, title: parent.label, isPublished: true })),
           ...(destinations as Array<Record<string, unknown>>).map((destination) => ({
             id: String(destination._id),
             title: String(destination.name || ''),

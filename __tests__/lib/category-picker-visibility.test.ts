@@ -33,6 +33,12 @@ describe('category picker visibility', () => {
     expect(visible.map((c) => c.slug)).toEqual(['camel-tours']);
   });
 
+  it('never exposes an archived category on public or admin taxonomy surfaces', () => {
+    const archived = { ...withTours, slug: 'old-category', archivedAt: '2026-08-14T00:00:00.000Z' };
+    const visible = filterVisibleTaxonomyEntries([withTours, archived], { requireTours: false });
+    expect(visible.map((c) => c.slug)).toEqual(['camel-tours']);
+  });
+
   it.each([
     ['Tour', 'components/TourForm.tsx'],
     ['Category 2', 'components/admin/AttractionPageForm.tsx'],

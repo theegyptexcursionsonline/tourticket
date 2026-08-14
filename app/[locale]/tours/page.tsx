@@ -82,7 +82,7 @@ async function getAllTours(locale: string): Promise<ITour[]> {
   try {
     await dbConnect();
 
-    const baseTours = await Tour.find({ isPublished: true, ...DEFAULT_TENANT_FILTER })
+    const baseTours = await Tour.find({ isPublished: true, archivedAt: null, ...DEFAULT_TENANT_FILTER })
       .populate('destination', 'name description country translations')
       .populate('category', 'name description longDescription translations')
       .sort({ featured: -1, createdAt: -1 }) // Featured first, then most recent
@@ -98,6 +98,8 @@ async function getAllTours(locale: string): Promise<ITour[]> {
     if (locale.startsWith('de') && candidateSlugs.length > 0) {
       const localizedCandidates = await Tour.find({
         isPublished: true,
+        archivedAt: null,
+        ...DEFAULT_TENANT_FILTER,
         slug: { $in: candidateSlugs },
       })
         .populate('destination', 'name description country translations')

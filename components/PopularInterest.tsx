@@ -11,7 +11,8 @@ import 'swiper/css';
 import 'swiper/css/navigation';
 import 'swiper/css/effect-coverflow';
 import { getErrorMessage } from './componentTypes';
-import { attractionPagePath } from '@/lib/content/contentUrl';
+import { attractionPagePath, contentPath } from '@/lib/content/contentUrl';
+import type { ParentPageValue } from '@/lib/content/contentNavigation';
 
 // --- TYPES ---
 interface Interest {
@@ -22,6 +23,8 @@ interface Interest {
   products: number;
   featured?: boolean;
   image?: string;
+  urlType?: string;
+  parentPage?: ParentPageValue | null;
 }
 
 interface CategoryPage {
@@ -51,8 +54,8 @@ const InterestCard = ({
   const linkUrl = categoryPage?.isPublished
     ? attractionPagePath(categoryPage.slug, 'category', categoryPage.urlType)
     : interest.type === 'attraction'
-      ? `/attraction/${interest.slug}`
-      : `/categories/${interest.slug}`;
+      ? attractionPagePath(interest.slug, 'attraction', interest.urlType, null, interest.parentPage?.slug)
+      : contentPath('category', interest.slug, interest.urlType, null, interest.parentPage?.slug);
 
   // Only use actual database images - no mock images
   const imageUrl = categoryPage?.heroImage || interest.image || DEFAULT_CATEGORY_IMAGE;

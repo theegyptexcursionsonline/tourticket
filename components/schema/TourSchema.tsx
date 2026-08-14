@@ -32,7 +32,7 @@ interface Tour {
   rating?: number;
   reviewCount?: number;
   location?: string;
-  destination?: { name?: string; slug?: string } | string;
+  destination?: { name?: string; slug?: string; urlType?: string; parentPage?: { slug?: string } | null } | string;
   category?: { name?: string; slug?: string } | string;
   includes?: string[];
   highlights?: string[];
@@ -40,6 +40,8 @@ interface Tour {
   operatedBy?: string;
   maxGroupSize?: number;
   languages?: string[];
+  urlType?: string;
+  parentPage?: { slug?: string } | null;
 }
 
 interface Props {
@@ -50,7 +52,7 @@ interface Props {
 export default function TourSchema({ tour, reviews = [] }: Props) {
   const pricing = effectiveTourPrice(tour);
   const price = pricing.price;
-  const tourUrl = `${BASE_URL}${contentPath('tour', tour.slug, (tour as { urlType?: string }).urlType)}`;
+  const tourUrl = `${BASE_URL}${contentPath('tour', tour.slug, tour.urlType, null, tour.parentPage?.slug)}`;
   const destName = typeof tour.destination === 'object' ? tour.destination?.name : tour.destination;
   const catName = typeof tour.category === 'object' ? tour.category?.name : tour.category;
 
@@ -208,7 +210,9 @@ export default function TourSchema({ tour, reviews = [] }: Props) {
                   '@type': 'ListItem',
                   position: 3,
                   name: destName,
-                  item: `${BASE_URL}/destinations/${typeof tour.destination === 'object' ? tour.destination?.slug : ''}`,
+                  item: `${BASE_URL}${typeof tour.destination === 'object'
+                    ? contentPath('destination', tour.destination?.slug || '', tour.destination?.urlType, null, tour.destination?.parentPage?.slug)
+                    : '/destinations'}`,
                 },
                 { '@type': 'ListItem', position: 4, name: tour.title, item: tourUrl },
               ]

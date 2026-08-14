@@ -59,6 +59,9 @@ import remarkGfm from 'remark-gfm';
 import { safeMarkdownRehypePlugins, safeMarkdownUrlTransform } from '@/lib/markdown/safeMarkdown';
 import { useLocale, useTranslations } from 'next-intl';
 import { isRTL } from '@/i18n/config';
+import { contentPath } from '@/lib/content/contentUrl';
+import { filterVisibleTaxonomyEntries } from '@/lib/utils/taxonomy';
+import { filterSearchHitsByTenant } from '@/lib/tenantSearchHitFilter';
 import { isPresent, isRecord, isSearchHit, type ChatPart, type SearchHit } from './componentTypes';
 import 'instantsearch.css/themes/satellite.css';
 
@@ -88,6 +91,8 @@ interface Interest {
   slug: string;
   products: number;
   featured?: boolean;
+  urlType?: string;
+  parentPage?: Category['parentPage'];
 }
 
 // Icon Mapping System
@@ -138,7 +143,7 @@ const InterestCard = ({ interest }: { interest: Interest }) => {
   const rtl = isRTL(locale);
   const ArrowIcon = rtl ? ArrowLeft : ArrowRight;
   const { Icon, gradient } = getIconForInterest(interest.name);
-  const linkUrl = `/categories/${interest.slug}`;
+  const linkUrl = contentPath('category', interest.slug, interest.urlType, null, interest.parentPage?.slug);
 
   return (
     <Link
@@ -207,7 +212,10 @@ function CustomSearchBox({ searchQuery }: { searchQuery: string }) {
 function TourHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limit?: number }) {
   const t = useTranslations('interestGrid');
   const { hits: rawHits } = useHits();
-  const hits = rawHits as unknown as SearchHit[];
+  const hits = filterVisibleTaxonomyEntries(
+    filterSearchHitsByTenant(rawHits as unknown as SearchHit[], 'default'),
+    { requireTours: true },
+  );
   const limitedHits = hits.slice(0, limit);
   const sliderRef = useRef<HTMLDivElement>(null);
 
@@ -381,7 +389,7 @@ function DestinationHits({ onHitClick, limit = 3 }: { onHitClick?: () => void; l
       {limitedHits.map((hit) => (
         <a
           key={hit.objectID}
-          href={`/destinations/${hit.slug || hit.objectID}`}
+          href={contentPath('destination', hit.slug || hit.objectID || '', hit.urlType, null, hit.parentPage?.slug)}
           onClick={onHitClick}
           className="block px-3 md:px-6 py-3 md:py-4 hover:bg-gradient-to-r hover:from-emerald-500/5 hover:via-teal-500/5 hover:to-transparent transition-all duration-300 border-b border-white/5 last:border-0 group relative overflow-hidden"
         >
@@ -415,7 +423,10 @@ function DestinationHits({ onHitClick, limit = 3 }: { onHitClick?: () => void; l
 function CategoryHits({ onHitClick, limit = 3 }: { onHitClick?: () => void; limit?: number }) {
   const t = useTranslations('interestGrid');
   const { hits: rawHits } = useHits();
-  const hits = rawHits as unknown as SearchHit[];
+  const hits = filterVisibleTaxonomyEntries(
+    filterSearchHitsByTenant(rawHits as unknown as SearchHit[], 'default'),
+    { requireTours: true },
+  );
   const limitedHits = hits.slice(0, limit);
 
   if (limitedHits.length === 0) return null;
@@ -438,7 +449,7 @@ function CategoryHits({ onHitClick, limit = 3 }: { onHitClick?: () => void; limi
       {limitedHits.map((hit) => (
         <a
           key={hit.objectID}
-          href={`/categories/${hit.slug || hit.objectID}`}
+          href={contentPath('category', hit.slug || hit.objectID || '', hit.urlType, null, hit.parentPage?.slug)}
           onClick={onHitClick}
           className="block px-3 md:px-6 py-3 md:py-4 hover:bg-gradient-to-r hover:from-purple-500/5 hover:via-fuchsia-500/5 hover:to-transparent transition-all duration-300 border-b border-white/5 last:border-0 group relative overflow-hidden"
         >

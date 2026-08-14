@@ -3,6 +3,7 @@ import Image from 'next/image';
 import { Destination } from '@/types';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { isRTL } from '@/i18n/config';
+import { contentPath } from '@/lib/content/contentUrl';
 
 interface DestinationWithTourCount extends Destination {
   tourCount: number;
@@ -38,7 +39,7 @@ export default async function DestinationsServer({ destinations }: DestinationsS
             return (
               <Link
                 key={destination._id}
-                href={`/destinations/${destination.slug}`}
+                href={contentPath('destination', destination.slug, destination.urlType, null, destination.parentPage?.slug)}
                 className="text-center group"
               >
                 <div className="relative w-32 h-32 sm:w-36 sm:h-36 md:w-40 md:h-40 rounded-full overflow-hidden shadow-lg transform transition-all duration-300 group-hover:scale-110 group-hover:shadow-xl bg-slate-200">

@@ -11,6 +11,8 @@ import { IDestination } from '@/lib/models/Destination';
 import { localizeEntityFields } from '@/lib/i18n/contentLocalization';
 import { selectLocalizedTaxonomyEntries } from '@/lib/i18n/localizedCollections';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
+import { contentPath } from '@/lib/content/contentUrl';
+import { filterVisibleTaxonomyEntries } from '@/lib/utils/taxonomy';
 
 // Enable ISR with 60 second revalidation for instant page loads
 export const revalidate = 1800; // 30 min — storefront content; edge serves stale-while-revalidate so clicks stay instant
@@ -74,21 +76,20 @@ async function getDestinationsWithTourCounts(locale: string): Promise<IDestinati
     await dbConnect();
     
     // Fetch all destinations (default site only — tenant docs stay on their sites)
-    const destinations = await Destination.find({ ...DEFAULT_TENANT_FILTER }).lean();
-    
-    // For each destination, count the number of published tours
-    const destinationsWithCounts = await Promise.all(
-      destinations.map(async (dest) => {
-        const tourCount = await Tour.countDocuments({
-          destination: dest._id,
-          isPublished: true,
-          ...DEFAULT_TENANT_FILTER
-        });
-        return {
-          ...dest,
-          tourCount: tourCount,
-        };
-      })
+    const [destinations, destinationCounts] = await Promise.all([
+      Destination.find({ isPublished: true, archivedAt: null, ...DEFAULT_TENANT_FILTER }).lean(),
+      Tour.aggregate<{ _id: unknown; tourCount: number }>([
+        { $match: { isPublished: true, archivedAt: null, ...DEFAULT_TENANT_FILTER } },
+        { $group: { _id: '$destination', tourCount: { $sum: 1 } } },
+      ]),
+    ]);
+    const countByDestination = new Map(destinationCounts.map((row) => [String(row._id), row.tourCount]));
+    const destinationsWithCounts = filterVisibleTaxonomyEntries(
+      destinations.map((destination) => ({
+        ...destination,
+        tourCount: countByDestination.get(String(destination._id)) || 0,
+      })),
+      { requireTours: true },
     );
 
     const serialized = JSON.parse(JSON.stringify(destinationsWithCounts)) as Record<string, unknown>[];
@@ -152,7 +153,11 @@ export default async function DestinationsIndexPage({
         name="All Destinations"
         description="Explore amazing destinations across Egypt"
         url="/destinations"
-        items={destinations.map((destination) => ({ name: destination.name, url: `/destinations/${destination.slug}`, image: destination.image }))}
+        items={destinations.map((destination) => ({
+          name: destination.name,
+          url: contentPath('destination', destination.slug, destination.urlType, null, destination.parentPage?.slug),
+          image: destination.image,
+        }))}
       />
       <Header startSolid />
       <main className="min-h-screen bg-slate-50 pt-20">

@@ -22,14 +22,15 @@ export async function GET(request: NextRequest) {
     const locale = searchParams.get('locale') || 'en';
     const destinations = await Destination.find({
       isPublished: true,
+      archivedAt: null,
       ...(featuredOnly ? { featured: true } : {}),
       ...DEFAULT_TENANT_FILTER,
     })
-      .select('_id name slug country image description featured tourCount')
+      .select('_id name slug country image description featured urlType parentPage archivedAt tourCount')
       .sort({ featured: -1, tourCount: -1, name: 1 })
       .lean();
 
-    const tours = await Tour.find({ isPublished: true, ...DEFAULT_TENANT_FILTER })
+    const tours = await Tour.find({ isPublished: true, archivedAt: null, ...DEFAULT_TENANT_FILTER })
       .select('destination')
       .lean();
 
@@ -66,7 +67,7 @@ export async function GET(request: NextRequest) {
     );
 
     const destinationsWithCounts = (filterVisibleTaxonomyEntries(localizedDestinations) as DestinationListItem[])
-      .filter((dest) => (dest.tourCount || 0) > 0 || dest.featured)
+      .filter((dest) => (dest.tourCount || 0) > 0)
       .sort((a, b) => {
         // Featured first
         if (a.featured && !b.featured) return -1;

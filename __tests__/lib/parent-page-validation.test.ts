@@ -44,6 +44,23 @@ describe('parent-page validation', () => {
     expect(mockDestinationFindOne.mock.calls[0][0].$and[0]).toEqual(tenantFilter);
   });
 
+  it('resolves the allowlisted Egypt landing page without a database lookup', async () => {
+    const { validateParentPageSelection } = await import('@/lib/content/validateParentPage');
+    await expect(validateParentPageSelection({
+      parentPage: { id: 'landing:egypt', slug: 'spoofed', label: 'Spoofed', kind: 'landing' },
+      tenantFilter: { tenantId: 'default' },
+    })).resolves.toEqual({
+      id: 'landing:egypt',
+      slug: 'egypt',
+      label: 'Egypt',
+      kind: 'landing',
+      href: '/egypt',
+    });
+    expect(mockDestinationFindOne).not.toHaveBeenCalled();
+    expect(mockCategoryFindOne).not.toHaveBeenCalled();
+    expect(mockAttractionFindOne).not.toHaveBeenCalled();
+  });
+
   it('rejects unavailable, self-referential and cyclic parents', async () => {
     const { ParentPageValidationError, validateParentPageSelection } = await import('@/lib/content/validateParentPage');
     mockDestinationFindOne.mockReturnValueOnce(query(null));

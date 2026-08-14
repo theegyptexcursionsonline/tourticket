@@ -22,10 +22,12 @@ interface Props {
   image?: string;
   country?: string;
   tours?: Tour[];
+  urlType?: string;
+  parentPage?: { slug?: string } | null;
 }
 
-export default function DestinationSchema({ name, slug, description, image, country, tours = [] }: Props) {
-  const destUrl = `${BASE_URL}/destinations/${slug}`;
+export default function DestinationSchema({ name, slug, description, image, country, tours = [], urlType, parentPage }: Props) {
+  const destUrl = `${BASE_URL}${contentPath('destination', slug, urlType, null, parentPage?.slug)}`;
 
   const ld = {
     '@context': 'https://schema.org',

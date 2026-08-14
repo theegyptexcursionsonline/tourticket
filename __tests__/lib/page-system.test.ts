@@ -56,6 +56,18 @@ describe('page-system helpers', () => {
     ]);
   });
 
+  it('treats an explicitly selected Home parent as the breadcrumb root', () => {
+    expect(buildContentBreadcrumbs({
+      currentTitle: 'Nile cruise',
+      parentPage: null,
+      rootLabel: 'Tours',
+      rootHref: '/search',
+    })).toEqual([
+      { label: 'Home', href: '/' },
+      { label: 'Nile cruise' },
+    ]);
+  });
+
   it('renders the live tour page from the saved parent-aware breadcrumb contract', () => {
     const source = readFileSync(join(process.cwd(), 'app/[locale]/[slug]/TourDetailClientPage.tsx'), 'utf8');
 

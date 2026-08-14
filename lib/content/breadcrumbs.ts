@@ -21,7 +21,7 @@ export function buildContentBreadcrumbs({
   const items: BreadcrumbItem[] = [{ label: 'Home', href: '/' }];
   if (parentPage?.slug && parentPage.label) {
     items.push({ label: parentPage.label, href: parentPage.href || `/${parentPage.slug}` });
-  } else if (rootLabel && rootHref) {
+  } else if (parentPage === undefined && rootLabel && rootHref) {
     items.push({ label: rootLabel, href: rootHref });
   }
   items.push({ label: breadcrumbLabel?.trim() || currentTitle });

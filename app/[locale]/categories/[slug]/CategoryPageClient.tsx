@@ -18,6 +18,7 @@ import ContentBreadcrumbs from '@/components/navigation/ContentBreadcrumbs';
 import { normalizePageTemplate, type PageTemplate } from '@/lib/content/pageTemplate';
 import LinkedPageCardsSection from '@/components/content/LinkedPageCardsSection';
 import type { LinkedPageCard } from '@/lib/attractionPages/pageContent';
+import { contentPath } from '@/lib/content/contentUrl';
 
 type CategoryPageCopy = {
   searchToursPlaceholder: string;
@@ -182,6 +183,8 @@ type CategoryInsightDestination = {
   slug: string;
   image?: string;
   count: number;
+  urlType?: string;
+  parentPage?: { slug?: string } | null;
 };
 
 type CategoryFaqItem = {
@@ -471,7 +474,7 @@ const AboutSection = ({
                 {popularDestinations.map((destination) => (
                   <Link
                     key={destination.slug}
-                    href={`/destinations/${destination.slug}`}
+                    href={contentPath('destination', destination.slug, destination.urlType, null, destination.parentPage?.slug)}
                     className="group bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm hover:shadow-md transition-all"
                   >
                     <div className="relative h-40">
@@ -856,6 +859,8 @@ export default function CategoryPageClient({
                     name: destinationName,
                     slug: destinationSlug,
                     image: rawDestination.image,
+                    urlType: rawDestination.urlType,
+                    parentPage: rawDestination.parentPage,
                     count: (existing?.count || 0) + 1,
                 });
             }
@@ -886,6 +891,8 @@ export default function CategoryPageClient({
                 name: destination.name,
                 slug: destination.slug,
                 image: destination.image,
+                urlType: destination.urlType,
+                parentPage: destination.parentPage,
                 count: destinationMap.get(destination.slug)?.count || 0,
             }));
         const popularDestinations = curatedPopularDestinations.length > 0

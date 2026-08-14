@@ -5,6 +5,7 @@ type TaxonomyLike = {
   tourCount?: number | null;
   featured?: boolean | null;
   isPublished?: boolean | null;
+  archivedAt?: Date | string | null;
   image?: string | null;
   description?: string | null;
 };
@@ -61,6 +62,10 @@ export function filterVisibleTaxonomyEntries<T extends TaxonomyLike>(
     }
 
     if (item.isPublished === false) {
+      return false;
+    }
+
+    if (item.archivedAt) {
       return false;
     }
 

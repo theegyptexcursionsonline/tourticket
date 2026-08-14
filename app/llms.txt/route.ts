@@ -8,6 +8,7 @@ import dbConnect from '@/lib/dbConnect';
 import DestinationModel from '@/lib/models/Destination';
 import BlogModel from '@/lib/models/Blog';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
+import { contentPath } from '@/lib/content/contentUrl';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 3600;
@@ -32,13 +33,16 @@ export async function GET() {
   try {
     await dbConnect();
 
-    const dests = await DestinationModel.find({ ...DEFAULT_TENANT_FILTER }, { name: 1, slug: 1 })
+    const dests = await DestinationModel.find(
+      { isPublished: true, archivedAt: null, ...DEFAULT_TENANT_FILTER },
+      { name: 1, slug: 1, urlType: 1, parentPage: 1 },
+    )
       .limit(30)
       .lean();
     if (dests.length) {
       lines.push('## Destinations');
-      for (const d of dests as Array<{ name?: string; slug?: string }>) {
-        if (d.slug) lines.push(`- [${d.name ?? d.slug}](${BASE}/destinations/${d.slug})`);
+      for (const d of dests as Array<{ name?: string; slug?: string; urlType?: string; parentPage?: { slug?: string } | null }>) {
+        if (d.slug) lines.push(`- [${d.name ?? d.slug}](${BASE}${contentPath('destination', d.slug, d.urlType, null, d.parentPage?.slug)})`);
       }
       lines.push('');
     }

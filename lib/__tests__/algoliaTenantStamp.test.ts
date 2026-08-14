@@ -10,7 +10,7 @@
 
 jest.mock('algoliasearch', () => ({ algoliasearch: jest.fn() }));
 
-import { formatBlogForAlgolia, formatDestinationForAlgolia } from '../algolia';
+import { formatBlogForAlgolia, formatCategoryForAlgolia, formatDestinationForAlgolia } from '../algolia';
 import { searchHitBelongsToTenant } from '../tenantSearchHitFilter';
 
 describe('Algolia records carry their owning tenant', () => {
@@ -39,6 +39,35 @@ describe('Algolia records carry their owning tenant', () => {
 
     expect(searchHitBelongsToTenant(mine, 'default')).toBe(true);
     expect(searchHitBelongsToTenant(theirs, 'default')).toBe(false);
+  });
+
+  it('preserves canonical navigation metadata for destination and category search hits', () => {
+    const destination = formatDestinationForAlgolia({
+      _id: 'd1',
+      name: 'Luxor',
+      slug: 'luxor',
+      urlType: 'direct',
+      parentPage: { slug: 'egypt' },
+    });
+    const category = formatCategoryForAlgolia({
+      _id: 'c1',
+      name: 'Desert Safari',
+      slug: 'desert-safari',
+      urlType: 'direct',
+      parentPage: { slug: 'egypt' },
+    });
+
+    expect(destination).toEqual(expect.objectContaining({
+      urlType: 'direct',
+      parentPage: { slug: 'egypt' },
+      archivedAt: null,
+    }));
+    expect(category).toEqual(expect.objectContaining({
+      tenantId: 'default',
+      urlType: 'direct',
+      parentPage: { slug: 'egypt' },
+      archivedAt: null,
+    }));
   });
 
   it('keeps a foreign-tenant blog out of a default-site result set', () => {
