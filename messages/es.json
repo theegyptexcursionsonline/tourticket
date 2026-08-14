@@ -449,6 +449,39 @@
       "description": "Restablece tu contrasena para recuperar el acceso a tu cuenta."
     }
   },
+  "resetPasswordPage": {
+    "loading": "Cargando el restablecimiento seguro de contraseña",
+    "eyebrow": "RECUPERACIÓN SEGURA DE LA CUENTA",
+    "title": "Elige una nueva contraseña",
+    "subtitle": "Usa el enlace más reciente de tu correo de restablecimiento. Caduca después de 15 minutos.",
+    "subtitleWithEmail": "Elige una nueva contraseña para {email}. Este enlace caduca después de 15 minutos.",
+    "newPassword": "Nueva contraseña",
+    "confirmPassword": "Confirmar nueva contraseña",
+    "passwordPlaceholder": "De 8 a 128 caracteres",
+    "confirmPlaceholder": "Escríbela de nuevo",
+    "showPassword": "Mostrar contraseña",
+    "hidePassword": "Ocultar contraseña",
+    "securityNote": "Por seguridad, al restablecerla se cerrarán las sesiones existentes.",
+    "updatePassword": "Actualizar contraseña",
+    "updating": "Actualizando contraseña...",
+    "backToLogin": "Volver a iniciar sesión",
+    "invalid": {
+      "title": "Este enlace está incompleto",
+      "description": "Solicita un nuevo correo de restablecimiento y usa el enlace más reciente.",
+      "requestNew": "Solicitar un nuevo enlace"
+    },
+    "success": {
+      "title": "Contraseña actualizada",
+      "description": "Tus sesiones anteriores se han cerrado. Inicia sesión de nuevo con tu nueva contraseña.",
+      "signIn": "Continuar para iniciar sesión"
+    },
+    "errors": {
+      "invalidLink": "Este enlace no es válido o está incompleto.",
+      "passwordLength": "La contraseña debe tener entre 8 y 128 caracteres.",
+      "passwordMismatch": "Las contraseñas no coinciden.",
+      "unavailable": "El restablecimiento no está disponible temporalmente. Inténtalo más tarde."
+    }
+  },
   "notFoundPage": {
     "title": "Pagina no encontrada",
     "descriptionPrefix": "La pagina que buscas en",

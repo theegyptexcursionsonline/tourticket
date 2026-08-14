@@ -49,7 +49,17 @@ const copy: Record<string, { label: string; kicker: string; placeholder: string 
 
 // Offer pages are single-CTA landing surfaces — the launcher competes with
 // the code panel there (client-reported on the network offer pages, 13 Aug).
-const HIDDEN_ROUTES = ['/admin', '/checkout', '/booking', '/payment', '/login', '/signup', '/offer'];
+const HIDDEN_ROUTES = [
+  '/admin',
+  '/checkout',
+  '/booking',
+  '/payment',
+  '/login',
+  '/signup',
+  '/forgot',
+  '/reset-password',
+  '/offer',
+];
 
 export default function EEOSearchConcierge() {
   const pathname = usePathname() || '';

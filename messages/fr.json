@@ -449,6 +449,39 @@
       "description": "Reinitialisez votre mot de passe pour retrouver l acces a votre compte."
     }
   },
+  "resetPasswordPage": {
+    "loading": "Chargement de la réinitialisation sécurisée",
+    "eyebrow": "RÉCUPÉRATION SÉCURISÉE DU COMPTE",
+    "title": "Choisissez un nouveau mot de passe",
+    "subtitle": "Utilisez le lien le plus récent de votre e-mail. Il expire après 15 minutes.",
+    "subtitleWithEmail": "Choisissez un nouveau mot de passe pour {email}. Ce lien expire après 15 minutes.",
+    "newPassword": "Nouveau mot de passe",
+    "confirmPassword": "Confirmer le nouveau mot de passe",
+    "passwordPlaceholder": "8 à 128 caractères",
+    "confirmPlaceholder": "Saisissez-le à nouveau",
+    "showPassword": "Afficher le mot de passe",
+    "hidePassword": "Masquer le mot de passe",
+    "securityNote": "Pour votre sécurité, une réinitialisation réussie ferme les sessions existantes.",
+    "updatePassword": "Mettre à jour le mot de passe",
+    "updating": "Mise à jour du mot de passe...",
+    "backToLogin": "Retour à la connexion",
+    "invalid": {
+      "title": "Ce lien est incomplet",
+      "description": "Demandez un nouvel e-mail de réinitialisation et utilisez son lien le plus récent.",
+      "requestNew": "Demander un nouveau lien"
+    },
+    "success": {
+      "title": "Mot de passe mis à jour",
+      "description": "Vos sessions précédentes ont été fermées. Connectez-vous avec votre nouveau mot de passe.",
+      "signIn": "Continuer vers la connexion"
+    },
+    "errors": {
+      "invalidLink": "Ce lien est invalide ou incomplet.",
+      "passwordLength": "Le mot de passe doit contenir entre 8 et 128 caractères.",
+      "passwordMismatch": "Les mots de passe ne correspondent pas.",
+      "unavailable": "La réinitialisation est temporairement indisponible. Réessayez plus tard."
+    }
+  },
   "notFoundPage": {
     "title": "Page introuvable",
     "descriptionPrefix": "La page que vous recherchez sur",

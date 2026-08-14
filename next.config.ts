@@ -181,6 +181,24 @@ const nextConfig = {
         ],
       },
       {
+        // Password reset links carry a short-lived account capability. Keep it
+        // out of referrers, caches and search indexes before client hydration.
+        source: '/reset-password',
+        headers: [
+          { key: 'Cache-Control', value: 'no-store, max-age=0' },
+          { key: 'Referrer-Policy', value: 'no-referrer' },
+          { key: 'X-Robots-Tag', value: 'noindex, nofollow, noarchive' },
+        ],
+      },
+      {
+        source: '/:locale(en|ar|es|fr|de)/reset-password',
+        headers: [
+          { key: 'Cache-Control', value: 'no-store, max-age=0' },
+          { key: 'Referrer-Policy', value: 'no-referrer' },
+          { key: 'X-Robots-Tag', value: 'noindex, nofollow, noarchive' },
+        ],
+      },
+      {
         // Static assets - long-term caching
         source: '/images/(.*)',
         headers: [

@@ -449,6 +449,39 @@
       "description": "Reset your password to regain access to your account. Enter your email and we will send you a password reset link."
     }
   },
+  "resetPasswordPage": {
+    "loading": "Loading secure password reset",
+    "eyebrow": "SECURE ACCOUNT RECOVERY",
+    "title": "Choose a new password",
+    "subtitle": "Use the latest link from your reset email. It expires after 15 minutes.",
+    "subtitleWithEmail": "Choose a new password for {email}. This link expires after 15 minutes.",
+    "newPassword": "New password",
+    "confirmPassword": "Confirm new password",
+    "passwordPlaceholder": "8 to 128 characters",
+    "confirmPlaceholder": "Enter it again",
+    "showPassword": "Show password",
+    "hidePassword": "Hide password",
+    "securityNote": "For your security, a successful reset signs out existing sessions.",
+    "updatePassword": "Update password",
+    "updating": "Updating password...",
+    "backToLogin": "Back to login",
+    "invalid": {
+      "title": "This reset link is incomplete",
+      "description": "Request a fresh password reset email and use its latest link.",
+      "requestNew": "Request a new reset link"
+    },
+    "success": {
+      "title": "Password updated",
+      "description": "Your previous sessions have been signed out. Sign in again with your new password.",
+      "signIn": "Continue to sign in"
+    },
+    "errors": {
+      "invalidLink": "This reset link is invalid or incomplete.",
+      "passwordLength": "Password must be between 8 and 128 characters.",
+      "passwordMismatch": "Passwords do not match.",
+      "unavailable": "Password reset is temporarily unavailable. Please try again later."
+    }
+  },
   "notFoundPage": {
     "title": "Page not found",
     "descriptionPrefix": "The page you're looking for on",

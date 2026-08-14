@@ -449,6 +449,39 @@
       "description": "Setzen Sie Ihr Passwort zuruck, um wieder Zugriff auf Ihr Konto zu erhalten."
     }
   },
+  "resetPasswordPage": {
+    "loading": "Sichere Passwortänderung wird geladen",
+    "eyebrow": "SICHERE KONTOWIEDERHERSTELLUNG",
+    "title": "Neues Passwort wählen",
+    "subtitle": "Verwenden Sie den neuesten Link aus Ihrer E-Mail. Er läuft nach 15 Minuten ab.",
+    "subtitleWithEmail": "Wählen Sie ein neues Passwort für {email}. Dieser Link läuft nach 15 Minuten ab.",
+    "newPassword": "Neues Passwort",
+    "confirmPassword": "Neues Passwort bestätigen",
+    "passwordPlaceholder": "8 bis 128 Zeichen",
+    "confirmPlaceholder": "Erneut eingeben",
+    "showPassword": "Passwort anzeigen",
+    "hidePassword": "Passwort ausblenden",
+    "securityNote": "Zu Ihrer Sicherheit werden bei erfolgreicher Änderung bestehende Sitzungen beendet.",
+    "updatePassword": "Passwort aktualisieren",
+    "updating": "Passwort wird aktualisiert...",
+    "backToLogin": "Zurück zur Anmeldung",
+    "invalid": {
+      "title": "Dieser Link ist unvollständig",
+      "description": "Fordern Sie eine neue E-Mail an und verwenden Sie den neuesten Link.",
+      "requestNew": "Neuen Link anfordern"
+    },
+    "success": {
+      "title": "Passwort aktualisiert",
+      "description": "Ihre vorherigen Sitzungen wurden beendet. Melden Sie sich mit dem neuen Passwort an.",
+      "signIn": "Weiter zur Anmeldung"
+    },
+    "errors": {
+      "invalidLink": "Dieser Link ist ungültig oder unvollständig.",
+      "passwordLength": "Das Passwort muss zwischen 8 und 128 Zeichen lang sein.",
+      "passwordMismatch": "Die Passwörter stimmen nicht überein.",
+      "unavailable": "Die Passwortänderung ist vorübergehend nicht verfügbar. Bitte versuchen Sie es später erneut."
+    }
+  },
   "notFoundPage": {
     "title": "Seite nicht gefunden",
     "descriptionPrefix": "Die gesuchte Seite auf",

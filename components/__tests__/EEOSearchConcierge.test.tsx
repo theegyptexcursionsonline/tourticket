@@ -78,7 +78,14 @@ describe('EEOSearchConcierge', () => {
     });
   });
 
-  it.each(['/en/checkout', '/ar/booking/abc', '/de/payment', '/en/admin']) (
+  it.each([
+    '/en/checkout',
+    '/ar/booking/abc',
+    '/de/payment',
+    '/en/admin',
+    '/fr/forgot',
+    '/es/reset-password',
+  ]) (
     'does not load on sensitive route %s',
     async (route) => {
       pathname = route;
