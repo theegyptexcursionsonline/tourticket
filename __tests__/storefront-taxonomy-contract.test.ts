@@ -52,7 +52,8 @@ describe('storefront taxonomy cleanup', () => {
     expect(tours).toContain("export const dynamic = 'force-dynamic'");
     expect(tours).toContain("'pricingSummary'");
     expect(tours).toContain("'translations'");
-    expect(tours).toContain(".populate('categories', 'name translations')");
+    expect(tours).toContain('localizedTour.categories = [localizedTour.category]');
+    expect(tours).not.toContain(".populate('categories'");
     expect(tours).not.toContain("slug: { $in: candidateSlugs }");
   });
 

@@ -105,7 +105,6 @@ async function getAllTours(locale: string): Promise<ITour[]> {
         'urlType',
         'destination',
         'category',
-        'categories',
         'translations',
         'language',
         'tenantId',
@@ -113,7 +112,6 @@ async function getAllTours(locale: string): Promise<ITour[]> {
       ].join(' '))
       .populate('destination', 'name description country translations')
       .populate('category', 'name description longDescription translations')
-      .populate('categories', 'name translations')
       .sort({ featured: -1, createdAt: -1 }) // Featured first, then most recent
       .lean();
 
@@ -157,6 +155,10 @@ async function getAllTours(locale: string): Promise<ITour[]> {
           locale,
           ['name', 'description', 'longDescription', 'metaTitle', 'metaDescription']
         );
+        // The Tour schema has one canonical category. The client card/filter
+        // contract accepts an array, so derive it without populating a
+        // non-existent `categories` path.
+        localizedTour.categories = [localizedTour.category];
       }
 
       if (Array.isArray(localizedTour.categories)) {
