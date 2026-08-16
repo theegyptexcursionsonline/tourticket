@@ -43,8 +43,16 @@ describe('storefront taxonomy cleanup', () => {
 
   it('keeps the tours index tenant-scoped and excludes archived tours', () => {
     const tours = source('app/[locale]/tours/page.tsx');
-    expect(tours.match(/archivedAt: null/g)?.length).toBeGreaterThanOrEqual(2);
-    expect(tours.match(/\.\.\.DEFAULT_TENANT_FILTER/g)?.length).toBeGreaterThanOrEqual(2);
+    expect(tours).toContain('archivedAt: null');
+    expect(tours).toContain('...DEFAULT_TENANT_FILTER');
+  });
+
+  it('keeps the tours index response within the storefront card contract', () => {
+    const tours = source('app/[locale]/tours/page.tsx');
+    expect(tours).toContain("'pricingSummary'");
+    expect(tours).toContain("'translations'");
+    expect(tours).toContain(".populate('categories', 'name translations')");
+    expect(tours).not.toContain("slug: { $in: candidateSlugs }");
   });
 
   it('keeps dark-mode practical-information text readable', () => {

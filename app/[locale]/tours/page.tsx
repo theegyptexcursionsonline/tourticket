@@ -82,9 +82,35 @@ async function getAllTours(locale: string): Promise<ITour[]> {
   try {
     await dbConnect();
 
+    // The index only renders card/search fields. Loading every tour's full
+    // itinerary, FAQs, add-ons and booking configuration pushed the Netlify
+    // response past the public proxy deadline as the catalogue grew.
     const baseTours = await Tour.find({ isPublished: true, archivedAt: null, ...DEFAULT_TENANT_FILTER })
+      .select([
+        'title',
+        'description',
+        'slug',
+        'image',
+        'pricingSummary',
+        'discountPrice',
+        'originalPrice',
+        'rating',
+        'reviewCount',
+        'duration',
+        'isFeatured',
+        'featured',
+        'urlType',
+        'destination',
+        'category',
+        'categories',
+        'translations',
+        'language',
+        'tenantId',
+        'createdAt',
+      ].join(' '))
       .populate('destination', 'name description country translations')
       .populate('category', 'name description longDescription translations')
+      .populate('categories', 'name translations')
       .sort({ featured: -1, createdAt: -1 }) // Featured first, then most recent
       .lean();
 
@@ -93,24 +119,8 @@ async function getAllTours(locale: string): Promise<ITour[]> {
       .map((tour) => String(tour.slug || ''))
       .filter(Boolean);
 
-    let serializedCandidates = serializedBaseTours;
-
-    if (locale.startsWith('de') && candidateSlugs.length > 0) {
-      const localizedCandidates = await Tour.find({
-        isPublished: true,
-        archivedAt: null,
-        ...DEFAULT_TENANT_FILTER,
-        slug: { $in: candidateSlugs },
-      })
-        .populate('destination', 'name description country translations')
-        .populate('category', 'name description longDescription translations')
-        .lean();
-
-      serializedCandidates = JSON.parse(JSON.stringify(localizedCandidates)) as Record<string, unknown>[];
-    }
-
     const filteredTours = selectLocalizedTours(
-      serializedCandidates.filter((tour) => candidateSlugs.includes(String(tour.slug || ''))),
+      serializedBaseTours.filter((tour) => candidateSlugs.includes(String(tour.slug || ''))),
       locale
     );
 
