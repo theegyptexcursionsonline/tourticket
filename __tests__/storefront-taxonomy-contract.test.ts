@@ -49,6 +49,7 @@ describe('storefront taxonomy cleanup', () => {
 
   it('keeps the tours index response within the storefront card contract', () => {
     const tours = source('app/[locale]/tours/page.tsx');
+    expect(tours).toContain("export const dynamic = 'force-dynamic'");
     expect(tours).toContain("'pricingSummary'");
     expect(tours).toContain("'translations'");
     expect(tours).toContain(".populate('categories', 'name translations')");

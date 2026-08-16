@@ -12,8 +12,11 @@ import { localizeEntityFields } from '@/lib/i18n/contentLocalization';
 import { selectLocalizedTours } from '@/lib/i18n/localizedCollections';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 
-// Enable ISR with 60 second revalidation for instant page loads
-export const revalidate = 1800; // 30 min — storefront content; edge serves stale-while-revalidate so clicks stay instant
+// Netlify exposes the production database only to the runtime function. Static
+// generation therefore produced and cached an empty catalogue at deploy time.
+// Keep this route runtime-rendered; the card-only projection below keeps it
+// inside the public response budget without shipping full tour documents.
+export const dynamic = 'force-dynamic';
 
 const toursPageMeta = {
   en: {
