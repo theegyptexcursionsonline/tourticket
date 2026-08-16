@@ -10,10 +10,17 @@ export function proxy(request: NextRequest) {
   const hostname = request.headers.get('host') || '';
   const pathname = request.nextUrl.pathname;
 
+  const isDashboardSubdomain =
+    hostname.startsWith('dashboard.') ||
+    hostname.startsWith('dashboard2.') ||
+    hostname.startsWith('admin.');
+
   // Netlify executes this proxy before Next.js config rewrites. Preserve old
-  // shared/search links while sending visitors to the canonical root URL.
+  // shared/search links while sending storefront visitors to the canonical
+  // root URL. Dashboard paths such as /tours/new are application routes, not
+  // legacy public-tour links.
   const legacyTourMatch = pathname.match(/^\/tours\/([^/]+)\/?$/);
-  if (legacyTourMatch) {
+  if (!isDashboardSubdomain && legacyTourMatch) {
     const url = request.nextUrl.clone();
     url.pathname = `/${legacyTourMatch[1]}`;
     return NextResponse.redirect(url, 308);
@@ -27,11 +34,6 @@ export function proxy(request: NextRequest) {
     normalizedHostname === '[::1]';
 
   // Subdomain routing: dashboard/dashboard2/admin.* → /admin
-  const isDashboardSubdomain =
-    hostname.startsWith('dashboard.') ||
-    hostname.startsWith('dashboard2.') ||
-    hostname.startsWith('admin.');
-
   // Paths that must resolve at the root (NOT be rewritten under /admin)
   // even when served from a dashboard subdomain. Keep /monitoring as a
   // passthrough for cached clients that still post to the old Sentry tunnel.
