@@ -49,6 +49,7 @@ import {
 import { meetingPointEmbedUrl, meetingPointMapUrl } from '@/lib/tours/meetingPointMap';
 import { effectiveTourPrice } from '@/lib/pricing/effectivePrice';
 import { provableRating, ratingLabel, reviewCountLabel } from '@/lib/tours/ratingDisplay';
+import { requestHostedAISearch } from '@/lib/hostedAISearch';
 
 // Enhanced interfaces for additional tour data
 interface ItineraryItem {
@@ -80,12 +81,6 @@ interface FAQ {
 }
 
 type Review = ReviewData;
-
-declare global {
-  interface Window {
-    FoxesConnect?: { open: () => void };
-  }
-}
 
 interface TourEnhancement {
   itinerary?: ItineraryItem[];
@@ -1654,20 +1649,11 @@ export default function TourPageClient({ tour, relatedTours, initialReviews = []
                     <button 
                       onClick={(e) => {
                         e.preventDefault();
-                        try {
-                          if (window.FoxesConnect && typeof window.FoxesConnect.open === 'function') {
-        window.FoxesConnect.open();
-        return;
-      }
-                          if (typeof window !== 'undefined') {
-                            window.dispatchEvent(new CustomEvent('open-chatbot'));
-                          }
-                        } catch (err) {
-                          console.error('Failed to open support chat:', err);
-                          if (typeof window !== 'undefined') {
-                            window.dispatchEvent(new CustomEvent('open-chatbot'));
-                          }
-                        }
+                        requestHostedAISearch({
+                          query: `Tell me more about ${tour.title}`,
+                          mode: 'ai',
+                          locale: document.documentElement.lang.split('-')[0],
+                        });
                       }}
                       className="flex items-center gap-3 text-slate-600 hover:text-red-600 transition-colors w-full text-left"
                     >

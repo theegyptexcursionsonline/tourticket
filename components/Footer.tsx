@@ -9,7 +9,7 @@ import { useNavData } from '@/contexts/NavDataContext';
 import toast from 'react-hot-toast';
 import { useLocale, useTranslations } from 'next-intl';
 import { isRTL } from '@/i18n/config';
-import type { EeoWindow } from './componentTypes';
+import { requestHostedAISearch } from '@/lib/hostedAISearch';
 
 // Import the single, consolidated switcher component
 import CurrencyLanguageSwitcher from '@/components/shared/CurrencyLanguageSwitcher';
@@ -84,32 +84,6 @@ export default function Footer() {
     return () => window.removeEventListener('keydown', onKey);
   }, [showAppModal]);
 
-  // Listen for open-chatbot events (dispatched by openChatbot)
-  useEffect(() => {
-    const handler = () => {
-      // Open the FoxesConnect support widget
-      try {
-        const supportWindow = window as EeoWindow;
-        if (supportWindow.FoxesConnect?.open) {
-          supportWindow.FoxesConnect.open();
-          return;
-        }
-        console.warn('Support widget not loaded yet');
-      } catch (err) {
-        console.error('Failed to open support chat:', err);
-      }
-    };
-
-    if (typeof window !== 'undefined') {
-      window.addEventListener('open-chatbot', handler as EventListener);
-    }
-    return () => {
-      if (typeof window !== 'undefined') {
-        window.removeEventListener('open-chatbot', handler as EventListener);
-      }
-    };
-  }, []);
-
   const handleSubscribe = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!email.trim()) {
@@ -151,24 +125,11 @@ export default function Footer() {
 
   const openChatbot = (e?: React.MouseEvent) => {
     if (e) e.preventDefault();
-    // Open the FoxesConnect support widget. The embed loads async, so retry
-    // briefly if a visitor clicks immediately after page load.
-    try {
-      const win = window as EeoWindow;
-      if (win.FoxesConnect?.open) {
-        win.FoxesConnect.open();
-        return;
-      }
-      setTimeout(() => {
-        if (win.FoxesConnect?.open) {
-          win.FoxesConnect.open();
-        } else {
-          window.dispatchEvent(new CustomEvent('open-chatbot'));
-        }
-      }, 600);
-    } catch {
-      window.dispatchEvent(new CustomEvent('open-chatbot'));
-    }
+    requestHostedAISearch({
+      query: '',
+      mode: 'ai',
+      locale,
+    });
   };
 
   return (

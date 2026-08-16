@@ -1,5 +1,5 @@
 import React from 'react'
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import Footer from '../Footer'
 
 // Mock the useSettings hook
@@ -19,6 +19,10 @@ jest.mock('@/hooks/useSettings', () => ({
 }))
 
 describe('Footer', () => {
+  afterEach(() => {
+    window.__foxesSearchPending = null
+  })
+
   it('should render footer', () => {
     render(<Footer />)
     expect(screen.getByRole('contentinfo') || document.querySelector('footer')).toBeInTheDocument()
@@ -53,5 +57,20 @@ describe('Footer', () => {
     links.forEach(link => {
       expect(link).toHaveAttribute('href')
     })
+  })
+
+  it('routes the chat action into the one hosted AI Search surface', () => {
+    const opened = jest.fn()
+    window.addEventListener('foxes:search:open', opened, { once: true })
+    render(<Footer />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Open chat' }))
+
+    expect(opened).toHaveBeenCalledTimes(1)
+    expect((opened.mock.calls[0][0] as CustomEvent).detail).toEqual(expect.objectContaining({
+      query: '',
+      mode: 'ai',
+      locale: 'en',
+    }))
   })
 })

@@ -11,15 +11,13 @@ import Script from 'next/script';
 // Reusable Header and Footer components
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import { requestHostedAISearch } from '@/lib/hostedAISearch';
 
 // Extend Window interface for reCAPTCHA
 declare global {
   interface Window {
     grecaptcha?: {
       execute: (siteKey: string, options: { action: string }) => Promise<string>;
-    };
-    FoxesConnect?: {
-      open: () => void;
     };
   }
 }
@@ -159,23 +157,11 @@ export default function ContactClientPage() {
 
   const openChatbot = (e: React.MouseEvent) => {
     e.preventDefault();
-    // Open the FoxesConnect support widget
-    try {
-      if (window.FoxesConnect && typeof window.FoxesConnect.open === 'function') {
-        window.FoxesConnect.open();
-        return;
-      }
-      // Fallback to event dispatch
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('open-chatbot'));
-      }
-    } catch (err) {
-      console.error('Failed to open support chat:', err);
-      // Fallback to event dispatch
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('open-chatbot'));
-      }
-    }
+    requestHostedAISearch({
+      query: '',
+      mode: 'ai',
+      locale: document.documentElement.lang.split('-')[0],
+    });
   };
   
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {

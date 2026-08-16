@@ -36,7 +36,7 @@ import { useCart } from '@/hooks/useCart';
 import { Tour, CartItem, Review as ReviewType, FAQ } from '@/types';
 import { toDateOnlyString } from '@/utils/date';
 import type { LucideIcon } from 'lucide-react';
-import type { EeoWindow } from './componentTypes';
+import { requestHostedAISearch } from '@/lib/hostedAISearch';
 import { contentPath } from '@/lib/content/contentUrl';
 import { buildContentBreadcrumbs } from '@/lib/content/breadcrumbs';
 import ContentBreadcrumbs from '@/components/navigation/ContentBreadcrumbs';
@@ -1381,25 +1381,11 @@ export default function TourPageClient({ tour, relatedTours, initialReviews }: T
                     <button 
                       onClick={(e) => {
                         e.preventDefault();
-                        try {
-                          const supportWindow = window as EeoWindow;
-                          if (typeof supportWindow.openIntercom === 'function') {
-                            supportWindow.openIntercom();
-                            return;
-                          }
-                          if (typeof window.Intercom === 'function') {
-                            window.Intercom('show');
-                            return;
-                          }
-                          if (typeof window !== 'undefined') {
-                            window.dispatchEvent(new CustomEvent('open-chatbot'));
-                          }
-                        } catch (err) {
-                          console.error('Failed to open Intercom:', err);
-                          if (typeof window !== 'undefined') {
-                            window.dispatchEvent(new CustomEvent('open-chatbot'));
-                          }
-                        }
+                        requestHostedAISearch({
+                          query: `Tell me more about ${tour.title}`,
+                          mode: 'ai',
+                          locale: document.documentElement.lang.split('-')[0],
+                        });
                       }}
                       className="flex items-center gap-3 text-slate-600 hover:text-red-600 transition-colors w-full text-left"
                     >

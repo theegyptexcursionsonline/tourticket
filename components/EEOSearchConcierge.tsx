@@ -17,7 +17,7 @@ const MOBILE_BOOKING_BAR_SELECTOR = '[data-mobile-booking-bar="true"]';
 const MOBILE_ACTION_GAP_PX = 12;
 // The launcher is served through the customer CDN. A release token prevents a
 // previously cached widget bundle from surviving a Search UI rollout.
-const LAUNCHER_RELEASE = '20260814-load-recovery-v1';
+const LAUNCHER_RELEASE = '20260816-collapsible-single-widget-v1';
 
 const copy: Record<string, { label: string; kicker: string; placeholder: string }> = {
   en: {
@@ -152,6 +152,8 @@ export default function EEOSearchConcierge() {
     script.dataset.dir = locale === 'ar' ? 'rtl' : 'ltr';
     script.dataset.locale = locale;
     script.dataset.rememberDismiss = 'false';
+    script.dataset.collapsible = 'true';
+    script.dataset.rememberCollapse = 'true';
     document.body.appendChild(script);
 
     dialogObserver = new MutationObserver(scheduleSync);
