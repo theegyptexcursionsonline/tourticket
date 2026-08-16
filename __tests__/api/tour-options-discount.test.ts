@@ -60,7 +60,7 @@ const discountedTour = {
       price: 150,
       applyTourDiscount: true,
       timeSlots: [
-        { time: '14:00', capacity: 6, price: 200 },
+        { time: '14:00', capacity: 6, price: 200, guestPrices: { child: 100, infant: 20 } },
         { time: '16:00' },
       ],
     },
@@ -104,6 +104,7 @@ describe('GET /api/tours/[tourId]/options quotes exactly what checkout charges',
 
     const slot14 = priv.timeSlots.find((slot: { time: string }) => slot.time === '14:00');
     expect(slot14.price).toBe(160); // 200 - 20%
+    expect(slot14.guestPrices).toEqual({ adult: 160, child: 80, infant: 16 });
     expect(slot14.originalPrice).toBe(200);
     expect(slot14.price).toBe(authoritativeBasePrice(discountedTour, {
       selectedBookingOption: { pricingKey: 'private-key' },

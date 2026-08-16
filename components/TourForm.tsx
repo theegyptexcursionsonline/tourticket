@@ -86,6 +86,7 @@ interface TimeSlot {
     time: string;
     capacity: number;
     price?: number;
+    guestPrices?: { child?: number; infant?: number };
 }
 
 interface Availability {
@@ -118,7 +119,7 @@ interface BookingOption {
     discount?: number;
     isRecommended?: boolean;
     applyTourDiscount?: boolean;
-    timeSlots?: Array<{ time: string; capacity?: number; price?: number }>;
+    timeSlots?: Array<{ time: string; capacity?: number; price?: number; guestPrices?: { child?: number; infant?: number } }>;
 }
 
 interface ItineraryItem {
@@ -330,6 +331,19 @@ const AvailabilityManager = ({ availability, setAvailability, CurrencyIcon }: { 
         setAvailability({ ...availability, slots: newSlots });
     };
 
+    const handleSlotGuestPriceChange = (index: number, guest: 'child' | 'infant', value: string) => {
+        const newSlots = [...(availability.slots || [])];
+        const slot = newSlots[index];
+        const guestPrices = { ...slot.guestPrices };
+        if (value === '') delete guestPrices[guest];
+        else guestPrices[guest] = Number(value);
+        newSlots[index] = {
+            ...slot,
+            guestPrices: Object.keys(guestPrices).length > 0 ? guestPrices : undefined,
+        };
+        setAvailability({ ...availability, slots: newSlots });
+    };
+
     const addSlot = () => {
         const newSlots = [...(availability.slots || []), { time: '12:00', capacity: 10 }];
         setAvailability({ ...availability, slots: newSlots });
@@ -400,10 +414,10 @@ const AvailabilityManager = ({ availability, setAvailability, CurrencyIcon }: { 
                     {(availability?.slots || []).map((slot: TimeSlot, index: number) => (
                         <div 
                             key={index} 
-                            className="group flex items-center gap-4 p-4 bg-white rounded-xl border border-slate-200 hover:border-indigo-300 transition-all duration-200 hover:shadow-md"
+                            className="group grid grid-cols-1 gap-4 rounded-xl border border-slate-200 bg-white p-4 transition-all duration-200 hover:border-indigo-300 hover:shadow-md sm:grid-cols-2 xl:grid-cols-6"
                         >
                             {/* Time Input */}
-                            <div className="flex-1">
+                            <div>
                                 <label className="block text-xs font-medium text-slate-500 mb-1">Time</label>
                                 <div className="relative">
                                     <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
@@ -417,7 +431,7 @@ const AvailabilityManager = ({ availability, setAvailability, CurrencyIcon }: { 
                             </div>
 
                             {/* Capacity Input */}
-                            <div className="flex-1">
+                            <div>
                                 <label className="block text-xs font-medium text-slate-500 mb-1">Capacity</label>
                                 <div className="relative">
                                     <Users className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
@@ -432,8 +446,8 @@ const AvailabilityManager = ({ availability, setAvailability, CurrencyIcon }: { 
                                 </div>
                             </div>
 
-                            <div className="flex-1">
-                                <label className="block text-xs font-medium text-slate-500 mb-1">Base slot price (optional)</label>
+                            <div>
+                                <label className="block text-xs font-medium text-slate-500 mb-1">Adult price (optional)</label>
                                 <div className="relative">
                                     <CurrencyIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
                                     <input
@@ -447,10 +461,25 @@ const AvailabilityManager = ({ availability, setAvailability, CurrencyIcon }: { 
                                             e.target.value === '' ? undefined : Number(e.target.value),
                                         )}
                                         className={`${inputBase} pl-10`}
-                                        placeholder="Use tour price"
+                                        placeholder="Use adult base"
                                     />
                                 </div>
                             </div>
+
+                            {(['child', 'infant'] as const).map((guest) => (
+                                <div key={guest}>
+                                    <label className="mb-1 block text-xs font-medium capitalize text-slate-500">{guest} price (optional)</label>
+                                    <input
+                                        type="number"
+                                        step="0.01"
+                                        min="0"
+                                        value={slot.guestPrices?.[guest] ?? ''}
+                                        onChange={(event) => handleSlotGuestPriceChange(index, guest, event.target.value)}
+                                        className={inputBase}
+                                        placeholder={`Use ${guest} base`}
+                                    />
+                                </div>
+                            ))}
 
                             {/* Remove Button */}
                             <button 
@@ -644,6 +673,7 @@ export default function TourForm({ tourToEdit, onSave }: { tourToEdit?: Tour, on
                                 time: slot.time,
                                 capacity: slot.capacity,
                                 price: slot.price,
+                                guestPrices: slot.guestPrices,
                             })),
                         isRecommended: option.isRecommended || false
                     }))
@@ -667,6 +697,7 @@ export default function TourForm({ tourToEdit, onSave }: { tourToEdit?: Tour, on
                             time: slot.time,
                             capacity: slot.capacity,
                             price: slot.price,
+                            guestPrices: slot.guestPrices,
                         })),
                         isRecommended: false
                     }],
@@ -995,7 +1026,7 @@ const addItineraryItem = () => {
         const isSelected = currentSlots.some((entry) => entry.time === slot.time);
         const nextSlots = isSelected
             ? currentSlots.filter((entry) => entry.time !== slot.time)
-            : [...currentSlots, { time: slot.time, capacity: slot.capacity, price: slot.price }];
+            : [...currentSlots, { time: slot.time, capacity: slot.capacity, price: slot.price, guestPrices: slot.guestPrices }];
         updatedOptions[optionIndex] = { ...option, timeSlots: nextSlots };
         setFormData((previous) => ({ ...previous, bookingOptions: updatedOptions }));
     };
@@ -1014,6 +1045,22 @@ const addItineraryItem = () => {
         setFormData((previous) => ({ ...previous, bookingOptions: updatedOptions }));
     };
 
+    const handleBookingOptionSlotGuestPrice = (optionIndex: number, time: string, guest: 'child' | 'infant', value: string) => {
+        const updatedOptions = [...formData.bookingOptions];
+        const option = updatedOptions[optionIndex];
+        updatedOptions[optionIndex] = {
+            ...option,
+            timeSlots: (option.timeSlots || []).map((slot) => {
+                if (slot.time !== time) return slot;
+                const guestPrices = { ...slot.guestPrices };
+                if (value === '') delete guestPrices[guest];
+                else guestPrices[guest] = Number(value);
+                return { ...slot, guestPrices: Object.keys(guestPrices).length > 0 ? guestPrices : undefined };
+            }),
+        };
+        setFormData((previous) => ({ ...previous, bookingOptions: updatedOptions }));
+    };
+
     const addBookingOption = () => {
         const clientKey = `draft-option-${Date.now()}-${formData.bookingOptions.length + 1}`;
         setFormData((p) => ({
@@ -1028,6 +1075,7 @@ const addItineraryItem = () => {
                     time: slot.time,
                     capacity: slot.capacity,
                     price: slot.price,
+                    guestPrices: slot.guestPrices,
                 })),
             }]
         }));
@@ -1285,7 +1333,15 @@ const addItineraryItem = () => {
                 localCustoms: cleanedData.localCustoms.filter((item) => item.trim()),
                 notSuitableFor: cleanedData.notSuitableFor.filter((item) => item.trim()),
                 needToKnow: cleanedData.needToKnow.filter((item) => item.trim()),
-                itinerary: Array.isArray(cleanedData.itinerary) ? cleanedData.itinerary.filter((item: ItineraryItem) => item.title?.trim() && item.description?.trim()) : [],
+                itinerary: Array.isArray(cleanedData.itinerary)
+                    ? cleanedData.itinerary
+                        .filter((item: ItineraryItem) => item.title?.trim())
+                        .map((item: ItineraryItem) => ({
+                            ...item,
+                            title: item.title.trim(),
+                            description: item.description?.trim() || '',
+                        }))
+                    : [],
                 faq: Array.isArray(cleanedData.faqs) ? cleanedData.faqs.filter((faq: FAQ) => faq.question?.trim() && faq.answer?.trim()) : [],
                 bookingOptions: Array.isArray(syncedBookingOptions)
                     ? syncedBookingOptions
@@ -2476,7 +2532,7 @@ const addItineraryItem = () => {
                                                     </button>
                                                     
                                                     {/* Option Configuration */}
-                                                    <div className={`overflow-hidden transition-all duration-300 ${expandedOptionIndex === index ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'}`}>
+                                                    <div className={expandedOptionIndex === index ? 'opacity-100' : 'hidden'}>
                                                         <div className="p-6 space-y-6">
                                                             <div className="flex flex-col gap-3 rounded-xl border border-indigo-100 bg-indigo-50/60 p-4 sm:flex-row sm:items-center">
                                                                 <div className="min-w-0 flex-1">
@@ -2626,7 +2682,7 @@ const addItineraryItem = () => {
                                                                             const selectedSlot = (option.timeSlots || []).find((entry) => entry.time === slot.time);
                                                                             const isSelected = Boolean(selectedSlot);
                                                                             return (
-                                                                                <div key={slot.time} className="grid grid-cols-[auto_1fr] items-center gap-3 rounded-lg border border-slate-200 bg-white p-3 sm:grid-cols-[auto_minmax(0,1fr)_minmax(10rem,0.7fr)]">
+                                                                                <div key={slot.time} className="grid grid-cols-[auto_1fr] items-center gap-3 rounded-lg border border-slate-200 bg-white p-3 sm:grid-cols-[auto_minmax(0,1fr)_repeat(3,minmax(8rem,0.7fr))]">
                                                                                     <input
                                                                                         type="checkbox"
                                                                                         checked={isSelected}
@@ -2639,7 +2695,7 @@ const addItineraryItem = () => {
                                                                                         <p className="text-xs text-slate-500">Capacity {slot.capacity}</p>
                                                                                     </div>
                                                                                     <div className="col-span-2 sm:col-span-1">
-                                                                                        <label className="sr-only" htmlFor={`option-${index}-slot-${slot.time}-price`}>Slot price</label>
+                                                                                        <label className="mb-1 block text-xs font-medium text-slate-500" htmlFor={`option-${index}-slot-${slot.time}-price`}>Adult</label>
                                                                                         <input
                                                                                             id={`option-${index}-slot-${slot.time}-price`}
                                                                                             type="number"
@@ -2652,6 +2708,22 @@ const addItineraryItem = () => {
                                                                                             placeholder={`Use ${selectedCurrency.symbol}${option.price || 0}`}
                                                                                         />
                                                                                     </div>
+                                                                                    {(['child', 'infant'] as const).map((guest) => (
+                                                                                        <div key={guest} className="col-span-2 sm:col-span-1">
+                                                                                            <label className="mb-1 block text-xs font-medium capitalize text-slate-500" htmlFor={`option-${index}-slot-${slot.time}-${guest}`}>{guest}</label>
+                                                                                            <input
+                                                                                                id={`option-${index}-slot-${slot.time}-${guest}`}
+                                                                                                type="number"
+                                                                                                min="0"
+                                                                                                step="0.01"
+                                                                                                disabled={!isSelected}
+                                                                                                value={selectedSlot?.guestPrices?.[guest] ?? ''}
+                                                                                                onChange={(event) => handleBookingOptionSlotGuestPrice(index, slot.time, guest, event.target.value)}
+                                                                                                className={`${inputBase} disabled:cursor-not-allowed disabled:bg-slate-100`}
+                                                                                                placeholder={`Use ${guest} base`}
+                                                                                            />
+                                                                                        </div>
+                                                                                    ))}
                                                                                 </div>
                                                                             );
                                                                         })}

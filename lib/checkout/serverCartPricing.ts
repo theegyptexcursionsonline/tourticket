@@ -6,6 +6,7 @@ import { isPerPersonAddOn } from '@/lib/checkout/addOnPricing';
 import { effectiveOptionPrice, effectiveTourPrice } from '@/lib/pricing/effectivePrice';
 import { authoritativeBasePrice } from '@/lib/pricing/authoritativePrice';
 import { isAddOnAvailableForOption, normalizedBookingOptionKeys } from '@/lib/bookings/addOnAvailability';
+import { effectiveSlotGuestPrices } from '@/lib/revenue/guestPrices';
 
 type EffectivePriceQuote = Awaited<ReturnType<typeof resolveEffectivePrice>>;
 
@@ -38,7 +39,8 @@ interface LeanBookingOption {
   duration?: string;
   badge?: string;
   applyTourDiscount?: boolean;
-  timeSlots?: Array<{ time?: string; capacity?: number; price?: number }>;
+  guestPrices?: { adult: number; child: number; infant: number };
+  timeSlots?: Array<{ time?: string; capacity?: number; price?: number; guestPrices?: { child?: number; infant?: number } }>;
 }
 
 interface LeanAddOn {
@@ -56,9 +58,10 @@ interface LeanTour {
   discountPrice: number;
   discountPercent?: number;
   originalPrice?: number;
+  revenueGuestPrices?: { adult: number; child: number; infant: number };
   bookingOptions?: LeanBookingOption[];
   addOns?: LeanAddOn[];
-  availability?: { slots?: Array<{ time?: string; capacity?: number; price?: number }> };
+  availability?: { slots?: Array<{ time?: string; capacity?: number; price?: number; guestPrices?: { child?: number; infant?: number } }> };
 }
 
 export interface SecureBookingOption {
@@ -137,7 +140,7 @@ export async function secureCartPricing(
       _id: tourId,
       isPublished: true,
       ...DEFAULT_TENANT_FILTER,
-    }).select('_id title discountPrice discountPercent originalPrice bookingOptions addOns availability').lean() as unknown as LeanTour | null;
+    }).select('_id title discountPrice discountPercent originalPrice revenueGuestPrices bookingOptions addOns availability').lean() as unknown as LeanTour | null;
     if (!tour) throw new Error('Tour unavailable');
 
     const optionId = rawItem?.selectedBookingOption?.id
@@ -151,6 +154,7 @@ export async function secureCartPricing(
     }
 
     let option: SecureBookingOption;
+    let catalogueGuestPrices: { adult: number; child: number; infant: number };
     if (!optionIdIsStandard || !pricingKeyIsStandard) {
       const match = optionId.match(/^option-(\d+)$/);
       const pricingKeyIndex = requestedPricingKey
@@ -194,6 +198,13 @@ export async function secureCartPricing(
         duration: dbOption.duration,
         badge: dbOption.badge,
       };
+      catalogueGuestPrices = effectiveSlotGuestPrices({
+        adult: option.price,
+        base: dbOption.guestPrices,
+        slot,
+        discountPercent: tour.discountPercent,
+        applyDiscount: Boolean(dbOption.applyTourDiscount),
+      });
     } else {
       if (!Number.isFinite(Number(tour.discountPrice)) || Number(tour.discountPrice) < 0) {
         throw new Error('Invalid catalogue price');
@@ -217,6 +228,13 @@ export async function secureCartPricing(
           ? pricing.originalPrice
           : Number(tour.originalPrice || tour.discountPrice),
       };
+      catalogueGuestPrices = effectiveSlotGuestPrices({
+        adult: option.price,
+        base: tour.revenueGuestPrices,
+        slot: selectedSlot,
+        discountPercent: tour.discountPercent,
+        applyDiscount: true,
+      });
     }
 
     if (!Number.isFinite(option.price) || option.price < 0) throw new Error('Invalid catalogue price');
@@ -288,7 +306,7 @@ export async function secureCartPricing(
       discountPrice: option.price,
       originalPrice: option.originalPrice,
       selectedBookingOption: option,
-      guestPrices: quote?.prices || { adult: option.price, child: Math.round(option.price * 50) / 100, infant: 0 },
+      guestPrices: quote?.prices || catalogueGuestPrices,
       priceVersion: quote?.version || 0,
       priceSourceVersion: quote?.sourceVersion || null,
       priceExecutionId: quote?.executionId || null,

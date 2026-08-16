@@ -42,7 +42,7 @@ describe('resolveEffectivePrice catalogue baseline with tour discounts', () => {
         price: 150,
         applyTourDiscount: true,
         timeSlots: [
-          { time: '14:00', price: 200 },
+          { time: '14:00', price: 200, guestPrices: { child: 100, infant: 20 } },
           { time: '16:00' },
         ],
       },
@@ -69,7 +69,7 @@ describe('resolveEffectivePrice catalogue baseline with tour discounts', () => {
 
   it('applies the discount to a slot price override for the selected time', async () => {
     const quote = await resolveEffectivePrice({ tourId: 'a'.repeat(24), optionKey: 'private-key', date: '2099-01-01', time: '14:00' });
-    expect(quote.prices.adult).toBe(160); // 200 - 20%
+    expect(quote.prices).toEqual({ adult: 160, child: 80, infant: 16 });
   });
 
   it('inherits the discounted base when the selected slot has no price', async () => {
@@ -89,7 +89,7 @@ describe('resolveEffectivePrice catalogue baseline with tour discounts', () => {
     expect(plainQuote.prices.adult).toBe(80);
   });
 
-  it('invalidates explicit guest prices once the discount moves the adult baseline', async () => {
+  it('applies the same discount to explicit base guest prices', async () => {
     tourLean.mockResolvedValueOnce({
       ...discountedTour,
       bookingOptions: [{
@@ -102,9 +102,7 @@ describe('resolveEffectivePrice catalogue baseline with tour discounts', () => {
       }],
     });
     const quote = await resolveEffectivePrice({ tourId: 'a'.repeat(24), optionKey: 'private-key', date: '2099-01-01', time: '10:00' });
-    // Explicit prices described the pre-discount adult, so they no longer
-    // verify; the child falls back to half the discounted base.
-    expect(quote.prices).toEqual({ adult: 120, child: 60, infant: 0 });
+    expect(quote.prices).toEqual({ adult: 120, child: 56, infant: 4 });
   });
 
   it('lets an active RevenuePilot override win over the discounted catalogue', async () => {

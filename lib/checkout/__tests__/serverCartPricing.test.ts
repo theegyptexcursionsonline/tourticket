@@ -177,7 +177,7 @@ describe('secureCartPricing applies the tour discount exactly like the sidebar q
         pricingKey: 'private-key',
         applyTourDiscount: true,
         timeSlots: [
-          { time: '14:00', price: 200 },
+          { time: '14:00', price: 200, guestPrices: { child: 100, infant: 20 } },
           { time: '16:00' },
         ],
       },
@@ -230,6 +230,7 @@ describe('secureCartPricing applies the tour discount exactly like the sidebar q
     }]);
     // slot 200 - 20% = 160
     expect(item.selectedBookingOption.price).toBe(160);
+    expect(item.guestPrices).toEqual({ adult: 160, child: 80, infant: 16 });
     expect(item.selectedBookingOption.price).toBe(authoritativeBasePrice(discountedTour, {
       selectedBookingOption: { pricingKey: 'private-key' },
       selectedTime: '14:00',

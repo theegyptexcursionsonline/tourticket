@@ -164,7 +164,7 @@ export default async function AboutEgyptLanding() {
             </div>
 
             <div className="w-full h-80 relative rounded-2xl overflow-hidden shadow-xl">
-              <Image src="/hero2.jpg" alt="Felucca on Nile" fill className="object-cover" />
+              <Image src="/pyramid2.jpg" alt="Pyramids of Giza" fill className="object-cover" />
             </div>
           </div>
         </section>

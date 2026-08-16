@@ -374,7 +374,6 @@ export default function UnifiedPagesAdmin() {
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Page</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">URL</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{sortBy === 'updated' ? 'Modified' : 'Created'}</th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
@@ -383,7 +382,7 @@ export default function UnifiedPagesAdmin() {
             <tbody className="bg-white divide-y divide-gray-200">
               {rows.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-4 text-center text-gray-500">
+                  <td colSpan={5} className="px-6 py-4 text-center text-gray-500">
                     {searchTerm || editorFilter || filterKind !== 'all' || filterStatus !== 'all'
                       ? 'No pages match your filters'
                       : 'No pages found'}
@@ -415,9 +414,6 @@ export default function UnifiedPagesAdmin() {
                       <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${KIND_BADGES[row.kind]}`}>
                         {KIND_LABELS[row.kind]}
                       </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="text-xs font-mono text-gray-500">{row.publicPath}</span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${

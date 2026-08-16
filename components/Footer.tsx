@@ -43,7 +43,7 @@ const paymentMethods = [
 // --- FOOTER COMPONENT ---
 // =================================================================
 export default function Footer() {
-  const { destinations } = useNavData();
+  const { destinations, categories } = useNavData();
   const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [newsletterConsent, setNewsletterConsent] = useState(false);
@@ -348,14 +348,14 @@ export default function Footer() {
           <div className="space-y-4">
             <h3 className="font-semibold text-base lg:text-lg text-slate-900 tracking-wide">{t('thingsToDo')}</h3>
             <ul className="space-y-2 text-sm text-slate-500">
-              {destinations.slice(0, 5).map((destination) => (
-                <li key={destination._id}>
+              {categories.slice(0, 5).map((category) => (
+                <li key={category._id}>
                   <Link 
                     className="hover:text-red-600 transition-colors inline-flex items-center gap-2" 
-                    href={contentPath('destination', destination.slug, destination.urlType, null, destination.parentPage?.slug)}
+                    href={contentPath('category', category.slug, category.urlType, null, category.parentPage?.slug)}
                   >
                     <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
-                    {t('thingsToDoIn', { destination: destination.name })}
+                    {category.name}
                   </Link>
                 </li>
               ))}

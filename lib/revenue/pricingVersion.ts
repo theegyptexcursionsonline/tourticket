@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 
 type GuestPrices = { adult?: number; child?: number; infant?: number };
-type PricingTimeSlot = { time?: string; price?: number };
+type PricingTimeSlot = { time?: string; price?: number; guestPrices?: { child?: number; infant?: number } };
 type PricingOption = { pricingKey?: string; price?: number; originalPrice?: number; type?: string; guestPrices?: GuestPrices; applyTourDiscount?: boolean; timeSlots?: PricingTimeSlot[] };
 type PricingCatalogue = { discountPrice?: number; originalPrice?: number; discountPercent?: number; revenueGuestPrices?: GuestPrices; bookingOptions?: PricingOption[]; availability?: { slots?: PricingTimeSlot[] } };
 
@@ -9,8 +9,12 @@ type PricingCatalogue = { discountPrice?: number; originalPrice?: number; discou
 // the base price, so schedule or capacity edits must not invalidate
 // RevenuePilot's view of the catalogue.
 const slotPricing = (slots?: PricingTimeSlot[]) => (slots || [])
-  .filter((slot) => typeof slot.price === 'number')
-  .map((slot) => ({ time: slot.time || '', price: slot.price as number }))
+  .filter((slot) => typeof slot.price === 'number' || slot.guestPrices?.child !== undefined || slot.guestPrices?.infant !== undefined)
+  .map((slot) => ({
+    time: slot.time || '',
+    price: typeof slot.price === 'number' ? slot.price : null,
+    guestPrices: slot.guestPrices ?? null,
+  }))
   .sort((left, right) => left.time.localeCompare(right.time));
 
 export function pricingCatalogueVersion(tour: PricingCatalogue) {

@@ -99,7 +99,10 @@ const extractEnhancementData = (tour: Tour): TourEnhancement => {
     whatToWear: cleanPracticalList(tour.whatToWear),
     physicalRequirements: cleanPracticalText(tour.physicalRequirements),
     accessibilityInfo: cleanPracticalList(tour.accessibilityInfo),
-    groupSize: tour.groupSize || { min: 1, max: tour.maxGroupSize || 20 },
+    groupSize: {
+      min: tour.groupSize?.min || 1,
+      max: tour.maxGroupSize || tour.groupSize?.max || 20,
+    },
     transportationDetails: cleanPracticalText(tour.transportationDetails),
     mealInfo: cleanPracticalText(tour.mealInfo),
     weatherPolicy: cleanPracticalText(tour.weatherPolicy),

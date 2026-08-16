@@ -50,7 +50,7 @@ export default function EgyptHeroClient() {
           style={{ transform: 'translate3d(0,0,0) scale(1.02)' }}
         >
           <Image
-            src="/hero3.png"
+            src="/hero3.jpg"
             alt="Pyramids and Nile"
             fill
             className="object-cover object-center"
@@ -86,7 +86,7 @@ export default function EgyptHeroClient() {
 
             <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
               <Link
-                href="/egypt"
+                href="/tours"
                 className="inline-flex items-center gap-3 px-12 py-4 rounded-full bg-gradient-to-r from-amber-400 to-amber-500 text-black font-semibold shadow-2xl hover:scale-[1.02] transition"
               >
                 <span>Explore Egypt</span>
@@ -107,7 +107,7 @@ export default function EgyptHeroClient() {
 
       <noscript>
         <div className="absolute inset-0">
-          <Image src="/hero3.png" alt="Pyramids of Egypt" fill className="object-cover" />
+          <Image src="/hero3.jpg" alt="Pyramids of Egypt" fill className="object-cover" />
           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
         </div>
       </noscript>

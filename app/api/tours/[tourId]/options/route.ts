@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
 import Tour from '@/lib/models/Tour';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
-import { explicitCatalogueGuestPrices } from '@/lib/revenue/guestPrices';
+import { effectiveSlotGuestPrices, explicitCatalogueGuestPrices } from '@/lib/revenue/guestPrices';
 import { effectiveOptionPrice, effectiveTourPrice, percentageOff } from '@/lib/pricing/effectivePrice';
 import { authoritativeBasePrice } from '@/lib/pricing/authoritativePrice';
 
@@ -72,6 +72,13 @@ export async function GET(
                 time: slot.time,
                 available: slot.capacity ?? universalCapacityByTime.get(slot.time) ?? 15,
                 price: slotPricing.price,
+                guestPrices: effectiveSlotGuestPrices({
+                  adult: slotPricing.price,
+                  base: option.guestPrices,
+                  slot,
+                  discountPercent: tour.discountPercent,
+                  applyDiscount: Boolean(option.applyTourDiscount),
+                }),
                 originalPrice: slotPricing.discountApplied ? slotPricing.originalPrice : undefined,
                 isPopular: false,
               };
@@ -79,6 +86,12 @@ export async function GET(
           : availabilitySlots.map((slot) => ({
               ...slot,
               price: pricing.price,
+              guestPrices: effectiveSlotGuestPrices({
+                adult: pricing.price,
+                base: option.guestPrices,
+                discountPercent: tour.discountPercent,
+                applyDiscount: Boolean(option.applyTourDiscount),
+              }),
               originalPrice: pricing.discountApplied ? pricing.originalPrice : option.originalPrice,
               isPopular: false,
             }));
@@ -123,10 +136,19 @@ export async function GET(
           // The standard no-option path honours a universal slot price, so
           // quote each slot exactly the way checkout will charge it.
           timeSlots: availabilitySlots.map((slot, index: number) => {
-            const slotPricing = effectiveTourPrice(tour, tour.availability?.slots?.[index]);
+            const storedSlot = tour.availability?.slots?.[index];
+            const slotPricing = effectiveTourPrice(tour, storedSlot);
+            const adult = authoritativeBasePrice(tour, { selectedBookingOption: null, selectedTime: slot.time });
             return {
               ...slot,
-              price: authoritativeBasePrice(tour, { selectedBookingOption: null, selectedTime: slot.time }),
+              price: adult,
+              guestPrices: effectiveSlotGuestPrices({
+                adult,
+                base: tour.revenueGuestPrices,
+                slot: storedSlot,
+                discountPercent: tour.discountPercent,
+                applyDiscount: true,
+              }),
               originalPrice: slotPricing.discountApplied ? slotPricing.originalPrice : tour.originalPrice,
               isPopular: false,
             };

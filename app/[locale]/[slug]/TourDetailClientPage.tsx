@@ -175,7 +175,9 @@ const extractEnhancementData = (tour: ITour): TourEnhancement => {
     whatToWear: cleanList(tour.whatToWear),
     physicalRequirements: cleanText(tour.physicalRequirements),
     accessibilityInfo: cleanList(tour.accessibilityInfo),
-    groupSize: tour.groupSize || (tour.maxGroupSize ? { min: 1, max: tour.maxGroupSize } : undefined),
+    groupSize: (tour.maxGroupSize || tour.groupSize)
+      ? { min: tour.groupSize?.min || 1, max: tour.maxGroupSize || tour.groupSize?.max || 20 }
+      : undefined,
     transportationDetails: cleanText(tour.transportationDetails),
     mealInfo: cleanText(tour.mealInfo),
     weatherPolicy: cleanText(tour.weatherPolicy),

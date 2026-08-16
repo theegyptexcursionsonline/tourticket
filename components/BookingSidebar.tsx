@@ -22,6 +22,7 @@ import { getErrorMessage } from './componentTypes';
 import { CANCELLATION_POLICY_SUMMARY } from '@/lib/bookings/cancellationPolicy';
 import { loadCurrentBookingOptions } from '@/lib/bookings/liveBookingOptions';
 import { effectiveOptionPrice, effectiveTourPrice, percentageOff } from '@/lib/pricing/effectivePrice';
+import { effectiveSlotGuestPrices } from '@/lib/revenue/guestPrices';
 import { isPerPersonAddOn } from '@/lib/checkout/addOnPricing';
 import { groupAvailableAddOns, isAddOnAvailableForOption, normalizedBookingOptionKeys } from '@/lib/bookings/addOnAvailability';
 import { bookingOptionUnitLabel } from '@/lib/bookings/bookingOptionLabels';
@@ -44,6 +45,7 @@ interface Tour {
   originalPrice?: number;
   discountPrice: number;
   discountPercent?: number;
+  revenueGuestPrices?: { adult: number; child: number; infant: number };
   destination?: {
     _id: string;
     name: string;
@@ -79,7 +81,7 @@ interface Tour {
   availability?: {
     type: string;
     availableDays: number[];
-    slots: { time: string; capacity: number; price?: number }[];
+    slots: { time: string; capacity: number; price?: number; guestPrices?: { child?: number; infant?: number } }[];
     blockedDates?: string[];
     startDate?: string;
     endDate?: string;
@@ -112,7 +114,7 @@ interface BookingOption {
   applyTourDiscount?: boolean;
   /** Server-shaped TimeSlots from the options API, or raw model subdocs
    *  ({time, capacity, price}) when falling back to the embedded tour. */
-  timeSlots?: Array<{ id?: string; time: string; capacity?: number; available?: number; price?: number; originalPrice?: number; isPopular?: boolean }>;
+  timeSlots?: Array<{ id?: string; time: string; capacity?: number; available?: number; price?: number; originalPrice?: number; isPopular?: boolean; guestPrices?: { adult: number; child: number; infant: number } }>;
   title?: string;
 }
 
@@ -1247,7 +1249,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
   const [bookingData, setBookingData] = useState<BookingData>({
     selectedDate: null,
     selectedTimeSlot: null,
-    adults: 2,
+    adults: 1,
     children: 0,
     infants: 0,
     selectedAddOns: {},
@@ -1488,11 +1490,21 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
     if (tour?.availability?.slots && tour.availability.slots.length > 0) {
       return tour.availability.slots.map((slot, slotIndex) => {
         const slotPricing = honorSlotPrice ? effectiveTourPrice(tour, slot) : null;
+        const adult = slotPricing?.price ?? price;
         return {
           id: `slot-${optionIndex}-${slotIndex}`,
           time: slot.time,
           available: slot.capacity,
-          price: slotPricing?.price ?? price,
+          price: adult,
+          guestPrices: honorSlotPrice
+            ? effectiveSlotGuestPrices({
+                adult,
+                base: tour.revenueGuestPrices,
+                slot,
+                discountPercent: tour.discountPercent,
+                applyDiscount: true,
+              })
+            : undefined,
           originalPrice: slotPricing?.discountApplied ? slotPricing.originalPrice : undefined,
           isPopular: slotIndex === 0, // Mark first slot as popular
           originalAvailable: slot.capacity,
@@ -1554,6 +1566,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
                   available: slot.available ?? slot.capacity ?? 15,
                   originalAvailable: slot.available ?? slot.capacity ?? 15,
                   price: slotPricing.price,
+                  guestPrices: slot.guestPrices,
                   originalPrice: slotPricing.discountApplied ? slotPricing.originalPrice : slot.originalPrice,
                   isPopular: slot.isPopular ?? slotIndex === 0,
                 };
@@ -1702,7 +1715,10 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
     }
 
     const childPrice = bookingData.selectedTimeSlot?.guestPrices?.child ?? basePrice * 0.5;
-    const subtotalCalc = (bookingData.adults * basePrice) + (bookingData.children * childPrice);
+    const infantPrice = bookingData.selectedTimeSlot?.guestPrices?.infant ?? 0;
+    const subtotalCalc = (bookingData.adults * basePrice)
+      + (bookingData.children * childPrice)
+      + (bookingData.infants * infantPrice);
     const originalSubtotal = (bookingData.adults * originalBasePrice) + (bookingData.children * originalBasePrice * 0.5);
 
     const addOnsCalc = Object.entries(bookingData.selectedAddOns).reduce((acc, [addOnId, quantity]) => {
@@ -1764,7 +1780,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
         setBookingData({
           selectedDate: null,
           selectedTimeSlot: null,
-          adults: 2,
+          adults: 1,
           children: 0,
           infants: 0,
           selectedAddOns: {},

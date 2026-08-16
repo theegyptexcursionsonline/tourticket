@@ -24,6 +24,9 @@ describe('pricing catalogue version', () => {
       ...base, bookingOptions: [{ ...base.bookingOptions[0], timeSlots: [{ time: '10:00', price: 120 }] }],
     }));
     expect(pricingCatalogueVersion(base)).not.toBe(pricingCatalogueVersion({
+      ...base, bookingOptions: [{ ...base.bookingOptions[0], timeSlots: [{ time: '10:00', guestPrices: { child: 55, infant: 10 } }] }],
+    }));
+    expect(pricingCatalogueVersion(base)).not.toBe(pricingCatalogueVersion({
       ...base, availability: { slots: [{ time: '10:00', price: 80 }] },
     }));
     // A blank percent and an unpriced slot are pricing-neutral, so legacy

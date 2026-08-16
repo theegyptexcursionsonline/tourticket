@@ -22,6 +22,7 @@ export interface IAvailabilitySlot {
   time: string;
   capacity: number;
   price?: number;
+  guestPrices?: { child?: number; infant?: number };
 }
 
 export interface IAvailability extends Document {
@@ -60,7 +61,7 @@ export interface IBookingOption {
   /** Opt this option into the tour's discount percentage. */
   applyTourDiscount?: boolean;
   /** Optional per-slot pricing; a blank price inherits the option's base. */
-  timeSlots?: Array<{ time: string; capacity?: number; price?: number }>;
+  timeSlots?: Array<{ time: string; capacity?: number; price?: number; guestPrices?: { child?: number; infant?: number } }>;
 }
 
 export interface IAddOn {
@@ -243,7 +244,7 @@ export interface ITour extends Document {
 const ItineraryItemSchema = new Schema<IItineraryItem>({
   time: { type: String },
   title: { type: String, required: true, trim: true },
-  description: { type: String, required: true, trim: true },
+  description: { type: String, trim: true, default: '' },
   duration: { type: String, trim: true },
   location: { type: String, trim: true },
   includes: [{ type: String, trim: true }],
@@ -252,6 +253,11 @@ const ItineraryItemSchema = new Schema<IItineraryItem>({
     default: 'location',
   },
   day: { type: Number, min: 1 },
+}, { _id: false });
+
+const SlotGuestPricesSchema = new Schema({
+  child: { type: Number, min: 0, max: 999999 },
+  infant: { type: Number, min: 0, max: 999999 },
 }, { _id: false });
 
 const AvailabilitySlotSchema = new Schema<IAvailabilitySlot>({
@@ -277,6 +283,7 @@ const AvailabilitySlotSchema = new Schema<IAvailabilitySlot>({
     min: [0, 'Price cannot be negative'],
     max: [999999, 'Price cannot exceed 999999'],
   },
+  guestPrices: { type: SlotGuestPricesSchema },
 }, { _id: false });
 
 const AvailabilitySchema = new Schema<IAvailability>({
@@ -401,6 +408,7 @@ const BookingOptionSchema = new Schema<IBookingOption>({
     capacity: { type: Number, min: 0 },
     // Blank means "use the option's base price".
     price: { type: Number, min: 0, max: 999999 },
+    guestPrices: { type: SlotGuestPricesSchema },
   }],
   description: {
     type: String,

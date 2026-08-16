@@ -5,7 +5,7 @@ import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 import type { IBookingOption } from '@/lib/models/Tour';
 import type { Types } from 'mongoose';
 import { pricingCatalogueVersion } from '@/lib/revenue/pricingVersion';
-import { explicitCatalogueGuestPrices } from '@/lib/revenue/guestPrices';
+import { effectiveSlotGuestPrices, explicitCatalogueGuestPrices } from '@/lib/revenue/guestPrices';
 import { authoritativeBasePrice } from '@/lib/pricing/authoritativePrice';
 
 export { explicitCatalogueGuestPrices } from '@/lib/revenue/guestPrices';
@@ -20,7 +20,7 @@ type CatalogueTour = {
   originalPrice?: number;
   bookingOptions?: IBookingOption[];
   revenueGuestPrices?: GuestPrices;
-  availability?: { slots?: Array<{ time?: string; capacity?: number; price?: number }> };
+  availability?: { slots?: Array<{ time?: string; capacity?: number; price?: number; guestPrices?: { child?: number; infant?: number } }> };
   updatedAt: Date;
 };
 
@@ -65,7 +65,16 @@ export async function resolveEffectivePrice(input: { tourId: string; optionKey?:
     selectedBookingOption: option ? { pricingKey: optionKey } : null,
     selectedTime: input.time,
   });
-  const cataloguePrices = catalogueGuestPrices(adult, option?.guestPrices ?? tour.revenueGuestPrices);
+  const selectedSlot = option
+    ? option.timeSlots?.find((slot) => slot.time === input.time)
+    : tour.availability?.slots?.find((slot) => slot.time === input.time);
+  const cataloguePrices = effectiveSlotGuestPrices({
+    adult,
+    base: option?.guestPrices ?? tour.revenueGuestPrices,
+    slot: selectedSlot,
+    discountPercent: tour.discountPercent,
+    applyDiscount: option ? Boolean(option.applyTourDiscount) : true,
+  });
   const date = normalizePriceDate(input.date);
   const override = await RevenuePriceOverride.findOne({ tenantId, tourId: tour._id, optionKey, date, time: input.time, active: true }).lean<PriceOverride | null>();
   const prices = override?.prices ?? cataloguePrices;
