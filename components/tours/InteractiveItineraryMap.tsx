@@ -2,16 +2,16 @@
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Clock, MapPin, Navigation } from 'lucide-react';
+import 'maplibre-gl/dist/maplibre-gl.css';
 import {
   completeItineraryRoute,
   isItineraryMappableLocation,
-  itineraryMapQuery,
-  itineraryMapStops,
-  itineraryPickupBaseQuery,
-  itineraryRouteContextQuery,
-  type ItineraryRouteCoordinate,
+  itineraryCoordinateAnchors,
   type ItineraryRoutePosition,
 } from '@/lib/tours/itineraryMap';
+
+const OPENFREE_STYLE_URL = 'https://tiles.openfreemap.org/styles/liberty';
+const MAP_LOAD_TIMEOUT_MS = 15000;
 
 export interface InteractiveItineraryItem {
   time?: string;
@@ -19,136 +19,19 @@ export interface InteractiveItineraryItem {
   description: string;
   duration?: string;
   location?: string;
+  coordinates?: { lat?: number | null; lng?: number | null } | null;
 }
 
 interface InteractiveItineraryMapProps {
   itinerary: InteractiveItineraryItem[];
-  tourLocation?: string;
-  apiKey?: string;
-  fallbackMapUrl?: string | null;
-  fallbackEmbedUrl?: string | null;
   openMapsUrl: string;
   activeIndex: number;
   onSelect: (index: number) => void;
 }
 
-type MapsEventListener = { remove: () => void };
-type MapInstance = {
-  fitBounds: (bounds: unknown, padding?: Record<string, number>) => void;
-  getZoom: () => number | undefined;
-  setZoom: (zoom: number) => void;
-  panTo: (position: ItineraryRouteCoordinate) => void;
-  addListener: (event: string, callback: () => void) => MapsEventListener;
-};
-type MarkerInstance = {
-  addListener: (event: string, callback: () => void) => MapsEventListener;
-  getPosition: () => unknown;
-  setIcon: (icon: Record<string, unknown>) => void;
-  setMap: (map: MapInstance | null) => void;
-  setZIndex: (zIndex: number) => void;
-};
-type InfoWindowInstance = {
-  close: () => void;
-  open: (options: { map: MapInstance; anchor: MarkerInstance; shouldFocus?: boolean }) => void;
-  setContent: (content: string) => void;
-};
-type GeocoderResult = { geometry?: { location?: { lat: () => number; lng: () => number } } };
-type GeocoderInstance = {
-  geocode: (
-    request: { address: string; region?: string },
-    callback: (results: GeocoderResult[] | null, status: string) => void,
-  ) => void;
-};
-type PolylineInstance = { setMap: (map: MapInstance | null) => void };
-
-interface GoogleMapsApi {
-  maps: {
-    Map: new (element: HTMLElement, options: Record<string, unknown>) => MapInstance;
-    Marker: new (options: Record<string, unknown>) => MarkerInstance;
-    InfoWindow: new (options?: Record<string, unknown>) => InfoWindowInstance;
-    Geocoder: new () => GeocoderInstance;
-    LatLngBounds: new () => { extend: (position: ItineraryRouteCoordinate) => void };
-    Polyline: new (options: Record<string, unknown>) => PolylineInstance;
-    Size: new (width: number, height: number) => unknown;
-    Point: new (x: number, y: number) => unknown;
-  };
-}
-
-let googleMapsLoader: Promise<GoogleMapsApi> | null = null;
-
-function currentGoogleMaps(): GoogleMapsApi | null {
-  const google = (window as unknown as { google?: GoogleMapsApi }).google;
-  return google?.maps?.Map ? google : null;
-}
-
-function waitForGoogleMaps(timeoutMs = 12000): Promise<GoogleMapsApi> {
-  return new Promise((resolve, reject) => {
-    const startedAt = Date.now();
-    const timer = window.setInterval(() => {
-      const google = currentGoogleMaps();
-      if (google) {
-        window.clearInterval(timer);
-        resolve(google);
-      } else if (Date.now() - startedAt >= timeoutMs) {
-        window.clearInterval(timer);
-        reject(new Error('Google Maps timed out'));
-      }
-    }, 100);
-  });
-}
-
-function loadGoogleMaps(apiKey: string): Promise<GoogleMapsApi> {
-  const loaded = currentGoogleMaps();
-  if (loaded) return Promise.resolve(loaded);
-  if (!apiKey) return Promise.reject(new Error('Google Maps key is unavailable'));
-  if (googleMapsLoader) return googleMapsLoader;
-
-  googleMapsLoader = new Promise<GoogleMapsApi>((resolve, reject) => {
-    const existingScript = document.querySelector<HTMLScriptElement>('script[src*="maps.googleapis.com/maps/api/js"]');
-    if (existingScript) {
-      waitForGoogleMaps().then(resolve, reject);
-      return;
-    }
-
-    const callbackName = '__eeoItineraryMapReady';
-    const callbackWindow = window as unknown as Record<string, unknown>;
-    const script = document.createElement('script');
-    script.dataset.eeoItineraryMap = 'true';
-    script.async = true;
-    script.defer = true;
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(apiKey)}&loading=async&v=quarterly&callback=${callbackName}`;
-
-    callbackWindow[callbackName] = () => {
-      const google = currentGoogleMaps();
-      delete callbackWindow[callbackName];
-      if (google) resolve(google);
-      else reject(new Error('Google Maps loaded without the maps library'));
-    };
-    script.onerror = () => {
-      delete callbackWindow[callbackName];
-      reject(new Error('Google Maps failed to load'));
-    };
-    document.head.appendChild(script);
-  }).catch((error) => {
-    googleMapsLoader = null;
-    throw error;
-  });
-
-  return googleMapsLoader;
-}
-
-function geocode(geocoder: GeocoderInstance, address: string): Promise<ItineraryRouteCoordinate | null> {
-  return new Promise((resolve) => {
-    geocoder.geocode({ address, region: 'EG' }, (results, status) => {
-      const location = results?.[0]?.geometry?.location;
-      if (status === 'OK' && location) {
-        resolve({ lat: location.lat(), lng: location.lng() });
-      } else {
-        resolve(null);
-      }
-    });
-  });
-}
+type MapLibreMap = import('maplibre-gl').Map;
+type MapLibreMarker = import('maplibre-gl').Marker;
+type MapLibrePopup = import('maplibre-gl').Popup;
 
 function escapeHtml(value?: string): string {
   return String(value || '')
@@ -171,206 +54,217 @@ function infoCard(item: InteractiveItineraryItem, index: number, approximate: bo
   </div>`;
 }
 
-function markerIcon(google: GoogleMapsApi, number: number, active: boolean) {
-  const fill = active ? '#991B1B' : '#EF4444';
-  const svg = `<svg width="44" height="54" viewBox="0 0 44 54" xmlns="http://www.w3.org/2000/svg">
-    <path d="M22 1C10.4 1 1 10.4 1 22c0 15.2 21 31 21 31s21-15.8 21-31C43 10.4 33.6 1 22 1z" fill="${fill}" stroke="white" stroke-width="2"/>
-    <circle cx="22" cy="22" r="12" fill="white"/>
-    <text x="22" y="27" text-anchor="middle" font-family="Arial,sans-serif" font-size="14" font-weight="700" fill="${fill}">${number}</text>
-  </svg>`;
-  return {
-    url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`,
-    scaledSize: new google.maps.Size(active ? 48 : 42, active ? 59 : 52),
-    anchor: new google.maps.Point(active ? 24 : 21, active ? 59 : 52),
-  };
+function markerClass(active: boolean): string {
+  return [
+    'eeo-itinerary-marker',
+    'inline-flex items-center justify-center rounded-full border-2 border-white text-xs font-bold text-white shadow-lg',
+    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-700 focus-visible:ring-offset-2',
+    active ? 'h-11 w-11 bg-red-800' : 'h-9 w-9 bg-red-600',
+  ].join(' ');
 }
 
 export default function InteractiveItineraryMap({
   itinerary,
-  tourLocation,
-  apiKey = '',
-  fallbackMapUrl,
-  fallbackEmbedUrl,
   openMapsUrl,
   activeIndex,
   onSelect,
 }: InteractiveItineraryMapProps) {
   const mapElementRef = useRef<HTMLDivElement>(null);
-  const mapInstanceRef = useRef<MapInstance | null>(null);
-  const markersRef = useRef<MarkerInstance[]>([]);
-  const positionsRef = useRef<ReturnType<typeof completeItineraryRoute>>([]);
-  const infoWindowRef = useRef<InfoWindowInstance | null>(null);
-  const googleRef = useRef<GoogleMapsApi | null>(null);
+  const mapInstanceRef = useRef<MapLibreMap | null>(null);
+  const markersRef = useRef<MapLibreMarker[]>([]);
+  const popupRef = useRef<MapLibrePopup | null>(null);
   const activeIndexRef = useRef(activeIndex);
   const focusedStageRef = useRef<number | null>(null);
-  const [mapState, setMapState] = useState<'loading' | 'ready' | 'fallback'>(() => apiKey ? 'loading' : 'fallback');
-  const [stagePositions, setStagePositions] = useState<ItineraryRoutePosition[]>([]);
+  const [shouldLoadMap, setShouldLoadMap] = useState(false);
+  const [mapState, setMapState] = useState<'loading' | 'ready' | 'unavailable'>('loading');
 
+  const anchors = useMemo(() => itineraryCoordinateAnchors(itinerary), [itinerary]);
+  const roundTripBase = anchors.find((anchor) => anchor.index === 0)?.position || null;
+  const positions = useMemo(
+    () => completeItineraryRoute(itinerary.length, anchors, roundTripBase),
+    [anchors, itinerary.length, roundTripBase],
+  );
+  const effectiveMapState = itinerary.length === 0 || positions.length !== itinerary.length
+    ? 'unavailable'
+    : mapState;
   const selected = itinerary[activeIndex] || itinerary[0];
-  const physicalStops = useMemo(() => itineraryMapStops(itinerary), [itinerary]);
 
   useEffect(() => {
     activeIndexRef.current = activeIndex;
   }, [activeIndex]);
 
   useEffect(() => {
-    if (!mapElementRef.current || itinerary.length === 0 || !apiKey) {
+    const element = mapElementRef.current;
+    if (!element) return;
+    if (typeof IntersectionObserver === 'undefined') {
+      const timer = window.setTimeout(() => setShouldLoadMap(true), 0);
+      return () => window.clearTimeout(timer);
+    }
+
+    const observer = new IntersectionObserver((entries) => {
+      if (!entries.some((entry) => entry.isIntersecting)) return;
+      setShouldLoadMap(true);
+      observer.disconnect();
+    }, { rootMargin: '400px 0px' });
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (!shouldLoadMap) return;
+    if (!mapElementRef.current || itinerary.length === 0 || positions.length !== itinerary.length) {
       return;
     }
 
     let cancelled = false;
-    const listeners: MapsEventListener[] = [];
-    let routeLine: PolylineInstance | null = null;
+    let loadTimer: ReturnType<typeof setTimeout> | null = null;
+    const markerListeners: Array<{ element: HTMLElement; event: string; listener: EventListener }> = [];
 
     const initialize = async () => {
+      setMapState('loading');
       try {
-        const google = await loadGoogleMaps(apiKey);
+        const maplibre = await import('maplibre-gl');
         if (cancelled || !mapElementRef.current) return;
-        googleRef.current = google;
 
-        const geocoder = new google.maps.Geocoder();
-        const queryCache = new Map<string, Promise<ItineraryRouteCoordinate | null>>();
-        const resolveQuery = (query: string) => {
-          if (!queryCache.has(query)) queryCache.set(query, geocode(geocoder, query));
-          return queryCache.get(query)!;
-        };
-
-        const routeContext = itineraryRouteContextQuery(physicalStops, tourLocation);
-        const exactAnchors = (await Promise.all(itinerary.map(async (item, index) => {
-          const location = String(item.location || '').trim();
-          if (!location || !isItineraryMappableLocation(location)) return null;
-          const position = await resolveQuery(itineraryMapQuery(location, routeContext || tourLocation));
-          return position ? { index, position } : null;
-        }))).filter((anchor): anchor is { index: number; position: ItineraryRouteCoordinate } => Boolean(anchor));
-
-        // Missing first/last anchors are the generic pickup and drop-off
-        // stages, which happen at the tour's pickup resort — not in the
-        // visited city. Anchor them there so a Sharm→Cairo route starts and
-        // ends in Sharm; fall back to the route context only when the
-        // published location names no recognisable city.
-        const pickupBase = itineraryPickupBaseQuery(tourLocation);
-        const routeBase = (pickupBase ? await resolveQuery(pickupBase) : null)
-          || (routeContext ? await resolveQuery(routeContext) : null);
-        const positions = completeItineraryRoute(itinerary.length, exactAnchors, routeBase);
-        if (cancelled || positions.length !== itinerary.length) throw new Error('Route stages could not be positioned');
-        positionsRef.current = positions;
-        setStagePositions(positions);
-
-        const map = new google.maps.Map(mapElementRef.current, {
-          center: positions[0],
+        const map = new maplibre.Map({
+          container: mapElementRef.current,
+          style: OPENFREE_STYLE_URL,
+          center: [positions[0]!.lng, positions[0]!.lat],
           zoom: 10,
-          mapTypeControl: false,
-          cameraControl: false,
-          streetViewControl: false,
-          fullscreenControl: true,
-          gestureHandling: 'cooperative',
-          clickableIcons: false,
-          styles: [
-            { featureType: 'poi', elementType: 'labels', stylers: [{ visibility: 'off' }] },
-            { featureType: 'transit', elementType: 'labels', stylers: [{ visibility: 'off' }] },
-          ],
+          attributionControl: false,
+          cooperativeGestures: true,
         });
         mapInstanceRef.current = map;
+        map.addControl(new maplibre.NavigationControl({ showCompass: false }), 'top-right');
+        map.addControl(new maplibre.AttributionControl({ compact: true }), 'bottom-right');
 
-        routeLine = new google.maps.Polyline({
-          map,
-          path: positions,
-          strokeColor: '#DC2626',
-          strokeOpacity: 0.9,
-          strokeWeight: 4,
-          geodesic: true,
-        });
+        loadTimer = setTimeout(() => {
+          if (!cancelled) {
+            map.remove();
+            mapInstanceRef.current = null;
+            setMapState('unavailable');
+          }
+        }, MAP_LOAD_TIMEOUT_MS);
 
-        const infoWindow = new google.maps.InfoWindow({ maxWidth: 270 });
-        infoWindowRef.current = infoWindow;
-        const bounds = new google.maps.LatLngBounds();
+        // `style.load` is the reliable readiness boundary for adding our own
+        // route source and markers. Waiting for the broader `load` event also
+        // waits on every initial base-map tile and can stall a fast customer
+        // connection behind a single slow optional tile.
+        map.once('style.load', () => {
+          if (cancelled) return;
+          if (loadTimer) clearTimeout(loadTimer);
 
-        const openStage = (index: number, notify = true) => {
-          const marker = markersRef.current[index];
-          const position = positions[index];
-          if (!marker || !position) return;
-          markersRef.current.forEach((candidate, markerIndex) => {
-            candidate.setIcon(markerIcon(google, markerIndex + 1, markerIndex === index));
-            candidate.setZIndex(markerIndex === index ? 1000 : markerIndex + 1);
+          map.addSource('eeo-itinerary-route', {
+            type: 'geojson',
+            data: {
+              type: 'Feature',
+              properties: {},
+              geometry: {
+                type: 'LineString',
+                coordinates: positions.map((position) => [position.lng, position.lat]),
+              },
+            },
           });
-          infoWindow.setContent(infoCard(itinerary[index]!, index, position.approximate));
-          infoWindow.open({ map, anchor: marker, shouldFocus: false });
-          if (notify) onSelect(index);
-        };
-
-        markersRef.current = positions.map((position, index) => {
-          bounds.extend(position);
-          const marker = new google.maps.Marker({
-            map,
-            position,
-            title: `Stage ${index + 1}: ${itinerary[index]?.title || ''}`,
-            icon: markerIcon(google, index + 1, index === activeIndexRef.current),
-            zIndex: index === activeIndexRef.current ? 1000 : index + 1,
-            optimized: false,
+          map.addLayer({
+            id: 'eeo-itinerary-route-line',
+            type: 'line',
+            source: 'eeo-itinerary-route',
+            layout: { 'line-cap': 'round', 'line-join': 'round' },
+            paint: {
+              'line-color': '#dc2626',
+              'line-opacity': 0.9,
+              'line-width': 4,
+            },
           });
-          listeners.push(marker.addListener('mouseover', () => openStage(index)));
-          listeners.push(marker.addListener('click', () => openStage(index)));
-          return marker;
-        });
 
-        map.fitBounds(bounds, { top: 62, right: 46, bottom: 62, left: 46 });
-        listeners.push(map.addListener('idle', () => {
-          const zoom = map.getZoom();
-          if (typeof zoom === 'number' && zoom > 12) map.setZoom(12);
-        }));
-        window.setTimeout(() => openStage(Math.min(activeIndexRef.current, itinerary.length - 1), false), 150);
-        setMapState('ready');
+          const popup = new maplibre.Popup({
+            closeButton: false,
+            closeOnClick: false,
+            offset: 28,
+            maxWidth: '280px',
+          });
+          popupRef.current = popup;
+
+          markersRef.current = positions.map((position, index) => {
+            const element = document.createElement('button');
+            element.type = 'button';
+            element.className = markerClass(index === activeIndexRef.current);
+            element.textContent = String(index + 1);
+            element.setAttribute('aria-label', `Show stage ${index + 1}: ${itinerary[index]?.title || ''}`);
+            const selectStage = () => onSelect(index);
+            for (const event of ['click', 'mouseenter', 'focus']) {
+              element.addEventListener(event, selectStage);
+              markerListeners.push({ element, event, listener: selectStage });
+            }
+            return new maplibre.Marker({ element, anchor: 'bottom' })
+              .setLngLat([position.lng, position.lat])
+              .addTo(map);
+          });
+
+          if (positions.length === 1) {
+            map.jumpTo({ center: [positions[0]!.lng, positions[0]!.lat], zoom: 12 });
+          } else {
+            const bounds = new maplibre.LngLatBounds();
+            positions.forEach((position) => bounds.extend([position.lng, position.lat]));
+            map.fitBounds(bounds, { padding: 58, maxZoom: 12, duration: 0 });
+          }
+
+          window.setTimeout(() => {
+            const index = Math.min(activeIndexRef.current, itinerary.length - 1);
+            const position = positions[index];
+            const item = itinerary[index];
+            if (!cancelled && position && item) {
+              popup
+                .setLngLat([position.lng, position.lat])
+                .setHTML(infoCard(item, index, position.approximate))
+                .addTo(map);
+            }
+          }, 150);
+          setMapState('ready');
+        });
       } catch {
-        if (!cancelled) setMapState('fallback');
+        if (!cancelled) setMapState('unavailable');
       }
     };
 
     void initialize();
     return () => {
       cancelled = true;
-      listeners.forEach((listener) => listener.remove());
-      markersRef.current.forEach((marker) => marker.setMap(null));
+      if (loadTimer) clearTimeout(loadTimer);
+      markerListeners.forEach(({ element, event, listener }) => element.removeEventListener(event, listener));
+      markersRef.current.forEach((marker) => marker.remove());
       markersRef.current = [];
-      routeLine?.setMap(null);
-      infoWindowRef.current?.close();
+      popupRef.current?.remove();
+      popupRef.current = null;
+      mapInstanceRef.current?.remove();
       mapInstanceRef.current = null;
-      positionsRef.current = [];
       focusedStageRef.current = null;
-      setStagePositions([]);
     };
-  }, [apiKey, itinerary, onSelect, physicalStops, tourLocation]);
+  }, [itinerary, onSelect, positions, shouldLoadMap]);
 
   useEffect(() => {
     if (mapState !== 'ready') return;
-    const google = googleRef.current;
     const map = mapInstanceRef.current;
-    const marker = markersRef.current[activeIndex];
-    const position = positionsRef.current[activeIndex];
+    const popup = popupRef.current;
+    const position = positions[activeIndex];
     const item = itinerary[activeIndex];
-    if (!google || !map || !marker || !position || !item || !infoWindowRef.current) return;
+    if (!map || !popup || !position || !item) return;
 
-    markersRef.current.forEach((candidate, index) => {
-      candidate.setIcon(markerIcon(google, index + 1, index === activeIndex));
-      candidate.setZIndex(index === activeIndex ? 1000 : index + 1);
+    markersRef.current.forEach((marker, index) => {
+      marker.getElement().className = markerClass(index === activeIndex);
     });
-    infoWindowRef.current.setContent(infoCard(item, activeIndex, position.approximate));
-    infoWindowRef.current.open({ map, anchor: marker, shouldFocus: false });
-    // The first run after the map becomes ready is the initial render, not a
-    // visitor selection — panning then would drag a fitted multi-city route
-    // (Sharm↔Cairo) off-centre onto stage 1. Keep the full-route overview and
-    // pan only when the visitor changes stage.
+    popup
+      .setLngLat([position.lng, position.lat])
+      .setHTML(infoCard(item, activeIndex, position.approximate))
+      .addTo(map);
+
     if (focusedStageRef.current !== null && focusedStageRef.current !== activeIndex) {
-      map.panTo(position);
+      map.easeTo({ center: [position.lng, position.lat], duration: 300 });
     }
     focusedStageRef.current = activeIndex;
-  }, [activeIndex, itinerary, mapState]);
+  }, [activeIndex, itinerary, mapState, positions]);
 
-  // Once the route is computed, the badge reports where the marker actually
-  // is: an "exact" editor place whose geocode failed renders interpolated, and
-  // labelling that pin "Exact place" would contradict the map. Before the
-  // route resolves (or on the static fallback) the label falls back to the
-  // editor-location check.
-  const selectedPosition = stagePositions[activeIndex];
+  const selectedPosition: ItineraryRoutePosition | undefined = positions[activeIndex];
   const selectedIsExact = selectedPosition
     ? !selectedPosition.approximate
     : Boolean(selected?.location && isItineraryMappableLocation(selected.location));
@@ -379,43 +273,68 @@ export default function InteractiveItineraryMap({
     <div data-testid="interactive-itinerary-map" className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-lg">
       <div className="relative aspect-[4/3] min-h-[290px] w-full bg-slate-100 sm:aspect-square">
         <div
-          ref={mapElementRef}
-          data-testid="interactive-itinerary-map-canvas"
-          className={`absolute inset-0 transition-opacity ${mapState === 'fallback' ? 'opacity-0' : 'opacity-100'}`}
+          className={`absolute inset-0 transition-opacity ${effectiveMapState === 'unavailable' ? 'opacity-0' : 'opacity-100'}`}
           role="region"
           aria-label={`Interactive tour route with ${itinerary.length} numbered stages`}
-        />
-
-        {mapState !== 'ready' && fallbackMapUrl && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={fallbackMapUrl} alt="Tour route map" className="h-full w-full object-cover" />
-        )}
-        {mapState !== 'ready' && !fallbackMapUrl && fallbackEmbedUrl && (
-          <iframe
-            title="Tour route map"
-            src={fallbackEmbedUrl}
-            width="100%"
-            height="100%"
-            className="h-full w-full border-0"
-            loading="lazy"
-            referrerPolicy="no-referrer-when-downgrade"
-            allowFullScreen
+        >
+          <div
+            ref={mapElementRef}
+            data-testid="interactive-itinerary-map-canvas"
+            className="h-full w-full"
           />
-        )}
-        {mapState === 'fallback' && !fallbackMapUrl && !fallbackEmbedUrl && (
-          <div className="absolute inset-0 flex items-center justify-center p-6 text-center text-sm text-slate-600">
-            The route map is temporarily unavailable.
+        </div>
+
+        {effectiveMapState === 'loading' && (
+          <div className="absolute inset-0 flex items-center justify-center bg-slate-100 text-sm font-semibold text-slate-700">
+            Loading route map…
           </div>
         )}
-
-        {mapState === 'loading' && (
-          <div className={`absolute flex items-center justify-center text-xs font-semibold text-slate-700 ${fallbackMapUrl || fallbackEmbedUrl ? 'right-3 top-3 rounded-full bg-white/95 px-3 py-1.5 shadow-md backdrop-blur-sm' : 'inset-0 bg-slate-100'}`}>
-            Loading interactive route…
+        {effectiveMapState === 'unavailable' && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-slate-100 p-6 text-center">
+            <MapPin className="h-8 w-8 text-slate-400" aria-hidden="true" />
+            <p className="text-sm font-semibold text-slate-700">The route map is temporarily unavailable.</p>
+            <a
+              href={openMapsUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-4 py-2 text-xs font-semibold text-white hover:bg-slate-700"
+            >
+              <Navigation size={13} />
+              Open route
+            </a>
           </div>
         )}
 
         <div className="pointer-events-none absolute left-3 top-3 rounded-full bg-white/95 px-3 py-1.5 text-xs font-semibold text-slate-800 shadow-md backdrop-blur-sm">
           {itinerary.length} route stages
+        </div>
+      </div>
+
+      <div className="border-t border-slate-100 px-3 py-3">
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide" aria-label="Select an itinerary stage">
+          {itinerary.map((item, index) => (
+            <button
+              key={`${item.title}-${index}`}
+              type="button"
+              onMouseEnter={() => onSelect(index)}
+              onFocus={() => onSelect(index)}
+              onClick={() => onSelect(index)}
+              aria-label={`Show stage ${index + 1}: ${item.title}`}
+              aria-pressed={activeIndex === index}
+              className={`inline-flex h-9 min-w-9 flex-shrink-0 scroll-mx-3 items-center justify-center rounded-full text-xs font-bold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2 ${activeIndex === index ? 'bg-red-700 text-white ring-4 ring-red-100' : 'bg-red-50 text-red-700 hover:bg-red-100'}`}
+            >
+              {index + 1}
+            </button>
+          ))}
+          <a
+            href={openMapsUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="ml-auto inline-flex h-9 flex-shrink-0 items-center justify-center gap-1.5 rounded-full bg-slate-900 px-3 text-xs font-semibold text-white hover:bg-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-500 focus-visible:ring-offset-2"
+          >
+            <Navigation size={13} />
+            Open route
+          </a>
         </div>
       </div>
 
@@ -442,33 +361,12 @@ export default function InteractiveItineraryMap({
         </div>
       )}
 
-      <div className="border-t border-slate-100 px-3 py-3">
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide" aria-label="Select an itinerary stage">
-          {itinerary.map((item, index) => (
-            <button
-              key={`${item.title}-${index}`}
-              type="button"
-              onMouseEnter={() => onSelect(index)}
-              onFocus={() => onSelect(index)}
-              onClick={() => onSelect(index)}
-              aria-label={`Show stage ${index + 1}: ${item.title}`}
-              aria-pressed={activeIndex === index}
-              className={`inline-flex h-9 min-w-9 flex-shrink-0 items-center justify-center rounded-full text-xs font-bold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2 ${activeIndex === index ? 'bg-red-700 text-white ring-4 ring-red-100' : 'bg-red-50 text-red-700 hover:bg-red-100'}`}
-            >
-              {index + 1}
-            </button>
-          ))}
-          <button
-            type="button"
-            onClick={() => window.open(openMapsUrl, '_blank', 'noopener,noreferrer')}
-            className="ml-auto inline-flex h-9 flex-shrink-0 items-center justify-center gap-1.5 rounded-full bg-slate-900 px-3 text-xs font-semibold text-white hover:bg-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-500 focus-visible:ring-offset-2"
-          >
-            <Navigation size={13} />
-            Open route
-          </button>
-        </div>
+      <div className="border-t border-slate-100 px-3 pb-4 pt-3">
         <p className="mt-2 text-[10px] leading-relaxed text-slate-500">
           Numbered stages follow the itinerary order. Generic pickup, sea and onboard stages are approximate; exact pickup is confirmed after booking.
+        </p>
+        <p className="mt-1 text-[10px] text-slate-500">
+          Map data © <a className="underline hover:text-slate-700" href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap contributors</a> · Tiles by <a className="underline hover:text-slate-700" href="https://openfreemap.org/" target="_blank" rel="noopener noreferrer">OpenFreeMap</a>
         </p>
       </div>
     </div>

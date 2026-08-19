@@ -41,10 +41,10 @@ import { imageMetadataFor } from '@/lib/content/imageMetadata';
 import { contentPath } from '@/lib/content/contentUrl';
 import { buildContentBreadcrumbs } from '@/lib/content/breadcrumbs';
 import {
+  itineraryCoordinateAnchors,
   itineraryDirectionsUrl,
-  itineraryEmbedMapUrl,
   itineraryMapStops,
-  itineraryStaticMapUrl,
+  itineraryStoredDirectionsUrl,
 } from '@/lib/tours/itineraryMap';
 import { meetingPointEmbedUrl, meetingPointMapUrl } from '@/lib/tours/meetingPointMap';
 import { effectiveTourPrice } from '@/lib/pricing/effectivePrice';
@@ -58,6 +58,7 @@ interface ItineraryItem {
   description: string;
   duration?: string;
   location?: string;
+  coordinates?: { lat?: number | null; lng?: number | null } | null;
   includes?: string[];
   icon?: string;
 }
@@ -451,13 +452,12 @@ const ItineraryIcon = ({ iconType, className = "w-5 h-5" }: { iconType?: string,
 };
 
 const ItinerarySection = ({ itinerary, tourLocation, sectionRef }: { itinerary: ItineraryItem[], tourLocation?: string, sectionRef: React.RefObject<HTMLDivElement | null> }) => {
-  // The map only exists when the editor typed explicit step locations —
-  // guessing from the tour title placed markers on random keyword matches.
+  // Coordinates are resolved once while the tour is authored. Customer page
+  // views never invoke a geocoder or a billable map API.
   const stops = itineraryMapStops(itinerary);
-  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '';
-  const staticMapUrl = itineraryStaticMapUrl(stops, apiKey, tourLocation);
-  const showMap = stops.length > 0;
-  const openMapsUrl = itineraryDirectionsUrl(stops, tourLocation);
+  const showMap = itineraryCoordinateAnchors(itinerary).length > 0;
+  const openMapsUrl = itineraryStoredDirectionsUrl(itinerary)
+    || itineraryDirectionsUrl(stops, tourLocation);
   const [activeItineraryIndex, setActiveItineraryIndex] = useState(0);
   const selectItineraryStage = useCallback((index: number) => {
     setActiveItineraryIndex(index);
@@ -575,10 +575,6 @@ const ItinerarySection = ({ itinerary, tourLocation, sectionRef }: { itinerary: 
           <div className="relative order-1 w-full lg:order-2 lg:sticky lg:top-24 lg:self-start">
             <InteractiveItineraryMap
               itinerary={itinerary}
-              tourLocation={tourLocation}
-              apiKey={apiKey}
-              fallbackMapUrl={staticMapUrl}
-              fallbackEmbedUrl={stops[0] ? itineraryEmbedMapUrl(stops[0], apiKey, tourLocation) : null}
               openMapsUrl={openMapsUrl}
               activeIndex={activeItineraryIndex}
               onSelect={selectItineraryStage}

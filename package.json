@@ -69,6 +69,7 @@
     "jspdf-autotable": "^5.0.8",
     "lucide-react": "^0.542.0",
     "mailgun.js": "^12.9.0",
+    "maplibre-gl": "6.4.1",
     "mongodb": "^6.21.0",
     "mongoose": "^8.24.1",
     "motion": "^12.42.2",

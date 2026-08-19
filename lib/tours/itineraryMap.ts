@@ -1,19 +1,19 @@
 // Itinerary map rules (client sheet 02.08, N4):
-// - The map renders ONLY from locations an editor typed into itinerary steps.
-//   With none, there is no map — never a guess from the tour title's keywords.
-// - Each distinct physical location receives a numbered marker, in itinerary
-//   order, and the route order is visible as a line between those stops.
-// - A round trip (last location equals the first) reuses the start marker
-//   instead of stacking a second one, and repeated stops render once.
+// - The customer map renders only from coordinate pairs saved by an editor.
+//   With none, it fails closed — never guess from a title or call a geocoder.
+// - Every lifecycle stage remains selectable in itinerary order. Authored
+//   coordinates stay exact; intervening travel stages are disclosed as
+//   approximate positions along the route.
+// - Round-trip endpoints can share the saved starting area while overlapping
+//   approximate markers are separated enough to remain independently usable.
 
 export interface ItineraryStepLike {
   location?: string | null;
+  coordinates?: {
+    lat?: number | null;
+    lng?: number | null;
+  } | null;
 }
-
-const STATIC_MAP_MARKER_LABELS = '123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-const STATIC_MAP_START_COLOR = '0xB91C1C';
-const STATIC_MAP_STOP_COLOR = '0xEF4444';
-const STATIC_MAP_ROUTE_COLOR = '0xDC2626E6';
 
 // Editor-facing itinerary copy often uses travel-stage labels in the location
 // field. Those labels are useful in the timeline, but they are not real map
@@ -228,6 +228,64 @@ export interface ItineraryRoutePosition extends ItineraryRouteCoordinate {
   approximate: boolean;
 }
 
+export function itineraryCoordinateAnchors(itinerary: ItineraryStepLike[]): ItineraryRouteAnchor[] {
+  return (itinerary || []).flatMap((step, index) => {
+    const lat = step?.coordinates?.lat;
+    const lng = step?.coordinates?.lng;
+    if (typeof lat !== 'number' || typeof lng !== 'number'
+      || !Number.isFinite(lat) || !Number.isFinite(lng)
+      || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+      return [];
+    }
+    return [{ index, position: { lat, lng } }];
+  });
+}
+
+function coordinateLabel(position: ItineraryRouteCoordinate): string {
+  return `${position.lat.toFixed(6)},${position.lng.toFixed(6)}`;
+}
+
+/**
+ * Builds a keyless Google Maps hand-off from the coordinates already stored by
+ * an editor. The customer page never geocodes place names. If the itinerary
+ * begins at an exact coordinate and ends at a generic lifecycle label such as
+ * "Your Hotel", the hand-off closes the route at the starting area.
+ */
+export function itineraryStoredDirectionsUrl(itinerary: ItineraryStepLike[]): string | null {
+  const anchors = itineraryCoordinateAnchors(itinerary);
+  if (anchors.length === 0) return null;
+
+  const origin = anchors[0]!;
+  const finalIndex = Math.max(0, itinerary.length - 1);
+  const exactFinal = anchors.find((anchor) => anchor.index === finalIndex);
+  const finalLocation = String(itinerary[finalIndex]?.location || '').trim();
+  const returnsToStartArea = origin.index === 0
+    && finalLocation.length > 0
+    && !isItineraryMappableLocation(finalLocation);
+  const destination = exactFinal || (returnsToStartArea ? origin : anchors[anchors.length - 1]!);
+
+  if (anchors.length === 1 && destination === origin && !returnsToStartArea) {
+    const searchUrl = new URL('https://www.google.com/maps/search/');
+    searchUrl.searchParams.set('api', '1');
+    searchUrl.searchParams.set('query', coordinateLabel(origin.position));
+    return searchUrl.toString();
+  }
+
+  const waypointAnchors = anchors.filter((anchor) =>
+    anchor !== origin && anchor !== destination);
+  const directionsUrl = new URL('https://www.google.com/maps/dir/');
+  directionsUrl.searchParams.set('api', '1');
+  directionsUrl.searchParams.set('origin', coordinateLabel(origin.position));
+  directionsUrl.searchParams.set('destination', coordinateLabel(destination.position));
+  if (waypointAnchors.length > 0) {
+    directionsUrl.searchParams.set(
+      'waypoints',
+      waypointAnchors.map((anchor) => coordinateLabel(anchor.position)).join('|'),
+    );
+  }
+  return directionsUrl.toString();
+}
+
 const coordinatesMatch = (first: ItineraryRouteCoordinate, second: ItineraryRouteCoordinate) =>
   Math.abs(first.lat - second.lat) < 0.00015 && Math.abs(first.lng - second.lng) < 0.00015;
 
@@ -313,60 +371,6 @@ export function completeItineraryRoute(
   });
 
   return positions;
-}
-
-// A no-key fallback is still needed on tenant deployments that do not expose
-// the Google Embed API key. Country-scoping is mandatory: generic business
-// names such as "Luxor Restaurant" otherwise resolve to unrelated countries.
-export function itineraryEmbedMapUrl(stop: string, apiKey?: string | null, tourLocation?: string | null): string {
-  const scopedStop = mapStopQuery(stop, tourLocation);
-  if (apiKey) {
-    return `https://www.google.com/maps/embed/v1/place?key=${encodeURIComponent(apiKey)}&q=${encodeURIComponent(scopedStop)}&zoom=12`;
-  }
-  return `https://www.google.com/maps?q=${encodeURIComponent(scopedStop)}&z=11&output=embed`;
-}
-
-// Static Maps URL with a numbered marker for every distinct physical stop and
-// a line showing their itinerary order. It is used for 2+ stops (a single stop
-// keeps the richer interactive place embed); returns null without a key so the
-// caller can hide the map instead of rendering a broken image.
-export function itineraryStaticMapUrl(stops: string[], apiKey?: string | null, tourLocation?: string | null): string | null {
-  if (!apiKey || stops.length < 2) return null;
-
-  // These storefronts sell Egypt experiences. Supplying the country context
-  // prevents ambiguous editor labels (for example, "Luxor Restaurant") from
-  // resolving to an unrelated place abroad and zooming the route to the world.
-  const routeContext = routeLocation(stops, tourLocation);
-  const mapStops = stops.map((stop) => mapStopQuery(stop, routeContext));
-  const markers = mapStops.map((stop, index) => {
-    const label = STATIC_MAP_MARKER_LABELS[index];
-    // Keep every stop in one red route system. The darker first marker makes
-    // the starting point distinct without forcing visitors to decode a second
-    // unrelated colour.
-    const color = index === 0 ? STATIC_MAP_START_COLOR : STATIC_MAP_STOP_COLOR;
-    // Static maps are requested at scale=2. Scale the default-size pin with
-    // the image so the numbered marker remains large and readable after the
-    // browser downsizes the high-DPI asset.
-    const marker = `scale:2|color:${color}${label ? `|label:${label}` : ''}|${stop}`;
-    return `markers=${encodeURIComponent(marker)}`;
-  });
-  const parts = [
-    'size=640x640',
-    'scale=2',
-    'maptype=roadmap',
-    // Remove competing business/transit labels so the custom red route pins
-    // remain the strongest visual signal without hiding roads or place names.
-    `style=${encodeURIComponent('feature:poi|element:labels|visibility:off')}`,
-    `style=${encodeURIComponent('feature:transit|element:labels|visibility:off')}`,
-    // This is route order, not turn-by-turn driving directions. Directions
-    // need a server-side Directions API request and a client-approved key.
-    // A thicker, high-opacity red stroke remains legible over Google's blue
-    // roads, waterways and grey city labels.
-    `path=${encodeURIComponent(`weight:5|color:${STATIC_MAP_ROUTE_COLOR}|geodesic:true|${mapStops.join('|')}`)}`,
-    ...markers,
-    `key=${encodeURIComponent(apiKey)}`,
-  ];
-  return `https://maps.googleapis.com/maps/api/staticmap?${parts.join('&')}`;
 }
 
 export function itineraryDirectionsUrl(stops: string[], tourLocation?: string | null): string {

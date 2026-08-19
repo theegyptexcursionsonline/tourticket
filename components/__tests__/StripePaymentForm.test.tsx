@@ -7,7 +7,10 @@ let mockStripe: { confirmPayment: jest.Mock } | null = null;
 let mockElements: { submit: jest.Mock } | null = null;
 let mockPaymentElementOptions: unknown;
 
-jest.mock('@stripe/stripe-js', () => ({ loadStripe: jest.fn(() => Promise.resolve({})) }));
+// Keep this suite deterministic even when the release gate inherits a real
+// publishable key. Stripe element behavior is mocked below; these tests cover
+// our unavailable/hosted/inline UI contracts, not Stripe.js bootstrapping.
+jest.mock('@stripe/stripe-js', () => ({ loadStripe: jest.fn(() => null) }));
 jest.mock('@stripe/react-stripe-js', () => ({
   Elements: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   ExpressCheckoutElement: ({

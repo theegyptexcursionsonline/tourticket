@@ -1,12 +1,27 @@
 import {
   completeItineraryRoute,
+  itineraryCoordinateAnchors,
   itineraryDirectionsUrl,
-  itineraryEmbedMapUrl,
   itineraryMapStops,
   itineraryPickupBaseQuery,
   itineraryRouteContextQuery,
-  itineraryStaticMapUrl,
+  itineraryStoredDirectionsUrl,
 } from '@/lib/tours/itineraryMap';
+
+describe('itineraryCoordinateAnchors', () => {
+  it('uses only finite stored coordinates in geographic range', () => {
+    expect(itineraryCoordinateAnchors([
+      { location: 'Cairo Airport', coordinates: { lat: 30.1219, lng: 31.4056 } },
+      { location: 'Missing coordinates' },
+      { location: 'Null coordinates', coordinates: { lat: null, lng: null } },
+      { location: 'Invalid latitude', coordinates: { lat: 120, lng: 31 } },
+      { location: 'Giza', coordinates: { lat: 29.9792, lng: 31.1342 } },
+    ])).toEqual([
+      { index: 0, position: { lat: 30.1219, lng: 31.4056 } },
+      { index: 4, position: { lat: 29.9792, lng: 31.1342 } },
+    ]);
+  });
+});
 
 describe('completeItineraryRoute', () => {
   it('keeps exact landmarks fixed and fills every generic lifecycle stage', () => {
@@ -35,6 +50,25 @@ describe('completeItineraryRoute', () => {
 
   it('does not invent route coordinates without an editor place or route base', () => {
     expect(completeItineraryRoute(4, [], null)).toEqual([]);
+  });
+});
+
+describe('itineraryStoredDirectionsUrl', () => {
+  it('uses stored coordinates and closes a generic return stage at the starting area', () => {
+    const url = new URL(itineraryStoredDirectionsUrl([
+      { location: 'Sharm Airport', coordinates: { lat: 27.9794911, lng: 34.3946305 } },
+      { location: 'Giza', coordinates: { lat: 29.9707813, lng: 31.1242335 } },
+      { location: 'Your Hotel' },
+    ])!);
+
+    expect(url.hostname).toBe('www.google.com');
+    expect(url.searchParams.get('origin')).toBe('27.979491,34.394630');
+    expect(url.searchParams.get('destination')).toBe('27.979491,34.394630');
+    expect(url.searchParams.get('waypoints')).toBe('29.970781,31.124233');
+  });
+
+  it('returns null rather than geocoding when no coordinate was authored', () => {
+    expect(itineraryStoredDirectionsUrl([{ location: 'Giza' }])).toBeNull();
   });
 });
 
@@ -99,67 +133,6 @@ describe('itineraryMapStops', () => {
   });
 });
 
-describe('itineraryStaticMapUrl', () => {
-  it('needs a key and at least two stops', () => {
-    expect(itineraryStaticMapUrl(['Cairo', 'Giza'], undefined)).toBeNull();
-    expect(itineraryStaticMapUrl(['Cairo'], 'k')).toBeNull();
-  });
-
-  it('gives every stop a visible red numbered marker and connects the route with a strong red line', () => {
-    const url = itineraryStaticMapUrl(['El Gouna', 'Valley of the Kings', 'Luxor'], 'k');
-    expect(url).toContain('staticmap');
-    expect(url).toContain(encodeURIComponent('scale:2|color:0xB91C1C|label:1|El Gouna, Egypt'));
-    expect(url).toContain(encodeURIComponent('scale:2|color:0xEF4444|label:2|Valley of the Kings, Luxor, Egypt'));
-    expect(url).toContain(encodeURIComponent('scale:2|color:0xEF4444|label:3|Luxor, Egypt'));
-    expect(url).toContain(encodeURIComponent('weight:5|color:0xDC2626E6|geodesic:true|El Gouna, Egypt|Valley of the Kings, Luxor, Egypt|Luxor, Egypt'));
-    expect(url).toContain(encodeURIComponent('feature:poi|element:labels|visibility:off'));
-    expect(url).toContain(encodeURIComponent('feature:transit|element:labels|visibility:off'));
-    expect(decodeURIComponent(url!)).not.toContain('color:blue');
-  });
-
-  it('extracts the route city from a detailed tour location without duplicating place names', () => {
-    const url = itineraryStaticMapUrl(
-      ['Orange Bay, Giftun Island', 'Hurghada Marina'],
-      'k',
-      'Orange Bay, Giftun Island, Hurghada',
-    );
-    const markers = new URL(url!).searchParams.getAll('markers').join('|');
-    expect(markers).toContain('Orange Bay, Giftun Island, Hurghada, Egypt');
-    expect(markers).toContain('Hurghada Marina, Egypt');
-    expect(markers).not.toContain('Orange Bay, Giftun Island, Orange Bay');
-    expect(markers).not.toContain('Hurghada Marina, Hurghada');
-  });
-
-  it('does not duplicate an existing Egypt country context', () => {
-    const url = itineraryStaticMapUrl(['Luxor, Egypt', 'Karnak, Ägypten'], 'k');
-    const markers = new URL(url!).searchParams.getAll('markers').join('|');
-    expect(markers).toContain('Luxor, Egypt');
-    expect(markers).toContain('Karnak, Ägypten');
-    expect(markers).not.toContain('Egypt, Egypt');
-  });
-
-  it('uses the published tour city to disambiguate short landmark names', () => {
-    const url = itineraryStaticMapUrl(['Egyptian Museum', 'Citadel'], 'k', 'Cairo, Egypt');
-    const markers = new URL(url!).searchParams.getAll('markers').join('|');
-    expect(markers).toContain('Egyptian Museum, Cairo, Egypt');
-    expect(markers).toContain('Citadel, Cairo, Egypt');
-  });
-
-  it('uses an explicit itinerary city instead of the pickup destination', () => {
-    const url = itineraryStaticMapUrl(
-      ['Luxor', 'Valley of the Kings', 'Karnak'],
-      'k',
-      'Makadi Bay',
-    );
-    const markers = new URL(url!).searchParams.getAll('markers').join('|');
-    expect(markers).toContain('Luxor, Egypt');
-    expect(markers).toContain('Valley of the Kings, Luxor, Egypt');
-    expect(markers).toContain('Karnak, Luxor, Egypt');
-    expect(markers).not.toContain('Makadi Bay');
-    expect(markers).not.toContain('Luxor, Luxor');
-  });
-});
-
 describe('itineraryRouteContextQuery', () => {
   it('prefers a stop that IS a city over a city embedded in a later landmark label', () => {
     // Sharm→Cairo bus tour: "Giza Plateau" appears after "Cairo", but the
@@ -190,24 +163,6 @@ describe('itineraryPickupBaseQuery', () => {
     expect(itineraryPickupBaseQuery('Some Unknown Village')).toBeNull();
     expect(itineraryPickupBaseQuery('')).toBeNull();
     expect(itineraryPickupBaseQuery(null)).toBeNull();
-  });
-});
-
-describe('itineraryEmbedMapUrl', () => {
-  it('country-scopes the no-key fallback to Egypt', () => {
-    expect(itineraryEmbedMapUrl('Luxor Restaurant')).toContain('Luxor%20Restaurant%2C%20Egypt');
-  });
-
-  it('uses the keyed place embed without duplicating an existing country', () => {
-    const url = itineraryEmbedMapUrl('Karnak, Egypt', 'secret key');
-    expect(url).toContain('/embed/v1/place?key=secret%20key');
-    expect(decodeURIComponent(url)).toContain('q=Karnak, Egypt');
-    expect(decodeURIComponent(url)).not.toContain('Egypt, Egypt');
-  });
-
-  it('uses the tour city to disambiguate a one-stop place embed', () => {
-    expect(decodeURIComponent(itineraryEmbedMapUrl('Hanging Church', 'secret key', 'Cairo, Egypt')))
-      .toContain('q=Hanging Church, Cairo, Egypt');
   });
 });
 
