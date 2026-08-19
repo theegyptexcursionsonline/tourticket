@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import Image from 'next/image';
 import { Link } from '@/i18n/routing';
 import { AnimatePresence, motion, useInView } from 'framer-motion';
@@ -454,10 +454,13 @@ const ItineraryIcon = ({ iconType, className = "w-5 h-5" }: { iconType?: string,
 const ItinerarySection = ({ itinerary, tourLocation, sectionRef }: { itinerary: ItineraryItem[], tourLocation?: string, sectionRef: React.RefObject<HTMLDivElement | null> }) => {
   // Coordinates are resolved once while the tour is authored. Customer page
   // views never invoke a geocoder or a billable map API.
-  const stops = itineraryMapStops(itinerary);
-  const showMap = itineraryCoordinateAnchors(itinerary).length > 0;
-  const openMapsUrl = itineraryStoredDirectionsUrl(itinerary)
-    || itineraryDirectionsUrl(stops, tourLocation);
+  // Recomputed only when the itinerary changes, not on every scroll tick.
+  const stops = useMemo(() => itineraryMapStops(itinerary), [itinerary]);
+  const showMap = useMemo(() => itineraryCoordinateAnchors(itinerary).length > 0, [itinerary]);
+  const openMapsUrl = useMemo(
+    () => itineraryStoredDirectionsUrl(itinerary) || itineraryDirectionsUrl(stops, tourLocation),
+    [itinerary, stops, tourLocation],
+  );
   const [activeItineraryIndex, setActiveItineraryIndex] = useState(0);
   const selectItineraryStage = useCallback((index: number) => {
     setActiveItineraryIndex(index);
@@ -1199,7 +1202,12 @@ export default function TourPageClient({ tour, relatedTours, initialReviews = []
     }
   };
 
-  const enhancement = extractEnhancementData(tour);
+  // Derived once per tour. This page re-renders on every scroll (eight
+  // useInView section observers drive the sticky tab bar), and
+  // extractEnhancementData rebuilds `itinerary` with .map() on each call.
+  // An unmemoised call handed the itinerary map a new array identity on
+  // every scroll tick, which tore down and re-created the WebGL map.
+  const enhancement = useMemo(() => extractEnhancementData(tour), [tour]);
 
   const tourImages = [tour.image, ...(tour.images || [])].filter(Boolean);
   const selectedImageSeo = imageMetadataFor(

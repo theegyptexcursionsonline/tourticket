@@ -30,6 +30,28 @@ describe('keyless itinerary map contract', () => {
     expect(config).toContain('https://tiles.openfreemap.org');
   });
 
+  it('hands the itinerary map a stable itinerary so scrolling cannot rebuild the map', () => {
+    const detail = read('app/[locale]/[slug]/TourDetailClientPage.tsx');
+    const map = read('components/tours/InteractiveItineraryMap.tsx');
+
+    // extractEnhancementData rebuilds `itinerary` with .map() on every call, and
+    // this page re-renders on every scroll tick (eight useInView observers feed
+    // the sticky tab bar). Calling it unmemoised handed the map a new array
+    // identity per tick, which tore down and re-created the WebGL map.
+    expect(detail).toContain('useMemo(() => extractEnhancementData(tour), [tour])');
+    expect(detail).not.toMatch(/const enhancement = extractEnhancementData\(tour\);/);
+
+    // The map itself must not key its lifecycle on object identity either.
+    // The behaviour is proven by counting map constructions across parent
+    // re-renders in components/tours/__tests__/InteractiveItineraryMap.stability.test.tsx;
+    // asserted here only so the derivation cannot quietly go away. Exact
+    // dependency arrays are deliberately NOT asserted — that would break on
+    // every legitimate edit without catching a real regression.
+    expect(map).toContain('const routeSignature = useMemo(');
+    expect(map).toContain('export default React.memo(InteractiveItineraryMap);');
+    expect(map).not.toMatch(/}, \[itinerary, onSelect, positions, shouldLoadMap\]\);/);
+  });
+
   it('requires complete coordinate pairs in the tour editor and never geocodes customer visits', () => {
     const form = read('components/TourForm.tsx');
     expect(form).toContain('Latitude <span className="font-normal">(map pin)</span>');
