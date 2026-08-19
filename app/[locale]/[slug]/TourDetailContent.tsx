@@ -231,12 +231,18 @@ export async function renderTourDetail(slug: string, locale: string): Promise<Re
   return (
     <>
       <Header2 startSolid />
-      <TourDetailClientPage
-        tour={localizedTour}
-        relatedTours={localizedRelatedTours}
-        initialReviews={reviews}
-        initialStopSaleDates={initialStopSaleDates}
-      />
+      {/* A tour also renders at the site root when its slug resolves there, so
+          the URL cannot identify one. Declaring the page type here lets
+          transactional-page behaviour (such as suppressing the floating trip
+          search) key off the page itself rather than guessing from the path. */}
+      <div data-page-type="tour">
+        <TourDetailClientPage
+          tour={localizedTour}
+          relatedTours={localizedRelatedTours}
+          initialReviews={reviews}
+          initialStopSaleDates={initialStopSaleDates}
+        />
+      </div>
       <Footer />
     </>
   );
