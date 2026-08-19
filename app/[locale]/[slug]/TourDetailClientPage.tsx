@@ -1660,7 +1660,7 @@ export default function TourPageClient({ tour, relatedTours, initialReviews = []
                       className="flex items-center gap-3 text-slate-600 hover:text-red-600 transition-colors w-full text-left"
                     >
                       <MessageCircle size={18} />
-                      <span>Chat with us</span>
+                      <span>Ask AI about this tour</span>
                     </button>
                     <a href="tel:+201142255624" className="flex items-center gap-3 text-slate-600 hover:text-red-600 transition-colors">
                       <Phone size={18} />

@@ -64,7 +64,7 @@ describe('Footer', () => {
     window.addEventListener('foxes:search:open', opened, { once: true })
     render(<Footer />)
 
-    fireEvent.click(screen.getByRole('button', { name: 'Open chat' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Open AI trip assistant' }))
 
     expect(opened).toHaveBeenCalledTimes(1)
     expect((opened.mock.calls[0][0] as CustomEvent).detail).toEqual(expect.objectContaining({

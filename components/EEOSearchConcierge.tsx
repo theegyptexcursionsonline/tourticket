@@ -17,7 +17,7 @@ const MOBILE_BOOKING_BAR_SELECTOR = '[data-mobile-booking-bar="true"]';
 const MOBILE_ACTION_GAP_PX = 12;
 // The launcher is served through the customer CDN. A release token prevents a
 // previously cached widget bundle from surviving a Search UI rollout.
-const LAUNCHER_RELEASE = '20260816-ai-search-identity-capsule-v3';
+const LAUNCHER_RELEASE = '20260819-single-composer-v4';
 
 const copy: Record<string, { label: string; kicker: string; placeholder: string }> = {
   en: {

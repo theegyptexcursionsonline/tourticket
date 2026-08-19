@@ -344,11 +344,11 @@ export default function ContactClientPage() {
                   <div className="p-4 bg-gradient-to-br from-green-500 to-emerald-500 rounded-2xl shadow-lg shadow-green-500/30 group-hover:shadow-green-500/50 transition-all mb-4 group-hover:scale-110 transform">
                     <MessageSquare size={28} className="text-white" />
                   </div>
-                  <h3 className="font-bold text-slate-900 mb-2 text-lg">Live Chat</h3>
-                  <p className="text-green-600 font-bold text-lg mb-3">Start a conversation</p>
+                  <h3 className="font-bold text-slate-900 mb-2 text-lg">AI Trip Assistant</h3>
+                  <p className="text-green-600 font-bold text-lg mb-3">Ask about Egypt tours</p>
                   <div className="flex items-center gap-1.5 text-xs text-slate-600 bg-slate-100 px-3 py-1.5 rounded-full">
                     <span className="inline-block w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-                    <span className="font-medium">Instant support</span>
+                    <span className="font-medium">Grounded AI answers</span>
                   </div>
                 </div>
               </div>
@@ -764,7 +764,7 @@ export default function ContactClientPage() {
                     className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-700 hover:to-orange-700 text-white rounded-xl font-bold shadow-xl hover:shadow-2xl hover:shadow-red-500/30 transition-all hover:scale-105"
                   >
                     <MessageSquare size={20} />
-                    <span>Chat with our team</span>
+                    <span>Ask our AI trip assistant</span>
                   </button>
                 </motion.div>
               </div>

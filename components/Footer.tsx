@@ -420,7 +420,7 @@ export default function Footer() {
                     type="button"
                     onClick={openChatbot}
                     className="text-sm font-semibold text-slate-900 hover:text-red-600 transition-colors cursor-pointer text-left"
-                    aria-label="Open chat"
+                    aria-label="Open AI trip assistant"
                   >
                     {t('chatWithUs')}
                   </button>

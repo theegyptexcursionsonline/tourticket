@@ -25,5 +25,8 @@ describe('single storefront AI widget contract', () => {
     expect(source).toContain('requestHostedAISearch');
     expect(source).not.toContain('window.FoxesConnect');
     expect(source).not.toContain("new CustomEvent('open-chatbot')");
+    expect(source).not.toContain('Chat with us');
+    expect(source).not.toContain('Live Chat');
+    expect(source).not.toContain('Instant support');
   });
 });
