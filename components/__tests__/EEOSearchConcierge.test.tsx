@@ -109,6 +109,34 @@ describe('EEOSearchConcierge', () => {
 
   const visibleRects = () => [{ width: 320, height: 200 }] as unknown as DOMRectList;
 
+  it('opens collapsed so it never covers the page on arrival', async () => {
+    render(<EEOSearchConcierge />);
+    await waitFor(() => {
+      const script = document.getElementById('eeo-search-concierge-script') as HTMLScriptElement;
+      expect(script.dataset.defaultCollapsed).toBe('true');
+    });
+  });
+
+  it('stays off a tour page that renders at the site root', async () => {
+    // The slug resolves to a tour, so only the rendered page identifies it.
+    render(<EEOSearchConcierge />);
+
+    const host = document.createElement('div');
+    host.id = 'foxes-launcher-host';
+    document.body.appendChild(host);
+
+    await waitFor(() => expect(host.hidden).toBe(false));
+
+    const tour = document.createElement('div');
+    tour.setAttribute('data-page-type', 'tour');
+    document.body.appendChild(tour);
+
+    await waitFor(() => expect(host.hidden).toBe(true));
+
+    tour.remove();
+    await waitFor(() => expect(host.hidden).toBe(false));
+  });
+
   it('hides the hosted launcher while a visible application modal is open', async () => {
     const closeListener = jest.fn();
     window.addEventListener('foxes:search:close', closeListener);
