@@ -113,4 +113,30 @@ describe('homepage performance contracts', () => {
     expect(document.querySelectorAll('[data-testid="hosted-ai-search-entry"]')).toHaveLength(1);
   });
 
+  it('keeps the hero hierarchy solid and makes social proof visually prominent', () => {
+    render(
+      <HeroSectionStable
+        initialSettings={{
+          title: { main: 'Explore Egypt', highlight: 'Pyramids and Nile' },
+          metaDescription: 'Unforgettable excursions',
+          trustIndicators: {
+            travelers: '2M+ travelers',
+            ratingText: '★★★★★',
+            rating: '4.9/5 rating',
+            isVisible: true,
+          },
+        }}
+      />,
+    );
+
+    expect(screen.getByText('Pyramids and Nile')).toHaveClass('text-white/90', 'md:text-5xl');
+    expect(screen.getByText('Pyramids and Nile')).not.toHaveClass('bg-gradient-to-r', 'text-transparent');
+    expect(screen.getByText('Unforgettable excursions')).toHaveClass('sm:text-lg');
+
+    const trust = screen.getByTestId('hero-trust-indicators');
+    expect(trust).toHaveClass('border-white/30', 'bg-slate-950/45', 'font-semibold', 'sm:text-base');
+    expect(trust).toHaveTextContent('2M+ travelers');
+    expect(trust).toHaveTextContent('4.9/5 rating');
+  });
+
 });

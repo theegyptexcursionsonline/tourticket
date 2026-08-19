@@ -181,7 +181,8 @@
   "destinations": {
     "title": "Wohin gehst du?",
     "tours": "Touren",
-    "tour": "Tour"
+    "tour": "Tour",
+    "viewAll": "Alle Reiseziele anzeigen"
   },
   "featured": {
     "title": "Perfekte Kreuzfahrten Fur Sie",

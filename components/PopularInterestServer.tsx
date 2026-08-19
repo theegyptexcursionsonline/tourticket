@@ -95,12 +95,12 @@ const InterestCard = ({
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
 
         {/* Hover Effect */}
-        <div className="absolute inset-0 bg-gradient-to-t from-red-900/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+        <div className="absolute inset-0 bg-red-950/15 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
       </div>
 
       {/* Featured Badge */}
       {interest.featured && (
-        <div className="absolute top-4 right-4 z-20 bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-4 py-1.5 rounded-full text-xs font-bold shadow-lg flex items-center gap-1">
+        <div className="absolute top-4 right-4 z-20 flex items-center gap-1 rounded-full bg-red-600 px-4 py-1.5 text-xs font-bold text-white shadow-lg">
           <Sparkles className="w-3 h-3" />
           {t('featuredBadge')}
         </div>
@@ -108,7 +108,7 @@ const InterestCard = ({
 
       {/* Trending Badge */}
       {interest.products > 50 && (
-        <div className="absolute top-4 left-4 z-20 bg-gradient-to-r from-green-400 to-emerald-500 text-white px-4 py-1.5 rounded-full text-xs font-bold shadow-lg flex items-center gap-1">
+        <div className="absolute top-4 left-4 z-20 flex items-center gap-1 rounded-full border border-white/50 bg-white/90 px-4 py-1.5 text-xs font-bold text-slate-900 shadow-lg backdrop-blur-sm">
           <TrendingUp className="w-3 h-3" />
           {t('trendingBadge')}
         </div>
@@ -116,7 +116,7 @@ const InterestCard = ({
 
       {/* Content */}
       <div className="absolute bottom-0 left-0 right-0 p-6 z-10">
-        <h3 className="text-2xl font-bold text-white mb-2 group-hover:text-yellow-300 transition-colors">
+        <h3 className="text-2xl font-bold text-white mb-2 transition-colors">
           {interest.name}
         </h3>
         <div className="flex items-center justify-between">
@@ -176,11 +176,11 @@ export default function PopularInterestServer({ interests, categoryPages }: Popu
   if (interests.length === 0) return <EmptyState t={t} rtl={rtl} />;
 
   return (
-    <section className="bg-gradient-to-b from-slate-900 to-slate-800 py-12 sm:py-16 md:py-20 overflow-hidden">
+    <section className="overflow-hidden bg-slate-950 py-12 sm:py-16 md:py-20">
       <div className="container mx-auto px-4 max-w-[1400px]">
         {/* Header */}
         <div className="text-center mb-10 sm:mb-12 md:mb-14">
-          <div className="inline-flex items-center gap-2 bg-yellow-400/20 text-yellow-300 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full mb-3 sm:mb-4">
+          <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-red-400/30 bg-red-500/15 px-3 py-1.5 text-red-100 sm:mb-4 sm:px-4 sm:py-2">
             <Sparkles className="w-3 sm:w-4 h-3 sm:h-4" />
             <span className="text-xs sm:text-sm font-bold">{t('sectionBadge')}</span>
           </div>
@@ -235,7 +235,7 @@ export default function PopularInterestServer({ interests, categoryPages }: Popu
         <div className="text-center mt-8 sm:mt-10 md:mt-12 px-4">
           <Link
             href="/interests"
-            className="inline-flex items-center gap-2 px-6 sm:px-8 py-3 sm:py-4 bg-white text-slate-900 rounded-xl text-sm sm:text-base font-bold hover:bg-slate-100 transition-all duration-300 shadow-xl hover:shadow-2xl hover:scale-105"
+            className="inline-flex min-h-12 items-center gap-2 rounded-full bg-red-600 px-6 py-3 text-sm font-bold text-white transition-colors hover:bg-red-700 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-red-300/40 sm:px-8 sm:py-4 sm:text-base"
           >
             {t('exploreAll')}
             <CtaArrow className="w-4 sm:w-5 h-4 sm:h-5" />
@@ -247,7 +247,7 @@ export default function PopularInterestServer({ interests, categoryPages }: Popu
         .swiper-button-next,
         .swiper-button-prev {
           color: white;
-          background-color: rgba(255, 255, 255, 0.1);
+          background-color: rgb(220 38 38);
           backdrop-filter: blur(10px);
           border-radius: 50%;
           width: 50px;
@@ -265,7 +265,7 @@ export default function PopularInterestServer({ interests, categoryPages }: Popu
 
         .swiper-button-next:hover,
         .swiper-button-prev:hover {
-          background-color: rgba(255, 255, 255, 0.2);
+          background-color: rgb(185 28 28);
           transform: scale(1.1);
         }
 

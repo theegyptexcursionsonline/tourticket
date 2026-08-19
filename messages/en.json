@@ -181,7 +181,8 @@
   "destinations": {
     "title": "Where are you going?",
     "tours": "tours",
-    "tour": "tour"
+    "tour": "tour",
+    "viewAll": "See all destinations"
   },
   "featured": {
     "title": "Canal Cruises Perfect For You",

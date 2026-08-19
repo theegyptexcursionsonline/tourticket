@@ -181,7 +181,8 @@
   "destinations": {
     "title": "A donde vas?",
     "tours": "tours",
-    "tour": "tour"
+    "tour": "tour",
+    "viewAll": "Ver todos los destinos"
   },
   "featured": {
     "title": "Cruceros Perfectos Para Ti",

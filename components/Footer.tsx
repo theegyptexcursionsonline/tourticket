@@ -372,7 +372,7 @@ export default function Footer() {
                     className="hover:text-red-600 transition-colors inline-flex items-center gap-2" 
                     href={contentPath('destination', destination.slug, destination.urlType, null, destination.parentPage?.slug)}
                   >
-                    <span className="h-1.5 w-1.5 rounded-full bg-blue-500" />
+                    <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
                     {destination.name}
                   </Link>
                 </li>
@@ -406,7 +406,7 @@ export default function Footer() {
                   </div>
                 </li>
                 <li className="flex gap-3">
-                  <span className="h-10 w-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-600"><Mail size={18} /></span>
+                  <span className="h-10 w-10 rounded-full bg-red-50 flex items-center justify-center text-red-600"><Mail size={18} /></span>
                   <div>
                     <a href="mailto:booking@egypt-excursionsonline.com" className="font-semibold text-slate-900 hover:text-red-600 transition-colors break-all">
                       booking@egypt-excursionsonline.com
@@ -449,7 +449,7 @@ export default function Footer() {
                       />
                       <button
                         type="submit"
-                        className="h-11 w-full sm:w-auto px-4 sm:px-6 rounded-xl text-white bg-gradient-to-r from-red-600 to-slate-900 hover:from-red-700 hover:to-slate-950 transition-colors text-sm font-semibold flex items-center justify-center disabled:cursor-not-allowed disabled:opacity-60"
+                        className="flex h-11 w-full items-center justify-center rounded-xl bg-red-600 px-4 text-sm font-semibold text-white transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto sm:px-6"
                         disabled={isLoading || !newsletterConsent}
                       >
                         {isLoading ? <Loader2 className="animate-spin" aria-hidden="true" /> : t('subscribe')}
@@ -495,7 +495,7 @@ export default function Footer() {
                     href={href}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="w-10 h-10 rounded-full bg-slate-900 text-white flex items-center justify-center hover:bg-red-600 transition-colors border border-slate-200"
+                    className="flex h-10 w-10 items-center justify-center rounded-full border border-red-100 bg-red-50 text-red-600 transition-colors hover:bg-red-600 hover:text-white"
                     aria-label={t('followSocialAria')}
                   >
                     <Icon size={18} />
@@ -536,7 +536,7 @@ export default function Footer() {
               onClick={(e) => e.stopPropagation()}
             >
               {/* Modal header gradient */}
-              <div className="relative overflow-hidden bg-gradient-to-br from-rose-50 via-white to-amber-50 px-6 pb-12 pt-8 text-center sm:px-8 sm:pb-14 sm:pt-10">
+              <div className="relative overflow-hidden bg-red-50 px-6 pb-12 pt-8 text-center sm:px-8 sm:pb-14 sm:pt-10">
                 <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_rgba(244,63,94,0.16)_0%,_transparent_60%)]" />
                 <button
                   type="button"

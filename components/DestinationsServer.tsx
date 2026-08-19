@@ -4,6 +4,7 @@ import { Destination } from '@/types';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { isRTL } from '@/i18n/config';
 import { contentPath } from '@/lib/content/contentUrl';
+import { ArrowLeft, ArrowRight } from 'lucide-react';
 
 interface DestinationWithTourCount extends Destination {
   tourCount: number;
@@ -17,6 +18,7 @@ export default async function DestinationsServer({ destinations }: DestinationsS
   const t = await getTranslations('destinations');
   const locale = await getLocale();
   const rtl = isRTL(locale);
+  const ViewAllArrow = rtl ? ArrowLeft : ArrowRight;
   const numberFormatter = new Intl.NumberFormat(locale);
 
   if (!destinations || destinations.length === 0) {
@@ -26,7 +28,7 @@ export default async function DestinationsServer({ destinations }: DestinationsS
   return (
     <section className="bg-white py-12 sm:py-16">
       <div className="container mx-auto px-4">
-        <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-800 mb-6 sm:mb-8 text-center sm:text-start">
+        <h2 className="mb-6 text-center text-3xl font-extrabold tracking-tight text-slate-900 sm:mb-8 sm:text-4xl">
           {t('title')}
         </h2>
         <div className="flex justify-center gap-4 sm:gap-6 md:gap-8 flex-wrap">
@@ -63,6 +65,15 @@ export default async function DestinationsServer({ destinations }: DestinationsS
               </Link>
             );
           })}
+        </div>
+        <div className="mt-8 flex justify-center sm:mt-10">
+          <Link
+            href="/destinations"
+            className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-red-600 px-6 py-3 text-sm font-bold text-white transition-colors hover:bg-red-700 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-red-200 sm:text-base"
+          >
+            {t('viewAll')}
+            <ViewAllArrow className="h-4 w-4" aria-hidden="true" />
+          </Link>
         </div>
       </div>
     </section>

@@ -224,28 +224,28 @@ export default function HeroSectionStable({ initialSettings }: HeroSectionStable
         <div className="relative z-10 mx-auto flex h-full w-full max-w-7xl flex-col items-center justify-center px-4 text-center sm:px-6 md:items-start md:text-left lg:px-8">
           <div className="relative max-w-xl">
             <h1 className="text-4xl font-extrabold uppercase leading-tight tracking-wide drop-shadow-lg sm:text-5xl md:text-6xl lg:text-7xl">
-              {heroMainText}
+              <span className="block">{heroMainText}</span>
               {heroHighlightText && (
-                <>
-                  <br />
-                  <span className="bg-gradient-to-r from-blue-400 to-cyan-300 bg-clip-text text-transparent">
-                    {heroHighlightText}
-                  </span>
-                </>
+                <span className="mt-1 block text-3xl font-bold text-white/90 sm:text-4xl md:text-5xl lg:text-6xl">
+                  {heroHighlightText}
+                </span>
               )}
             </h1>
 
-            <p className="mx-auto mt-4 max-w-md text-base font-light drop-shadow sm:text-lg md:mx-0 md:text-xl">
+            <p className="mx-auto mt-4 max-w-md text-base font-normal leading-relaxed text-white/90 drop-shadow sm:text-lg md:mx-0">
               {heroSubtitleText}
             </p>
 
             <HostedAISearchEntry placeholder={currentSuggestion} />
 
             {initialSettings?.trustIndicators?.isVisible !== false && (
-              <div className="mt-6 flex items-center justify-center gap-6 text-sm text-white/80 md:justify-start">
-                <span>{travelersText}</span>
-                <span>{ratingStarsText}</span>
-                <span>{ratingScoreText}</span>
+              <div
+                data-testid="hero-trust-indicators"
+                className="mx-auto mt-6 inline-flex items-center justify-center divide-x divide-white/25 rounded-full border border-white/30 bg-slate-950/45 px-2 py-2.5 text-sm font-semibold text-white shadow-lg backdrop-blur-md sm:text-base md:mx-0 md:justify-start"
+              >
+                <span className="px-3">{travelersText}</span>
+                <span className="px-3 tracking-wide" aria-label={ratingStarsText}>{ratingStarsText}</span>
+                <span className="px-3">{ratingScoreText}</span>
               </div>
             )}
           </div>

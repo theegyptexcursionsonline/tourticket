@@ -87,10 +87,10 @@ const formatBookings = (num?: number) => {
 
 const getTagColor = (tag: string) => {
   if (tag.includes('%')) return 'bg-red-500 text-white';
-  if (tag === 'Staff favourite') return 'bg-indigo-500 text-white';
-  if (tag === 'Online only deal') return 'bg-emerald-500 text-white';
-  if (tag === 'New') return 'bg-purple-500 text-white';
-  if (tag === 'Best for Kids') return 'bg-yellow-400 text-black';
+  if (tag === 'Staff favourite') return 'bg-slate-900 text-white';
+  if (tag === 'Online only deal') return 'bg-red-600 text-white';
+  if (tag === 'New') return 'bg-red-600 text-white';
+  if (tag === 'Best for Kids') return 'bg-white text-slate-900';
   return 'bg-white/95 text-gray-800';
 };
 
@@ -131,7 +131,7 @@ const TourCard = ({ tour, onAddToCartClick }: { tour: Tour; onAddToCartClick: (t
           </span>
 
           <div className="flex shrink-0 items-center gap-1 rounded-full border border-white/20 bg-white/95 px-2.5 py-1.5 backdrop-blur-sm sm:gap-2 sm:px-3 sm:py-2" style={{ boxShadow: 'none' }}>
-            <Star size={16} className="text-yellow-500 fill-yellow-500" />
+            <Star size={16} className="fill-red-600 text-red-600" />
             <span className="text-xs font-bold text-gray-800 sm:text-sm">
               {tour.rating ? tour.rating.toFixed(1) : '0.0'}
             </span>
@@ -156,7 +156,7 @@ const TourCard = ({ tour, onAddToCartClick }: { tour: Tour; onAddToCartClick: (t
         {/* Special Offer Badge */}
         {tour.specialOffer && (
           <div className={`absolute ${tour.tags && tour.tags.length > 0 ? 'top-[5.5rem]' : 'top-14'} left-4 z-20`}>
-            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold uppercase tracking-wide rounded-full bg-gradient-to-r from-purple-600 to-violet-500 text-white backdrop-blur-sm" style={{ boxShadow: 'none' }}>
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-red-600 px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-white backdrop-blur-sm" style={{ boxShadow: 'none' }}>
               <Tag size={11} />
               <span className="truncate max-w-[160px]">{tour.specialOffer.badgeText}</span>
             </span>
@@ -165,7 +165,7 @@ const TourCard = ({ tour, onAddToCartClick }: { tour: Tour; onAddToCartClick: (t
 
         {/* Price Badge */}
         <div className="absolute left-4 bottom-4 z-20">
-          <div className="bg-gradient-to-r from-red-600 to-red-500 text-white px-3 py-2 rounded-full font-black text-sm sm:text-base border-2 border-white/20" style={{ boxShadow: 'none' }}>
+          <div className="rounded-full border-2 border-white/20 bg-red-600 px-3 py-2 text-sm font-black text-white sm:text-base" style={{ boxShadow: 'none' }}>
             <span className="text-xs font-medium">From </span>{formatPrice(tour.pricingSummary?.fromPrice ?? tour.discountPrice ?? tour.originalPrice ?? 0)}
             {tour.originalPrice && tour.discountPrice && tour.originalPrice > tour.discountPrice && (
               <span className="ml-2 text-xs font-medium line-through text-red-100">
@@ -293,7 +293,7 @@ export default function FeaturedToursServer({ tours }: FeaturedToursServerProps)
 
   return (
     <>
-      <section className="featured-tours-section bg-gradient-to-b from-white to-gray-50 py-8 sm:py-12 md:py-16 lg:py-20">
+      <section className="featured-tours-section bg-slate-50 py-8 sm:py-12 md:py-16 lg:py-20">
         {/* Header with container */}
         <div className="container mx-auto px-4 md:px-8 mb-8 sm:mb-10 md:mb-12">
           <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 sm:gap-6">
@@ -309,7 +309,7 @@ export default function FeaturedToursServer({ tours }: FeaturedToursServerProps)
             <div className="flex items-center gap-4 w-full md:w-auto">
               <Link
                 href="/tours"
-                className="inline-flex items-center justify-center gap-2 px-5 sm:px-6 md:px-8 py-2.5 sm:py-3 md:py-4 rounded-full bg-gradient-to-r from-red-600 to-red-500 text-white text-sm sm:text-base font-bold hover:scale-105 transform transition-all duration-300 border-2 border-transparent hover:border-white/20 w-full md:w-auto"
+                className="inline-flex w-full min-h-12 items-center justify-center gap-2 rounded-full bg-red-600 px-5 py-2.5 text-sm font-bold text-white transition-colors hover:bg-red-700 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-red-200 sm:px-6 sm:py-3 sm:text-base md:w-auto md:px-8 md:py-4"
                 style={{ boxShadow: 'none' }}
                 aria-label={t('seeAllAria')}
               >

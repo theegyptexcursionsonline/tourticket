@@ -424,7 +424,6 @@ export default async function HomePageServer() {
   const {
     destinations,
     tours,
-    categories,
     featuredInterests,
     categoryPages,
     headerDestinations,
@@ -475,7 +474,6 @@ export default async function HomePageServer() {
         tours={tours}
         featuredInterests={featuredInterests}
         categoryPages={categoryPages}
-        categories={categories}
         dayTrips={dayTrips}
       />
     </main>
