@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Clock, MapPin, Navigation } from 'lucide-react';
+import { Clock, MapPin, Navigation, RefreshCw } from 'lucide-react';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import {
   completeItineraryRoute,
@@ -79,6 +79,11 @@ function InteractiveItineraryMap({
   const [shouldLoadMap, setShouldLoadMap] = useState(false);
   const [styleLoaded, setStyleLoaded] = useState(false);
   const [mapState, setMapState] = useState<'loading' | 'ready' | 'unavailable'>('loading');
+  // OpenFreeMap is a free community tile host with no availability guarantee,
+  // and these links are opened from WhatsApp on hotel and mobile wifi. A style
+  // download that stalls past the timeout must not strand the customer with a
+  // dead panel for the rest of the visit, so the build is retryable.
+  const [retryToken, setRetryToken] = useState(0);
 
   const anchors = useMemo(() => itineraryCoordinateAnchors(itinerary), [itinerary]);
   const roundTripBase = anchors.find((anchor) => anchor.index === 0)?.position || null;
@@ -100,6 +105,14 @@ function InteractiveItineraryMap({
     [positions],
   );
   const canRenderMap = itinerary.length > 0 && positions.length === itinerary.length;
+  // Marker accessible names come from stage titles, which can change without a
+  // pin moving — a retitled stage, or the same route read in another language.
+  // Tracked separately so a title edit refreshes the labels in place instead of
+  // rebuilding the route.
+  const labelSignature = useMemo(
+    () => itinerary.map((item) => item.title).join('\u0001'),
+    [itinerary],
+  );
 
   // Live values for callbacks that must not force the map to be rebuilt.
   const onSelectRef = useRef(onSelect);
@@ -146,8 +159,8 @@ function InteractiveItineraryMap({
     return () => observer.disconnect();
   }, []);
 
-  // Create the map exactly once per mount. Both dependencies are booleans, so
-  // a parent re-render cannot restart this.
+  // Create the map once. Every dependency is a boolean or a retry counter, so
+  // a parent re-render cannot restart this — only a real retry can.
   useEffect(() => {
     if (!shouldLoadMap || !canRenderMap || !mapElementRef.current) return;
 
@@ -207,7 +220,7 @@ function InteractiveItineraryMap({
       focusedStageRef.current = null;
       setStyleLoaded(false);
     };
-  }, [canRenderMap, clearMarkers, shouldLoadMap]);
+  }, [canRenderMap, clearMarkers, retryToken, shouldLoadMap]);
 
   // Draw the route and the numbered stage markers onto the existing map. When
   // the route data is unchanged this never runs, so scrolling the page leaves
@@ -293,6 +306,20 @@ function InteractiveItineraryMap({
     focusedStageRef.current = activeIndex;
   }, [activeIndex, mapState, routeSignature]);
 
+  // Refresh the marker accessible names when stage titles change but the pins
+  // do not. Rewriting the attribute on the existing elements keeps the map and
+  // its markers intact.
+  useEffect(() => {
+    if (mapState !== 'ready') return;
+    const stages = itineraryRef.current;
+    markersRef.current.forEach((marker, index) => {
+      marker.getElement().setAttribute(
+        'aria-label',
+        `Show stage ${index + 1}: ${stages[index]?.title || ''}`,
+      );
+    });
+  }, [labelSignature, mapState]);
+
   const selectedPosition: ItineraryRoutePosition | undefined = positions[activeIndex];
   const selectedIsExact = selectedPosition
     ? !selectedPosition.approximate
@@ -322,15 +349,28 @@ function InteractiveItineraryMap({
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-slate-100 p-6 text-center">
             <MapPin className="h-8 w-8 text-slate-400" aria-hidden="true" />
             <p className="text-sm font-semibold text-slate-700">The route map is temporarily unavailable.</p>
-            <a
-              href={openMapsUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-4 py-2 text-xs font-semibold text-white hover:bg-slate-700"
-            >
-              <Navigation size={13} />
-              Open route
-            </a>
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setMapState('loading');
+                  setRetryToken((token) => token + 1);
+                }}
+                className="inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white px-4 py-2 text-xs font-semibold text-slate-800 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-500 focus-visible:ring-offset-2"
+              >
+                <RefreshCw size={13} />
+                Try again
+              </button>
+              <a
+                href={openMapsUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-4 py-2 text-xs font-semibold text-white hover:bg-slate-700"
+              >
+                <Navigation size={13} />
+                Open route
+              </a>
+            </div>
           </div>
         )}
 

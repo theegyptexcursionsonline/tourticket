@@ -454,10 +454,13 @@ const ItineraryIcon = ({ iconType, className = "w-5 h-5" }: { iconType?: string,
 const ItinerarySection = ({ itinerary, tourLocation, sectionRef }: { itinerary: ItineraryItem[], tourLocation?: string, sectionRef: React.RefObject<HTMLDivElement | null> }) => {
   // Coordinates are resolved once while the tour is authored. Customer page
   // views never invoke a geocoder or a billable map API.
-  const stops = itineraryMapStops(itinerary);
-  const showMap = itineraryCoordinateAnchors(itinerary).length > 0;
-  const openMapsUrl = itineraryStoredDirectionsUrl(itinerary)
-    || itineraryDirectionsUrl(stops, tourLocation);
+  // Recomputed only when the itinerary changes, not on every scroll tick.
+  const stops = useMemo(() => itineraryMapStops(itinerary), [itinerary]);
+  const showMap = useMemo(() => itineraryCoordinateAnchors(itinerary).length > 0, [itinerary]);
+  const openMapsUrl = useMemo(
+    () => itineraryStoredDirectionsUrl(itinerary) || itineraryDirectionsUrl(stops, tourLocation),
+    [itinerary, stops, tourLocation],
+  );
   const [activeItineraryIndex, setActiveItineraryIndex] = useState(0);
   const selectItineraryStage = useCallback((index: number) => {
     setActiveItineraryIndex(index);

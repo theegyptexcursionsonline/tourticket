@@ -42,10 +42,14 @@ describe('keyless itinerary map contract', () => {
     expect(detail).not.toMatch(/const enhancement = extractEnhancementData\(tour\);/);
 
     // The map itself must not key its lifecycle on object identity either.
+    // The behaviour is proven by counting map constructions across parent
+    // re-renders in components/tours/__tests__/InteractiveItineraryMap.stability.test.tsx;
+    // asserted here only so the derivation cannot quietly go away. Exact
+    // dependency arrays are deliberately NOT asserted — that would break on
+    // every legitimate edit without catching a real regression.
     expect(map).toContain('const routeSignature = useMemo(');
-    expect(map).toContain('}, [canRenderMap, clearMarkers, shouldLoadMap]);');
-    expect(map).toContain('}, [clearMarkers, routeSignature, styleLoaded]);');
     expect(map).toContain('export default React.memo(InteractiveItineraryMap);');
+    expect(map).not.toMatch(/}, \[itinerary, onSelect, positions, shouldLoadMap\]\);/);
   });
 
   it('requires complete coordinate pairs in the tour editor and never geocodes customer visits', () => {

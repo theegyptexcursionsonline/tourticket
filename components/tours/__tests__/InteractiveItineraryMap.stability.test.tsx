@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import InteractiveItineraryMap, { type InteractiveItineraryItem } from '../InteractiveItineraryMap';
 
+const MAP_LOAD_TIMEOUT_MS = 15000;
+
 // Building a MapLibre map means a WebGL context, a style download and a fresh
 // tile set. On the live tour page the parent re-renders on every scroll tick
 // (eight useInView observers drive the sticky tab bar) and handed this
@@ -16,6 +18,7 @@ const mapStats = {
   markersCreated: 0,
   setDataCalls: 0,
   fitBoundsCalls: 0,
+  stallNextBuilds: 0,
 };
 
 jest.mock('maplibre-gl', () => {
@@ -32,6 +35,11 @@ jest.mock('maplibre-gl', () => {
 
     constructor(_options: unknown) {
       mapStats.constructed += 1;
+      // When the tile host stalls, `style.load` simply never arrives.
+      if (mapStats.stallNextBuilds > 0) {
+        mapStats.stallNextBuilds -= 1;
+        return;
+      }
       // Style readiness resolves on a later tick, as it does in a browser.
       setTimeout(() => this.handlers.get('style.load')?.(), 0);
     }
@@ -57,9 +65,11 @@ jest.mock('maplibre-gl', () => {
       this.element = options.element;
     }
     setLngLat() { return this; }
-    addTo() { return this; }
+    // Real markers are inserted into the map container, which is what makes
+    // their accessible names reachable — mirror that so the DOM can be queried.
+    addTo() { document.body.appendChild(this.element); return this; }
     getElement() { return this.element; }
-    remove() { /* no-op */ }
+    remove() { this.element.remove(); }
   }
 
   return {
@@ -106,9 +116,9 @@ const STOPS: Array<{ title: string; lat?: number; lng?: number }> = [
 ];
 
 // Rebuilt on every call, exactly like extractEnhancementData() on the tour page.
-function freshItinerary(shift = 0): InteractiveItineraryItem[] {
+function freshItinerary(shift = 0, titleSuffix = ''): InteractiveItineraryItem[] {
   return STOPS.map((stop) => ({
-    title: stop.title,
+    title: `${stop.title}${titleSuffix}`,
     description: `${stop.title} description.`,
     location: stop.title,
     coordinates: typeof stop.lat === 'number'
@@ -121,7 +131,7 @@ function freshItinerary(shift = 0): InteractiveItineraryItem[] {
  * Mirrors the real tour page: unrelated state changes re-render the parent,
  * and every render hands the map brand-new prop objects holding the same data.
  */
-function ScrollingParent({ shift = 0 }: { shift?: number }) {
+function ScrollingParent({ shift = 0, titleSuffix = '' }: { shift?: number; titleSuffix?: string }) {
   const [tick, setTick] = useState(0);
   const [activeIndex, setActiveIndex] = useState(0);
   return (
@@ -130,7 +140,7 @@ function ScrollingParent({ shift = 0 }: { shift?: number }) {
         simulate scroll tick {tick}
       </button>
       <InteractiveItineraryMap
-        itinerary={freshItinerary(shift)}
+        itinerary={freshItinerary(shift, titleSuffix)}
         openMapsUrl="https://maps.example.test/route"
         activeIndex={activeIndex}
         onSelect={(index) => setActiveIndex(index)}
@@ -139,11 +149,55 @@ function ScrollingParent({ shift = 0 }: { shift?: number }) {
   );
 }
 
+function markerLabels(): string[] {
+  return [...document.querySelectorAll('.eeo-itinerary-marker')]
+    .map((element) => element.getAttribute('aria-label') || '');
+}
+
 async function flushStyleLoad() {
   await act(async () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
   });
 }
+
+describe('InteractiveItineraryMap recovery from a stalled tile host', () => {
+  beforeEach(() => {
+    mapStats.constructed = 0;
+    mapStats.removed = 0;
+    mapStats.markersCreated = 0;
+    mapStats.setDataCalls = 0;
+    mapStats.fitBoundsCalls = 0;
+    mapStats.stallNextBuilds = 0;
+  });
+
+  it('offers a working retry instead of stranding the customer with a dead map', async () => {
+    jest.useFakeTimers();
+    try {
+      // The first build never receives style.load — the tile host has stalled.
+      mapStats.stallNextBuilds = 1;
+      render(<ScrollingParent />);
+      await act(async () => { await Promise.resolve(); });
+      await act(async () => { jest.advanceTimersByTime(MAP_LOAD_TIMEOUT_MS + 100); });
+
+      expect(screen.getByText('The route map is temporarily unavailable.')).toBeInTheDocument();
+      expect(mapStats.constructed).toBe(1);
+      expect(mapStats.removed).toBe(1);
+
+      // Without a retry the map would stay dead for the rest of the visit.
+      const retry = screen.getByRole('button', { name: 'Try again' });
+      await act(async () => { retry.click(); });
+      await act(async () => { jest.advanceTimersByTime(1); });
+      await act(async () => { await Promise.resolve(); });
+      await act(async () => { jest.advanceTimersByTime(1); });
+
+      expect(mapStats.constructed).toBe(2);
+      expect(mapStats.markersCreated).toBe(STOPS.length);
+      expect(screen.queryByText('The route map is temporarily unavailable.')).not.toBeInTheDocument();
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+});
 
 describe('InteractiveItineraryMap stability under parent re-renders', () => {
   beforeEach(() => {
@@ -152,6 +206,7 @@ describe('InteractiveItineraryMap stability under parent re-renders', () => {
     mapStats.markersCreated = 0;
     mapStats.setDataCalls = 0;
     mapStats.fitBoundsCalls = 0;
+    mapStats.stallNextBuilds = 0;
   });
 
   it('builds the map once and never rebuilds it when the parent re-renders with equal data', async () => {
@@ -188,6 +243,25 @@ describe('InteractiveItineraryMap stability under parent re-renders', () => {
     }
 
     expect(mapStats.constructed).toBe(1);
+    expect(mapStats.removed).toBe(0);
+  });
+
+  it('refreshes marker accessible names when stage titles change but the pins do not', async () => {
+    const { rerender } = render(<ScrollingParent titleSuffix="" />);
+    await flushStyleLoad();
+    await waitFor(() => expect(mapStats.markersCreated).toBe(STOPS.length));
+    expect(markerLabels()[1]).toBe('Show stage 2: Orange Bay');
+
+    // A retitled stage — or the same route read in another language — moves no
+    // pin, so the route signature is unchanged.
+    rerender(<ScrollingParent titleSuffix=" (renamed)" />);
+    await flushStyleLoad();
+
+    await waitFor(() => expect(markerLabels()[1]).toBe('Show stage 2: Orange Bay (renamed)'));
+    expect(markerLabels()[0]).toBe('Show stage 1: Hotel Pickup (renamed)');
+    // ...and the labels were rewritten in place, not by rebuilding anything.
+    expect(mapStats.constructed).toBe(1);
+    expect(mapStats.markersCreated).toBe(STOPS.length);
     expect(mapStats.removed).toBe(0);
   });
 
