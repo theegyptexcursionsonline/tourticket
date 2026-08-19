@@ -20,7 +20,7 @@ describe('keyless itinerary map contract', () => {
     const detail = read('app/[locale]/[slug]/TourDetailClientPage.tsx');
     const config = read('next.config.ts');
 
-    expect(map).toContain('https://tiles.openfreemap.org/styles/liberty');
+    expect(map).toContain('https://tiles.openfreemap.org/styles/bright');
     expect(map).toContain('OpenStreetMap contributors');
     expect(map).not.toContain('NEXT_PUBLIC_GOOGLE_MAPS_API_KEY');
     expect(map).not.toContain('maps.googleapis.com');

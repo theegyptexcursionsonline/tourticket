@@ -10,7 +10,7 @@ import {
   type ItineraryRoutePosition,
 } from '@/lib/tours/itineraryMap';
 
-const OPENFREE_STYLE_URL = 'https://tiles.openfreemap.org/styles/liberty';
+const OPENFREE_STYLE_URL = 'https://tiles.openfreemap.org/styles/bright';
 const MAP_LOAD_TIMEOUT_MS = 15000;
 
 export interface InteractiveItineraryItem {
@@ -31,28 +31,6 @@ interface InteractiveItineraryMapProps {
 
 type MapLibreMap = import('maplibre-gl').Map;
 type MapLibreMarker = import('maplibre-gl').Marker;
-type MapLibrePopup = import('maplibre-gl').Popup;
-
-function escapeHtml(value?: string): string {
-  return String(value || '')
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#039;');
-}
-
-function infoCard(item: InteractiveItineraryItem, index: number, approximate: boolean): string {
-  const meta = [item.time, item.duration].filter(Boolean).map(escapeHtml).join(' · ');
-  return `<div style="max-width:250px;padding:4px 2px 2px;font-family:Arial,sans-serif;color:#1e293b">
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:7px">
-      <span style="display:inline-flex;width:28px;height:28px;align-items:center;justify-content:center;border-radius:999px;background:#dc2626;color:white;font-weight:700">${index + 1}</span>
-      <div><strong style="font-size:14px">${escapeHtml(item.title)}</strong>${meta ? `<div style="font-size:11px;color:#64748b;margin-top:2px">${meta}</div>` : ''}</div>
-    </div>
-    <div style="font-size:12px;line-height:1.45;color:#475569">${escapeHtml(item.description)}</div>
-    ${item.location ? `<div style="font-size:11px;color:#64748b;margin-top:7px">${escapeHtml(item.location)} · ${approximate ? 'Approximate route stage' : 'Exact itinerary place'}</div>` : ''}
-  </div>`;
-}
 
 function markerClass(active: boolean): string {
   return [
@@ -72,7 +50,6 @@ export default function InteractiveItineraryMap({
   const mapElementRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<MapLibreMap | null>(null);
   const markersRef = useRef<MapLibreMarker[]>([]);
-  const popupRef = useRef<MapLibrePopup | null>(null);
   const activeIndexRef = useRef(activeIndex);
   const focusedStageRef = useRef<number | null>(null);
   const [shouldLoadMap, setShouldLoadMap] = useState(false);
@@ -136,7 +113,6 @@ export default function InteractiveItineraryMap({
         });
         mapInstanceRef.current = map;
         map.addControl(new maplibre.NavigationControl({ showCompass: false }), 'top-right');
-        map.addControl(new maplibre.AttributionControl({ compact: true }), 'bottom-right');
 
         loadTimer = setTimeout(() => {
           if (!cancelled) {
@@ -154,36 +130,41 @@ export default function InteractiveItineraryMap({
           if (cancelled) return;
           if (loadTimer) clearTimeout(loadTimer);
 
-          map.addSource('eeo-itinerary-route', {
-            type: 'geojson',
-            data: {
-              type: 'Feature',
-              properties: {},
-              geometry: {
-                type: 'LineString',
-                coordinates: positions.map((position) => [position.lng, position.lat]),
+          if (positions.length > 1) {
+            map.addSource('eeo-itinerary-route', {
+              type: 'geojson',
+              data: {
+                type: 'Feature',
+                properties: {},
+                geometry: {
+                  type: 'LineString',
+                  coordinates: positions.map((position) => [position.lng, position.lat]),
+                },
               },
-            },
-          });
-          map.addLayer({
-            id: 'eeo-itinerary-route-line',
-            type: 'line',
-            source: 'eeo-itinerary-route',
-            layout: { 'line-cap': 'round', 'line-join': 'round' },
-            paint: {
-              'line-color': '#dc2626',
-              'line-opacity': 0.9,
-              'line-width': 4,
-            },
-          });
-
-          const popup = new maplibre.Popup({
-            closeButton: false,
-            closeOnClick: false,
-            offset: 28,
-            maxWidth: '280px',
-          });
-          popupRef.current = popup;
+            });
+            map.addLayer({
+              id: 'eeo-itinerary-route-casing',
+              type: 'line',
+              source: 'eeo-itinerary-route',
+              layout: { 'line-cap': 'round', 'line-join': 'round' },
+              paint: {
+                'line-color': '#ffffff',
+                'line-opacity': 0.95,
+                'line-width': 8,
+              },
+            });
+            map.addLayer({
+              id: 'eeo-itinerary-route-line',
+              type: 'line',
+              source: 'eeo-itinerary-route',
+              layout: { 'line-cap': 'round', 'line-join': 'round' },
+              paint: {
+                'line-color': '#dc2626',
+                'line-opacity': 0.9,
+                'line-width': 5,
+              },
+            });
+          }
 
           markersRef.current = positions.map((position, index) => {
             const element = document.createElement('button');
@@ -209,17 +190,6 @@ export default function InteractiveItineraryMap({
             map.fitBounds(bounds, { padding: 58, maxZoom: 12, duration: 0 });
           }
 
-          window.setTimeout(() => {
-            const index = Math.min(activeIndexRef.current, itinerary.length - 1);
-            const position = positions[index];
-            const item = itinerary[index];
-            if (!cancelled && position && item) {
-              popup
-                .setLngLat([position.lng, position.lat])
-                .setHTML(infoCard(item, index, position.approximate))
-                .addTo(map);
-            }
-          }, 150);
           setMapState('ready');
         });
       } catch {
@@ -234,8 +204,6 @@ export default function InteractiveItineraryMap({
       markerListeners.forEach(({ element, event, listener }) => element.removeEventListener(event, listener));
       markersRef.current.forEach((marker) => marker.remove());
       markersRef.current = [];
-      popupRef.current?.remove();
-      popupRef.current = null;
       mapInstanceRef.current?.remove();
       mapInstanceRef.current = null;
       focusedStageRef.current = null;
@@ -245,19 +213,13 @@ export default function InteractiveItineraryMap({
   useEffect(() => {
     if (mapState !== 'ready') return;
     const map = mapInstanceRef.current;
-    const popup = popupRef.current;
     const position = positions[activeIndex];
     const item = itinerary[activeIndex];
-    if (!map || !popup || !position || !item) return;
+    if (!map || !position || !item) return;
 
     markersRef.current.forEach((marker, index) => {
       marker.getElement().className = markerClass(index === activeIndex);
     });
-    popup
-      .setLngLat([position.lng, position.lat])
-      .setHTML(infoCard(item, activeIndex, position.approximate))
-      .addTo(map);
-
     if (focusedStageRef.current !== null && focusedStageRef.current !== activeIndex) {
       map.easeTo({ center: [position.lng, position.lat], duration: 300 });
     }
@@ -306,7 +268,7 @@ export default function InteractiveItineraryMap({
         )}
 
         <div className="pointer-events-none absolute left-3 top-3 rounded-full bg-white/95 px-3 py-1.5 text-xs font-semibold text-slate-800 shadow-md backdrop-blur-sm">
-          {itinerary.length} route stages
+          Road map · {itinerary.length} route stages
         </div>
       </div>
 
@@ -366,7 +328,7 @@ export default function InteractiveItineraryMap({
           Numbered stages follow the itinerary order. Generic pickup, sea and onboard stages are approximate; exact pickup is confirmed after booking.
         </p>
         <p className="mt-1 text-[10px] text-slate-500">
-          Map data © <a className="underline hover:text-slate-700" href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap contributors</a> · Tiles by <a className="underline hover:text-slate-700" href="https://openfreemap.org/" target="_blank" rel="noopener noreferrer">OpenFreeMap</a>
+          © <a className="underline hover:text-slate-700" href="https://www.openmaptiles.org/" target="_blank" rel="noopener noreferrer">OpenMapTiles</a> · Map data © <a className="underline hover:text-slate-700" href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap contributors</a>
         </p>
       </div>
     </div>

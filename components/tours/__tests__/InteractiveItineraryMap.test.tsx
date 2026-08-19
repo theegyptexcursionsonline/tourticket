@@ -33,11 +33,17 @@ describe('InteractiveItineraryMap', () => {
       path.join(process.cwd(), 'components/tours/InteractiveItineraryMap.tsx'),
       'utf8',
     );
+    const packageJson = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'package.json'), 'utf8'));
+    expect(packageJson.dependencies['maplibre-gl']).toBe('5.24.0');
     expect(source).toContain("import('maplibre-gl')");
     expect(source).toContain('IntersectionObserver');
     expect(source).toContain("map.once('style.load'");
     expect(source).toContain('className="h-full w-full"');
-    expect(source).toContain('https://tiles.openfreemap.org/styles/liberty');
+    expect(source).toContain('https://tiles.openfreemap.org/styles/bright');
+    expect(source).toContain('if (positions.length > 1)');
+    expect(source).toContain("id: 'eeo-itinerary-route-casing'");
+    expect(source).not.toContain('AttributionControl');
+    expect(source).not.toContain('new maplibre.Popup');
     expect(source).not.toContain('maps.googleapis.com');
   });
 
@@ -66,6 +72,10 @@ describe('InteractiveItineraryMap', () => {
 
   it('shows required open-map attribution and retains external directions', () => {
     render(<ControlledMap />);
+    expect(screen.getByRole('link', { name: 'OpenMapTiles' })).toHaveAttribute(
+      'href',
+      'https://www.openmaptiles.org/',
+    );
     expect(screen.getByRole('link', { name: 'OpenStreetMap contributors' })).toHaveAttribute(
       'href',
       'https://www.openstreetmap.org/copyright',
@@ -75,6 +85,7 @@ describe('InteractiveItineraryMap', () => {
       'https://maps.example.test/route',
     );
     expect(screen.getByText(/Generic pickup, sea and onboard stages are approximate/i)).toBeInTheDocument();
+    expect(screen.getByText(/Road map · 8 route stages/i)).toBeInTheDocument();
   });
 
   it('renders a designed unavailable state instead of a broken image when coordinates are absent', async () => {
