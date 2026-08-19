@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import Image from 'next/image';
 import { Link } from '@/i18n/routing';
 import { AnimatePresence, motion, useInView } from 'framer-motion';
@@ -1199,7 +1199,12 @@ export default function TourPageClient({ tour, relatedTours, initialReviews = []
     }
   };
 
-  const enhancement = extractEnhancementData(tour);
+  // Derived once per tour. This page re-renders on every scroll (eight
+  // useInView section observers drive the sticky tab bar), and
+  // extractEnhancementData rebuilds `itinerary` with .map() on each call.
+  // An unmemoised call handed the itinerary map a new array identity on
+  // every scroll tick, which tore down and re-created the WebGL map.
+  const enhancement = useMemo(() => extractEnhancementData(tour), [tour]);
 
   const tourImages = [tour.image, ...(tour.images || [])].filter(Boolean);
   const selectedImageSeo = imageMetadataFor(
