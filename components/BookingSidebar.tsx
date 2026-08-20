@@ -2393,7 +2393,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
                         <div className="flex items-center justify-between">
                           <div className="flex-1 pr-3">
                             <div className="font-medium text-gray-800 text-sm">Adults</div>
-                            <div className="text-xs text-gray-500">Age 13+ • Full price</div>
+                            <div className="text-xs text-gray-500">Age 13+</div>
                           </div>
                           <div className="flex items-center gap-2">
                             <motion.button
@@ -2416,7 +2416,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
                         <div className="flex items-center justify-between">
                           <div className="flex-1 pr-3">
                             <div className="font-medium text-gray-800 text-sm">Children</div>
-                            <div className="text-xs text-gray-500">Age 4-12 • 50% discount</div>
+                            <div className="text-xs text-gray-500">Age 4-12</div>
                           </div>
                           <div className="flex items-center gap-2">
                             <motion.button
@@ -2439,7 +2439,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
                         <div className="flex items-center justify-between">
                           <div className="flex-1 pr-3">
                             <div className="font-medium text-gray-800 text-sm">Infants</div>
-                            <div className="text-xs text-gray-500">Age 0-3 • Free</div>
+                            <div className="text-xs text-gray-500">Age 0-3</div>
                           </div>
                           <div className="flex items-center gap-2">
                             <motion.button

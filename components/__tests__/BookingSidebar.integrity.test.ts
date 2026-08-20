@@ -94,3 +94,23 @@ describe('BookingSidebar dialog behaviour', () => {
     expect(source.slice(Math.max(0, dialogIndex - 400), dialogIndex)).toContain('ref={dialogRef}');
   });
 });
+
+describe('BookingSidebar participant rows carry no static pricing claims', () => {
+  // Client sheet row 51: guest prices come from the booking option/slot
+  // (guestPrices.child / guestPrices.infant, with per-option fallbacks), so
+  // fixed "Full price / 50% discount / Free" captions misstate the real
+  // price whenever an operator configures their own rates. The rows keep
+  // the age bands and nothing else.
+  it.each(['• Full price', '• 50% discount', '• Free'])(
+    'does not hardcode %p under the participants selector',
+    (needle) => {
+      expect(source).not.toContain(needle);
+    },
+  );
+
+  it('still tells the customer which ages each category covers', () => {
+    expect(source).toContain('Age 13+');
+    expect(source).toContain('Age 4-12');
+    expect(source).toContain('Age 0-3');
+  });
+});
