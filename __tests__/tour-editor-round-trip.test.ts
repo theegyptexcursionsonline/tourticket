@@ -56,3 +56,40 @@ describe('the capacity contract stays enforceable after a round trip', () => {
     expect(clean).toContain('bookingOptionCapacityError');
   });
 });
+
+describe('the save pipeline preserves capacities end to end', () => {
+  // The admin routes run: cleanBookingOptions -> ensureBookingOptionPricingKeys
+  // -> stripBookingOptionClientKeys, and the result is what gets written.
+  // Exercising the real chain proves nothing drops the fields en route.
+  const { cleanBookingOptions } = require('@/lib/admin/cleanBookingOptions');
+  const { ensureBookingOptionPricingKeys } = require('@/lib/revenue/pricingKeys');
+  const { stripBookingOptionClientKeys } = require('@/lib/admin/addOnAssignments');
+
+  const throughPipeline = (option: Record<string, unknown>) => {
+    const cleaned = cleanBookingOptions([option]);
+    const keyed = ensureBookingOptionPricingKeys('507f1f77bcf86cd799439011', cleaned);
+    return stripBookingOptionClientKeys(keyed || [])[0] as Record<string, unknown>;
+  };
+
+  it('an authored Per Group capacity reaches the write payload', () => {
+    const saved = throughPipeline({ type: 'Per Group', label: 'Private boat', price: 500, minCapacity: 5, maxCapacity: 12 });
+    expect(saved.minCapacity).toBe(5);
+    expect(saved.maxCapacity).toBe(12);
+  });
+
+  it('an edited Per Family capacity is not overwritten by the type default', () => {
+    const saved = throughPipeline({ type: 'Per Family', label: 'Family boat', price: 400, minCapacity: 6 });
+    expect(saved.minCapacity).toBe(6);
+  });
+
+  it('a form value arriving as a string is stored as a number', () => {
+    const saved = throughPipeline({ type: 'Per Couple', label: 'Duo', price: 200, minCapacity: '2' });
+    expect(saved.minCapacity).toBe(2);
+  });
+
+  it('blank capacities fall back to the type default rather than being written blank', () => {
+    const saved = throughPipeline({ type: 'Per Couple', label: 'Duo', price: 200, minCapacity: '' });
+    expect(saved.minCapacity).toBe(2);
+    expect(saved).not.toHaveProperty('maxCapacity');
+  });
+});
