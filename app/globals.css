@@ -289,7 +289,7 @@ html[data-storefront-theme="dark"] body.storefront-theme .es-review-background-c
   color: #94a3b8 !important;
 }
 /* dark-theme:generated:start — built by `pnpm theme:generate`; do not hand-edit */
-/* 264 light utilities darkened, 36 deliberately preserved. */
+/* 265 light utilities darkened, 36 deliberately preserved. */
 
 html[data-storefront-theme="dark"] body.storefront-theme :where([class~="from-gray-100"], [class~="from-slate-100"]):not([class~="bg-clip-text"]) {
   --tw-gradient-from: #1e293b var(--tw-gradient-from-position) !important;
@@ -784,7 +784,7 @@ html[data-storefront-theme="dark"] body.storefront-theme :where([class~="border"
   border-color: #334155 !important;
 }
 
-html[data-storefront-theme="dark"] body.storefront-theme :where([class~="divide-slate-100"], [class~="divide-slate-200"]) > :not([hidden]) ~ :not([hidden]) {
+html[data-storefront-theme="dark"] body.storefront-theme :where([class~="divide-gray-100"], [class~="divide-slate-100"], [class~="divide-slate-200"]) > :not([hidden]) ~ :not([hidden]) {
   border-color: #334155 !important;
 }
 

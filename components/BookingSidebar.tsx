@@ -600,7 +600,11 @@ const TourOptionCard: React.FC<{
   childCount: number;
   infantCount: number;
   tour: Tour; // Added tour prop
-}> = ({ option, onSelect, selectedTimeSlot, adults, childCount, infantCount, tour }) => {
+  /** Several options on screen: each card collapses to its summary. */
+  collapsible?: boolean;
+  expanded?: boolean;
+  onToggleExpanded?: () => void;
+}> = ({ option, onSelect, selectedTimeSlot, adults, childCount, infantCount, tour, collapsible = false, expanded = true, onToggleExpanded }) => {
   const { formatPrice } = useSettings();
   const [descExpanded, setDescExpanded] = useState(false);
   const [descOverflows, setDescOverflows] = useState(false);
@@ -638,6 +642,18 @@ const TourOptionCard: React.FC<{
   const totalBookings = tour.bookings || tour.reviews || 0;
   const maxParticipants = tour.maxGroupSize || 15;
   const hasAvailableSlots = option.timeSlots.some((timeSlot) => timeSlot.available > 0);
+  // One departure stays an inline chip; several move into a dropdown so a
+  // long timetable cannot bury the other options.
+  const usesSlotDropdown = option.timeSlots.length > 1;
+  const [slotMenuOpen, setSlotMenuOpen] = useState(false);
+  const selectedSlotForOption = option.timeSlots.find((timeSlot) =>
+    isSelectedTimeSlot(selectedTimeSlot, option.id, timeSlot.id));
+  const bookableSlotCount = option.timeSlots.filter((timeSlot) => timeSlot.available > 0).length;
+  // A collapsed card shows only its summary (title, badges, specs, price);
+  // everything below opens on click.
+  const isOpen = !collapsible || expanded;
+  const headerId = `option-header-${option.id}`;
+  const bodyId = `option-body-${option.id}`;
 
   return (
     <motion.div
@@ -650,7 +666,26 @@ const TourOptionCard: React.FC<{
       }`}
       whileHover={{ scale: 1.01 }}
     >
-      {/* Header with Badges */}
+      {/* Header with Badges — the whole summary is the expand/collapse control */}
+      <div
+        {...(collapsible
+          ? {
+              id: headerId,
+              role: 'button' as const,
+              tabIndex: 0,
+              'aria-expanded': isOpen,
+              'aria-controls': bodyId,
+              onClick: onToggleExpanded,
+              onKeyDown: (event: React.KeyboardEvent) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault();
+                  onToggleExpanded?.();
+                }
+              },
+            }
+          : {})}
+        className={collapsible ? 'rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-red-400' : undefined}
+      >
       <div className="flex items-start justify-between mb-2 gap-2">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5 mb-1.5 flex-wrap">
@@ -727,8 +762,16 @@ const TourOptionCard: React.FC<{
           <TrendingUp size={13} className="text-orange-500" />
           <span className="font-medium">{option.difficulty}</span>
         </div>
+        {collapsible && (
+          <div className="ml-auto flex items-center gap-1 text-[11px] font-semibold text-red-600">
+            {isOpen ? 'Hide details' : 'View times'}
+            <ChevronDown size={14} className={`transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+          </div>
+        )}
+      </div>
       </div>
 
+      <div id={bodyId} hidden={!isOpen}>
       {/* Description */}
       {option.description && (
         <div className="mb-2 bg-white rounded-xl border border-gray-100">
@@ -828,7 +871,99 @@ const TourOptionCard: React.FC<{
           </div>
         )}
 
-        <div className="grid grid-cols-1 gap-2">
+        {/* More than one departure: a dropdown, so a long timetable does not
+            push the other options off the screen. Price and remaining spots
+            stay visible on every row, and a sold-out time is not selectable
+            (client request 2026-08-21). */}
+        {usesSlotDropdown && (
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => !capacityBlocked && setSlotMenuOpen(open => !open)}
+              disabled={capacityBlocked}
+              aria-expanded={slotMenuOpen}
+              aria-haspopup="listbox"
+              className={`w-full flex items-center justify-between gap-2 rounded-xl border-2 px-3 py-2 text-left transition-all ${
+                capacityBlocked
+                  ? 'border-gray-200 bg-gray-100 text-gray-400 cursor-not-allowed'
+                  : selectedSlotForOption
+                  ? 'border-red-500 bg-red-50 text-gray-900'
+                  : 'border-gray-300 bg-white text-gray-800 hover:border-red-400'
+              }`}
+            >
+              <span className="min-w-0">
+                <span className="block text-sm font-bold leading-tight">
+                  {selectedSlotForOption ? selectedSlotForOption.time : 'Choose a departure time'}
+                </span>
+                <span className="block text-[10px] text-gray-500">
+                  {selectedSlotForOption
+                    ? `${selectedSlotForOption.available} spots left`
+                    : `${bookableSlotCount} of ${option.timeSlots.length} times available`}
+                </span>
+              </span>
+              <span className="flex items-center gap-2 flex-shrink-0">
+                {selectedSlotForOption && (
+                  <span className="text-xs font-semibold text-gray-700">{formatPrice(selectedSlotForOption.price)}</span>
+                )}
+                <ChevronDown size={16} className={`text-gray-400 transition-transform ${slotMenuOpen ? 'rotate-180' : ''}`} />
+              </span>
+            </button>
+
+            {slotMenuOpen && !capacityBlocked && (
+              <div
+                role="listbox"
+                className="mt-2 max-h-64 overflow-y-auto rounded-xl border-2 border-gray-200 bg-white shadow-lg divide-y divide-gray-100"
+              >
+                {option.timeSlots.map(timeSlot => {
+                  const isSelected = isSelectedTimeSlot(selectedTimeSlot, option.id, timeSlot.id);
+                  const isSoldOut = timeSlot.available === 0;
+                  const slotDiscount = percentageOff(timeSlot.originalPrice, timeSlot.price);
+                  return (
+                    <button
+                      key={timeSlot.id}
+                      type="button"
+                      role="option"
+                      aria-selected={isSelected}
+                      disabled={isSoldOut}
+                      onClick={() => {
+                        if (isSoldOut) return;
+                        onSelect(timeSlot);
+                        setSlotMenuOpen(false);
+                      }}
+                      className={`flex w-full items-center justify-between gap-3 px-3 py-2 text-left transition-colors ${
+                        isSoldOut
+                          ? 'bg-gray-50 text-gray-400 cursor-not-allowed'
+                          : isSelected
+                          ? 'bg-red-50 text-gray-900'
+                          : 'text-gray-800 hover:bg-gray-50'
+                      }`}
+                    >
+                      <span className="min-w-0">
+                        <span className="block text-sm font-bold leading-tight">{timeSlot.time}</span>
+                        <span className={`block text-[10px] ${isSoldOut ? 'text-gray-400' : 'text-gray-500'}`}>
+                          {isSoldOut ? 'Fully booked' : `${timeSlot.available} spots left`}
+                        </span>
+                      </span>
+                      <span className="flex items-center gap-2 flex-shrink-0">
+                        {slotDiscount > 0 && !isSoldOut && (
+                          <span className="rounded-full bg-red-100 px-1.5 py-0.5 text-[10px] font-bold text-red-700">
+                            {slotDiscount}% off
+                          </span>
+                        )}
+                        <span className={`text-xs font-semibold ${isSoldOut ? 'text-gray-400' : 'text-gray-700'}`}>
+                          {formatPrice(timeSlot.price)}
+                        </span>
+                        {isSelected && <Check size={12} className="text-red-600" />}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        <div className={`grid grid-cols-1 gap-2 ${usesSlotDropdown ? 'hidden' : ''}`}>
           {option.timeSlots.map(timeSlot => {
             const isSelected = isSelectedTimeSlot(selectedTimeSlot, option.id, timeSlot.id);
             const isLowAvailability = timeSlot.available <= 3;
@@ -921,6 +1056,7 @@ const TourOptionCard: React.FC<{
             <span>Highly rated</span>
           </div>
         )}
+      </div>
       </div>
     </motion.div>
   );
@@ -1821,6 +1957,18 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
     bookingData.selectedTimeSlot,
   ), [availability?.tourOptions, bookingData.selectedTimeSlot]);
 
+  // With several options the list is a stack of collapsed cards; one expands
+  // at a time (client request 2026-08-21). A single option is never collapsed
+  // — there is nothing to compare it against.
+  const [expandedOptionId, setExpandedOptionId] = useState<string | null>(null);
+  const toggleOptionExpanded = useCallback((optionId: string) => {
+    setExpandedOptionId(prev => (prev === optionId ? null : optionId));
+  }, []);
+  // The card holding the current selection stays open even after a collapse,
+  // so the chosen departure never hides behind a closed card.
+  const effectiveExpandedOptionId = expandedOptionId
+    ?? (bookingData.selectedTimeSlot?.optionId || null);
+
   const availableAddOns = useMemo(() => {
     const optionKey = selectedBookingOption?.pricingKey || (selectedBookingOption?.id === 'standard-default' ? 'standard' : null);
     return (availability?.addOns || []).filter((addOn) => isAddOnAvailableForOption(addOn, optionKey));
@@ -2597,6 +2745,9 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
                 childCount={bookingData.children}
                 infantCount={bookingData.infants}
                 tour={tour}
+                collapsible={(availability?.tourOptions.length || 0) > 1}
+                expanded={effectiveExpandedOptionId === option.id}
+                onToggleExpanded={() => toggleOptionExpanded(option.id)}
               />
             ))}
           </motion.div>

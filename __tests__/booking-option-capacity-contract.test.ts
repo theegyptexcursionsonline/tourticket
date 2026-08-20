@@ -101,3 +101,40 @@ describe('tour editor exposes the capacity contract', () => {
     expect(form).toContain('bookingOptionCapacityIssue([option])');
   });
 });
+
+describe('checkout option list collapses and puts multiple times in a dropdown', () => {
+  const sidebar = read('components/BookingSidebar.tsx');
+
+  it('collapses cards only when more than one option is offered', () => {
+    expect(sidebar).toContain("collapsible={(availability?.tourOptions.length || 0) > 1}");
+    expect(sidebar).toContain('const isOpen = !collapsible || expanded;');
+  });
+
+  it('opens one card at a time and keeps the selected one open', () => {
+    expect(sidebar).toContain('setExpandedOptionId(prev => (prev === optionId ? null : optionId))');
+    expect(sidebar).toContain("?? (bookingData.selectedTimeSlot?.optionId || null)");
+  });
+
+  it('exposes the collapse state to assistive tech', () => {
+    expect(sidebar).toContain("'aria-expanded': isOpen");
+    expect(sidebar).toContain("'aria-controls': bodyId");
+  });
+
+  it('moves multiple departures into a dropdown, single ones stay inline', () => {
+    expect(sidebar).toContain('const usesSlotDropdown = option.timeSlots.length > 1;');
+    expect(sidebar).toContain('role="listbox"');
+  });
+
+  it('keeps price and remaining spots visible on every dropdown row', () => {
+    const menu = sidebar.slice(sidebar.indexOf('role="listbox"'), sidebar.indexOf('role="listbox"') + 2600);
+    expect(menu).toContain('spots left');
+    expect(menu).toContain('formatPrice(timeSlot.price)');
+  });
+
+  it('makes a sold-out time unselectable rather than merely styled', () => {
+    const menu = sidebar.slice(sidebar.indexOf('role="listbox"'), sidebar.indexOf('role="listbox"') + 2600);
+    expect(menu).toContain('disabled={isSoldOut}');
+    expect(menu).toContain('if (isSoldOut) return;');
+    expect(menu).toContain('Fully booked');
+  });
+});
