@@ -534,6 +534,9 @@
       "threeStarsAndUp": "3 estrellas o mas"
     },
     "noToursFoundTitle": "No se encontraron tours",
+    "searchFailedTitle": "No se pudieron cargar los tours",
+    "searchFailedDescription": "Se produjo un error al cargar los resultados. Inténtalo de nuevo.",
+    "searchRetry": "Reintentar",
     "noToursFoundDescription": "No encontramos tours que coincidan con tus criterios. Prueba ajustar o limpiar filtros.",
     "clearFilters": "Limpiar filtros",
     "loadingTours": "Cargando tours...",

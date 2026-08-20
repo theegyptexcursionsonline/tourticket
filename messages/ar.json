@@ -534,6 +534,9 @@
       "threeStarsAndUp": "3 نجوم فأكثر"
     },
     "noToursFoundTitle": "لم يتم العثور على جولات",
+    "searchFailedTitle": "تعذّر تحميل الجولات",
+    "searchFailedDescription": "حدث خطأ أثناء تحميل النتائج. يرجى المحاولة مرة أخرى.",
+    "searchRetry": "إعادة المحاولة",
     "noToursFoundDescription": "لم نعثر على جولات تطابق معاييرك. جرّب تعديل الفلاتر أو مسحها.",
     "clearFilters": "مسح الفلاتر",
     "loadingTours": "جارٍ تحميل الجولات...",

@@ -534,6 +534,9 @@
       "threeStarsAndUp": "3 Stars & up"
     },
     "noToursFoundTitle": "No tours found",
+    "searchFailedTitle": "We could not load tours",
+    "searchFailedDescription": "Something went wrong while fetching results. Please try again.",
+    "searchRetry": "Try again",
     "noToursFoundDescription": "We couldn't find any tours matching your criteria. Try adjusting or clearing your filters.",
     "clearFilters": "Clear Filters",
     "loadingTours": "Loading tours...",

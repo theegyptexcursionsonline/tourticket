@@ -534,6 +534,9 @@
       "threeStarsAndUp": "3 Sterne und mehr"
     },
     "noToursFoundTitle": "Keine Touren gefunden",
+    "searchFailedTitle": "Touren konnten nicht geladen werden",
+    "searchFailedDescription": "Beim Laden der Ergebnisse ist ein Fehler aufgetreten. Bitte versuchen Sie es erneut.",
+    "searchRetry": "Erneut versuchen",
     "noToursFoundDescription": "Wir konnten keine Touren finden, die zu Ihren Filtern passen. Bitte passen Sie Ihre Filter an.",
     "clearFilters": "Filter loschen",
     "loadingTours": "Touren werden geladen...",
