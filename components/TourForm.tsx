@@ -664,6 +664,11 @@ export default function TourForm({ tourToEdit, onSave }: { tourToEdit?: Tour, on
                             : { child: '', infant: '' },
                         description: option.description || '',
                         originalPrice: option.originalPrice || undefined,
+                        // Capacities MUST round-trip: this mapping is a
+                        // whitelist, so a field missing here is silently
+                        // erased the next time the tour is saved.
+                        minCapacity: option.minCapacity ?? '',
+                        maxCapacity: option.maxCapacity ?? '',
                         duration: option.duration || '',
                         languages: option.languages || [],
                         highlights: option.highlights || [],

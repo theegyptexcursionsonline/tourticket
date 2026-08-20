@@ -616,7 +616,21 @@ const TourOptionCard: React.FC<{
     if (el) setDescOverflows(el.scrollHeight > el.clientHeight + 1);
   }, [option.description]);
 
-  const basePrice = option.price;
+  // Departures can be priced differently (08:00 $69.17 vs 10:00 $222.89 on
+  // the same option), so once the customer picks one, every figure on this
+  // card follows THAT slot — which is also what checkout charges. Before a
+  // pick, the first bookable departure represents the option.
+  const selectedSlotForOption = option.timeSlots.find((timeSlot) =>
+    isSelectedTimeSlot(selectedTimeSlot, option.id, timeSlot.id));
+  const representativeSlot = selectedSlotForOption
+    || option.timeSlots.find((timeSlot) => timeSlot.available > 0)
+    || option.timeSlots[0];
+  const basePrice = representativeSlot?.price ?? option.price;
+  // Child price comes from the slot's own guest prices; when the operator
+  // set none, half the adult price is not a guess — it is what checkout
+  // charges (effectiveSlotGuestPrices).
+  const childPrice = representativeSlot?.guestPrices?.child
+    ?? Math.round(basePrice * 50) / 100;
   // Per Couple/Family/Group options charge whole units rounded UP over the
   // total participant count — never price-per-participant (client sheet
   // 2026-08-20: a per-group price was being multiplied per guest).
@@ -625,7 +639,7 @@ const TourOptionCard: React.FC<{
   const units = isUnitPriced ? unitCount(totalParticipants, effectiveUnitSize(option)) : null;
   const subtotal = units !== null
     ? units * basePrice
-    : (adults * basePrice) + (childCount * basePrice * 0.5);
+    : (adults * basePrice) + (childCount * childPrice);
   const originalSubtotal = option.originalPrice
     ? (units !== null
       ? units * option.originalPrice
@@ -646,8 +660,6 @@ const TourOptionCard: React.FC<{
   // long timetable cannot bury the other options.
   const usesSlotDropdown = option.timeSlots.length > 1;
   const [slotMenuOpen, setSlotMenuOpen] = useState(false);
-  const selectedSlotForOption = option.timeSlots.find((timeSlot) =>
-    isSelectedTimeSlot(selectedTimeSlot, option.id, timeSlot.id));
   const bookableSlotCount = option.timeSlots.filter((timeSlot) => timeSlot.available > 0).length;
   // A collapsed card shows only its summary (title, badges, specs, price);
   // everything below opens on click.
@@ -839,11 +851,20 @@ const TourOptionCard: React.FC<{
             </span>
           )}
         </div>
-        <div className="flex justify-between items-center">
-          <span className="text-gray-600 text-xs capitalize">
-            {bookingOptionUnitLabel(option.type)}: {formatPrice(basePrice)}
-            {units !== null && ` · ${unitCountLabel(option.type, units)}`}
-          </span>
+        <div className="flex justify-between items-end gap-2">
+          {isUnitPriced ? (
+            <span className="text-gray-600 text-xs capitalize">
+              {bookingOptionUnitLabel(option.type)}: {formatPrice(basePrice)}
+              {units !== null && ` · ${unitCountLabel(option.type, units)}`}
+            </span>
+          ) : (
+            // Per-person options quote both rates, and both follow the
+            // selected departure (client request 2026-08-21).
+            <span className="text-gray-600 text-xs">
+              <span className="block">Per Adult: {formatPrice(basePrice)}</span>
+              <span className="block">Per Child: {formatPrice(childPrice)}</span>
+            </span>
+          )}
           <span className="text-sm font-bold text-gray-900">{formatPrice(subtotal)}</span>
         </div>
       </div>

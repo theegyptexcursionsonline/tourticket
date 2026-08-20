@@ -138,3 +138,31 @@ describe('checkout option list collapses and puts multiple times in a dropdown',
     expect(menu).toContain('Fully booked');
   });
 });
+
+describe('option card quotes adult and child rates that follow the departure', () => {
+  const sidebar = read('components/BookingSidebar.tsx');
+
+  it('replaces the single per-person line with Per Adult and Per Child', () => {
+    expect(sidebar).toContain('Per Adult: {formatPrice(basePrice)}');
+    expect(sidebar).toContain('Per Child: {formatPrice(childPrice)}');
+  });
+
+  it('prices follow the selected departure, not the option base', () => {
+    expect(sidebar).toContain('const basePrice = representativeSlot?.price ?? option.price;');
+    expect(sidebar).toContain('representativeSlot?.guestPrices?.child');
+  });
+
+  it('falls back to the first BOOKABLE departure before one is chosen', () => {
+    expect(sidebar).toContain('option.timeSlots.find((timeSlot) => timeSlot.available > 0)');
+  });
+
+  it('charges the quoted child rate instead of a hardcoded half', () => {
+    expect(sidebar).toContain('(adults * basePrice) + (childCount * childPrice)');
+    expect(sidebar).not.toContain('(childCount * basePrice * 0.5)');
+  });
+
+  it('keeps the unit wording on per couple/family/group options', () => {
+    expect(sidebar).toContain('{isUnitPriced ? (');
+    expect(sidebar).toContain('bookingOptionUnitLabel(option.type)');
+  });
+});
