@@ -177,3 +177,43 @@ describe('storefront dark-mode surface coverage', () => {
     expect([...files].filter((file) => file.includes('admin'))).toEqual([]);
   });
 });
+
+describe('dark mode keeps hued card text readable', () => {
+  // Client report 2026-08-21: What to Know / Accessibility / Policies /
+  // Cultural Information were "almost unreadable" in dark mode. Their tinted
+  // cards (bg-rose-50, bg-amber-50, bg-purple-50) were darkened, but their
+  // HUED ink (text-rose-800, text-amber-900, text-purple-900) was not — the
+  // classifier only handled neutral text. Measured live: 1.75-2.14:1.
+  const css = fs.readFileSync(path.join(process.cwd(), 'app/globals.css'), 'utf8');
+
+  it.each([
+    'text-rose-800',
+    'text-rose-900',
+    'text-amber-900',
+    'text-purple-800',
+    'text-purple-900',
+    'text-blue-800',
+    'text-blue-900',
+    'text-indigo-900',
+    'text-teal-900',
+  ])('%s is recoloured for the dark theme', (utility) => {
+    expect(css).toContain(`[class~="${utility}"]`);
+  });
+
+  it('lightens hued ink instead of merely re-darkening it', () => {
+    for (const [utility, ink] of [
+      ['text-rose-800', '#fda4af'],
+      ['text-amber-900', '#fcd34d'],
+      ['text-purple-900', '#d8b4fe'],
+    ] as const) {
+      const index = css.indexOf(`[class~="${utility}"]`);
+      expect(index).toBeGreaterThan(-1);
+      expect(css.slice(index, index + 400)).toContain(ink);
+    }
+  });
+
+  it('leaves lighter hued text (<=600) on its brand colour', () => {
+    expect(css).not.toContain('[class~="text-rose-500"]');
+    expect(css).not.toContain('[class~="text-blue-600"]');
+  });
+});

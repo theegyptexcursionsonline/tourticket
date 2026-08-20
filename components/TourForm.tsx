@@ -11,6 +11,7 @@ import {
     Loader2,
     XCircle,
     ChevronDown,
+    ChevronUp,
     X,
     Plus,
     Image as ImageIcon,
@@ -989,6 +990,21 @@ const addItineraryItem = () => {
   }));
   setExpandedItineraryIndex(formData.itinerary.length);
 };
+
+    /**
+     * Move a step up or down. `day` is renumbered for the whole list so the
+     * stored order and the displayed numbers can never disagree, and the
+     * moved step stays expanded so the editor keeps their place.
+     */
+    const moveItineraryItem = (index: number, direction: -1 | 1) => {
+        const target = index + direction;
+        if (target < 0 || target >= formData.itinerary.length) return;
+        const reordered = [...formData.itinerary];
+        [reordered[index], reordered[target]] = [reordered[target], reordered[index]];
+        reordered.forEach((item, i: number) => { item.day = i + 1; });
+        setFormData((p) => ({ ...p, itinerary: reordered }));
+        setExpandedItineraryIndex((current) => (current === index ? target : current === target ? index : current));
+    };
 
     const removeItineraryItem = (index: number) => {
         if (formData.itinerary.length <= 1) return;
@@ -2432,19 +2448,45 @@ const addItineraryItem = () => {
                                                     expandedItineraryIndex === i ? 'border-indigo-500 shadow-lg' : 'border-slate-200 hover:border-indigo-300'
                                                 }`}
                                             >
-                                                <button
-                                                    type="button"
-                                                    onClick={() => toggleItineraryItem(i)}
-                                                    className="bg-slate-50 w-full text-left px-6 py-4 border-b border-slate-200 flex items-center justify-between transition-colors hover:bg-slate-100"
-                                                >
-                                                    <div className="flex items-center gap-3">
-                                                        <div className="flex items-center justify-center w-8 h-8 bg-indigo-100 text-indigo-600 rounded-lg font-bold text-sm">
-                                                            {i + 1}
+                                                <div className="bg-slate-50 border-b border-slate-200 flex items-center gap-2 pr-4 transition-colors hover:bg-slate-100">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => toggleItineraryItem(i)}
+                                                        className="flex-1 text-left px-6 py-4 flex items-center justify-between gap-3"
+                                                    >
+                                                        <div className="flex items-center gap-3">
+                                                            <div className="flex items-center justify-center w-8 h-8 bg-indigo-100 text-indigo-600 rounded-lg font-bold text-sm">
+                                                                {i + 1}
+                                                            </div>
+                                                            <h4 className="font-semibold text-slate-900">{day.title?.trim() || `Step ${i + 1}`}</h4>
                                                         </div>
-                                                        <h4 className="font-semibold text-slate-900">{day.title?.trim() || `Step ${i + 1}`}</h4>
+                                                        <ChevronDown className={`h-5 w-5 text-slate-500 transform transition-transform duration-200 ${expandedItineraryIndex === i ? 'rotate-180' : ''}`} />
+                                                    </button>
+                                                    {/* Reorder controls: steps are numbered by position, so moving
+                                                        one renumbers the whole list. */}
+                                                    <div className="flex flex-col gap-0.5">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => moveItineraryItem(i, -1)}
+                                                            disabled={i === 0}
+                                                            aria-label={`Move step ${i + 1} up`}
+                                                            title="Move up"
+                                                            className="rounded border border-slate-200 bg-white p-1 text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed"
+                                                        >
+                                                            <ChevronUp className="h-4 w-4" />
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => moveItineraryItem(i, 1)}
+                                                            disabled={i === formData.itinerary.length - 1}
+                                                            aria-label={`Move step ${i + 1} down`}
+                                                            title="Move down"
+                                                            className="rounded border border-slate-200 bg-white p-1 text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed"
+                                                        >
+                                                            <ChevronDown className="h-4 w-4" />
+                                                        </button>
                                                     </div>
-                                                    <ChevronDown className={`h-5 w-5 text-slate-500 transform transition-transform duration-200 ${expandedItineraryIndex === i ? 'rotate-180' : ''}`} />
-                                                </button>
+                                                </div>
                                                 <div className={`overflow-hidden transition-all duration-300 ${expandedItineraryIndex === i ? 'max-h-[1000px] opacity-100 p-6' : 'max-h-0 opacity-0 p-0'}`}>
                                                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
   <div className="space-y-2">
@@ -2713,6 +2755,19 @@ const addItineraryItem = () => {
                                                                         </select>
                                                                         <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 pointer-events-none" />
                                                                     </div>
+                                                                </div>
+
+                                                                <div className="space-y-2">
+                                                                    <label className="block text-sm font-medium text-slate-700">Duration (optional)</label>
+                                                                    <input
+                                                                        type="text"
+                                                                        maxLength={50}
+                                                                        value={option.duration || ''}
+                                                                        onChange={(e) => handleBookingOptionChange(index, 'duration', e.target.value)}
+                                                                        className={inputBase}
+                                                                        placeholder="e.g. 8 hours"
+                                                                    />
+                                                                    <p className="text-xs text-slate-500">Shown on this option at checkout. Leave blank to show nothing.</p>
                                                                 </div>
 
                                                                 <div className="space-y-2">

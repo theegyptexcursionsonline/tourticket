@@ -745,10 +745,12 @@ const TourOptionCard: React.FC<{
 
       {/* Specs Row */}
       <div className="flex items-center gap-3 text-xs text-gray-600 mb-2 bg-gray-50 rounded-full px-3 py-1.5">
-        <div className="flex items-center gap-1.5">
-          <Clock size={13} className="text-red-500" />
-          <span className="font-medium">{option.duration}</span>
-        </div>
+        {option.duration ? (
+          <div className="flex items-center gap-1.5">
+            <Clock size={13} className="text-red-500" />
+            <span className="font-medium">{option.duration}</span>
+          </div>
+        ) : null}
         <div className="flex items-center gap-1.5">
           <Languages size={13} className="text-green-500" />
           <span className="font-medium">{option.languages.slice(0, 2).join(', ')}</span>
@@ -1765,7 +1767,9 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
             originalPrice: pricing.discountApplied
               ? pricing.originalPrice
               : (option.originalPrice || optionPrice),
-            duration: option.duration || tourDisplayData?.duration || '3 hours',
+            // Shown only when the operator actually entered one (client
+            // request 2026-08-21); never an invented "3 hours".
+            duration: option.duration || tourDisplayData?.duration || '',
             languages: option.languages || tourDisplayData?.languages || ['English'],
             description: option.description || 'Experience our tour',
             timeSlots: bindTimeSlotsToOption(optionId, baseTimeSlots).map((slot: TimeSlot) => ({
@@ -1807,7 +1811,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
             originalPrice: standardPricing.discountApplied
               ? standardPricing.originalPrice
               : (tourDisplayData?.originalPrice || standardPrice),
-            duration: tourDisplayData?.duration || '3 hours',
+            duration: tourDisplayData?.duration || '',
             languages: tourDisplayData?.languages || ['English'],
             description: 'Perfect introduction to the destination with expert guide',
             timeSlots: bindTimeSlotsToOption(fallbackOptionId, baseTimeSlots).map((slot) => ({

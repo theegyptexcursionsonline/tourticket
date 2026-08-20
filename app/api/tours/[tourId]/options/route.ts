@@ -110,7 +110,9 @@ export async function GET(
           originalPrice: pricing.discountApplied
             ? pricing.originalPrice
             : (option.originalPrice || tour.originalPrice),
-          duration: option.duration || tour.duration || '3 hours',
+          // Empty stays empty — the booking surface hides the chip rather
+          // than quoting a duration nobody configured.
+          duration: option.duration || tour.duration || '',
           languages: option.languages || tour.languages || ['English'],
           description: option.description || tour.description || 'Complete tour experience',
           timeSlots: optionSlots,
@@ -138,7 +140,7 @@ export async function GET(
           price: tourPricing.price,
           guestPrices: explicitCatalogueGuestPrices(tourPricing.price, tour.revenueGuestPrices).prices,
           originalPrice: tourPricing.discountApplied ? tourPricing.originalPrice : tour.originalPrice,
-          duration: tour.duration || '3 hours',
+          duration: tour.duration || '',
           languages: tour.languages || ['English'],
           description: tour.description || 'Complete tour experience with all essential features and expert guidance.',
           // The standard no-option path honours a universal slot price, so
