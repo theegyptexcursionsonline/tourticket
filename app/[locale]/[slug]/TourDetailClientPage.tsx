@@ -612,7 +612,7 @@ const PracticalInfoSection = ({ enhancement, sectionRef }: { enhancement: TourEn
       Practical Information
     </h3>
     {(hasBring || hasWear) && (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:items-start">
       {hasBring && (
       <div className="bg-slate-50 p-6 rounded-xl">
         <h4 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
@@ -660,7 +660,7 @@ const PracticalInfoSection = ({ enhancement, sectionRef }: { enhancement: TourEn
     )}
 
     {(enhancement.notSuitableFor?.length || enhancement.needToKnow?.length) ? (
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:items-start">
         {enhancement.notSuitableFor && enhancement.notSuitableFor.length > 0 && (
           <div className="bg-rose-50 p-6 rounded-xl border border-rose-200">
             <h4 className="font-bold text-rose-900 mb-4">Not suitable for</h4>
@@ -728,7 +728,7 @@ const AccessibilitySection = ({ enhancement, sectionRef }: { enhancement: TourEn
     </h3>
 
     {(hasAccess || hasSafety) && (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:items-start">
       {hasAccess && (
       <div className="bg-purple-50 p-6 rounded-xl">
         <h4 className="font-bold text-purple-900 mb-4">Accessibility Information</h4>
@@ -792,7 +792,7 @@ const PoliciesSection = ({ enhancement, sectionRef }: { enhancement: TourEnhance
       <Shield size={24} className="text-red-600" />
       Policies
     </h3>
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:items-start">
       {policies.map(({ key, value, title, icon: Icon, wrap, head, tint, body }) => (
         <div key={key} className={`${wrap} p-6 rounded-xl`}>
           <h4 className={`font-bold ${head} mb-3 flex items-center gap-2`}>
@@ -819,7 +819,7 @@ const CulturalSection = ({ enhancement, sectionRef }: { enhancement: TourEnhance
       Cultural Information
     </h3>
     {(hasHighlights || hasCustoms) && (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:items-start">
       {hasHighlights && (
       <div className="bg-indigo-50 p-6 rounded-xl">
         <h4 className="font-bold text-indigo-900 mb-4 flex items-center gap-2">
