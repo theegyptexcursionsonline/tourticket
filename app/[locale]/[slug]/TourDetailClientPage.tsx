@@ -43,6 +43,7 @@ import { buildContentBreadcrumbs } from '@/lib/content/breadcrumbs';
 import {
   itineraryCoordinateAnchors,
   itineraryDirectionsUrl,
+  itineraryAutomaticRouteBase,
   itineraryMapStops,
   itineraryStoredDirectionsUrl,
 } from '@/lib/tours/itineraryMap';
@@ -451,12 +452,16 @@ const ItineraryIcon = ({ iconType, className = "w-5 h-5" }: { iconType?: string,
   return icons[iconType || 'location'] || icons.location;
 };
 
-const ItinerarySection = ({ itinerary, tourLocation, sectionRef }: { itinerary: ItineraryItem[], tourLocation?: string, sectionRef: React.RefObject<HTMLDivElement | null> }) => {
-  // Coordinates are resolved once while the tour is authored. Customer page
-  // views never invoke a geocoder or a billable map API.
+const ItinerarySection = ({ itinerary, tourLocation, tourTitle, sectionRef }: { itinerary: ItineraryItem[], tourLocation?: string, tourTitle?: string, sectionRef: React.RefObject<HTMLDivElement | null> }) => {
+  // Authored coordinates remain exact. Tours without pins receive a reviewed,
+  // destination-scoped approximate route without a per-view geocoder call.
   // Recomputed only when the itinerary changes, not on every scroll tick.
   const stops = useMemo(() => itineraryMapStops(itinerary), [itinerary]);
-  const showMap = useMemo(() => itineraryCoordinateAnchors(itinerary).length > 0, [itinerary]);
+  const showMap = useMemo(
+    () => itineraryCoordinateAnchors(itinerary).length > 0
+      || Boolean(itineraryAutomaticRouteBase(itinerary, tourLocation, tourTitle)),
+    [itinerary, tourLocation, tourTitle],
+  );
   const openMapsUrl = useMemo(
     () => itineraryStoredDirectionsUrl(itinerary) || itineraryDirectionsUrl(stops, tourLocation),
     [itinerary, stops, tourLocation],
@@ -473,7 +478,7 @@ const ItinerarySection = ({ itinerary, tourLocation, sectionRef }: { itinerary: 
         Detailed Itinerary
       </h3>
 
-      {/* Split Layout: Itinerary Items + Map (map only with explicit locations) */}
+      {/* Split Layout: Itinerary Items + authored or approximate auto-map */}
       <div className={`grid grid-cols-1 ${showMap ? 'lg:grid-cols-2' : ''} items-start gap-6`}>
         {/* Left: Itinerary Timeline */}
         <div className="relative order-2 min-w-0 lg:order-1">
@@ -578,6 +583,8 @@ const ItinerarySection = ({ itinerary, tourLocation, sectionRef }: { itinerary: 
           <div className="relative order-1 w-full lg:order-2 lg:sticky lg:top-24 lg:self-start">
             <InteractiveItineraryMap
               itinerary={itinerary}
+              tourLocation={tourLocation}
+              tourTitle={tourTitle}
               openMapsUrl={openMapsUrl}
               activeIndex={activeItineraryIndex}
               onSelect={selectItineraryStage}
@@ -1427,7 +1434,12 @@ export default function TourPageClient({ tour, relatedTours, initialReviews = []
               <OverviewSection tour={tour} sectionRef={overviewRef} />
               
               {enhancement.itinerary && enhancement.itinerary.length > 0 && (
-                <ItinerarySection itinerary={enhancement.itinerary} tourLocation={tour.location} sectionRef={itineraryRef} />
+                <ItinerarySection
+                  itinerary={enhancement.itinerary}
+                  tourLocation={tour.location}
+                  tourTitle={tour.title}
+                  sectionRef={itineraryRef}
+                />
               )}
               
               <PracticalInfoSection enhancement={enhancement} sectionRef={practicalRef} />
