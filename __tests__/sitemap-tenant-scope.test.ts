@@ -9,7 +9,9 @@ describe('flagship sitemap tenant scope', () => {
     // Tour, Category and AttractionPage. Destination and Blog use slightly
     // different publication predicates but are also explicitly scoped.
     expect(scopedQueries).toHaveLength(3);
-    expect(source).toContain('{ isPublished: { $ne: false }, ...DEFAULT_TENANT_FILTER }');
+    // Destinations tolerate a missing isPublished flag but must stay tenant-scoped
+    // and out of the trash (archived records used to reach the live sitemap).
+    expect(source).toContain('{ isPublished: { $ne: false }, ...DEFAULT_TENANT_FILTER, ...NOT_ARCHIVED_FILTER }');
     expect(source).toContain("{ status: 'published', ...DEFAULT_TENANT_FILTER }");
   });
 });

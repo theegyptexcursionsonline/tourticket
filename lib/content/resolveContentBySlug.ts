@@ -9,6 +9,10 @@ import Destination from '@/lib/models/Destination';
 import Category from '@/lib/models/Category';
 import AttractionPage from '@/lib/models/AttractionPage';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
+// A trashed record must not resolve at all: the fallbacks below deliberately
+// render/redirect to unpublished matches (drafts), and trash would ride that
+// path straight back onto the live site (client report 2026-08-21).
+import { NOT_ARCHIVED_FILTER } from '@/lib/content/publicContentFilter';
 import {
   ContentType,
   UrlType,
@@ -58,19 +62,19 @@ export async function resolveContentMatches(slug: string): Promise<ContentMatch[
   await dbConnect();
 
   const [tour, destination, category, attractionPage] = await Promise.all([
-    Tour.findOne({ slug, ...DEFAULT_TENANT_FILTER })
+    Tour.findOne({ slug, ...DEFAULT_TENANT_FILTER, ...NOT_ARCHIVED_FILTER })
       .select('slug urlType isPublished destination parentPage breadcrumbLabel')
       .populate('destination', 'slug')
       .lean(),
-    Destination.findOne({ slug, ...DEFAULT_TENANT_FILTER }).select('slug urlType isPublished parentPage breadcrumbLabel').lean(),
-    Category.findOne({ slug, ...DEFAULT_TENANT_FILTER })
+    Destination.findOne({ slug, ...DEFAULT_TENANT_FILTER, ...NOT_ARCHIVED_FILTER }).select('slug urlType isPublished parentPage breadcrumbLabel').lean(),
+    Category.findOne({ slug, ...DEFAULT_TENANT_FILTER, ...NOT_ARCHIVED_FILTER })
       .select('slug urlType isPublished cityDestination parentPage breadcrumbLabel')
       .populate('cityDestination', 'slug')
       .lean(),
     // Both attraction pages and catalogue pages participate in urlType routing.
     // A catalogue page's default shape is /category/{slug}, so its canonical
     // segment is derived from pageType, not the shared content-type default.
-    AttractionPage.findOne({ slug, ...DEFAULT_TENANT_FILTER })
+    AttractionPage.findOne({ slug, ...DEFAULT_TENANT_FILTER, ...NOT_ARCHIVED_FILTER })
       .select('slug urlType isPublished pageType cityDestination parentPage breadcrumbLabel')
       .populate('cityDestination', 'slug')
       .lean(),

@@ -16,6 +16,7 @@ import {
   selectLocalizedTours,
 } from '@/lib/i18n/localizedCollections';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
+import { NOT_ARCHIVED_FILTER, PUBLIC_CONTENT_FILTER } from '@/lib/content/publicContentFilter';
 import { destinationStructuredFields } from '@/lib/i18n/translationFields';
 import { metadataAlternates } from '@/lib/i18n/seoAlternates';
 import { localizeHtmlLinks } from '@/lib/i18n/localizeHtmlLinks';
@@ -23,7 +24,11 @@ import type { Category, Destination, Review, Tour } from '@/types';
 
 export async function getDestinationMetadata(slug: string, locale: string, canonicalPath: string): Promise<Metadata | null> {
   await dbConnect();
-  const destinationMatches = await DestinationModel.find({ slug, ...DEFAULT_TENANT_FILTER })
+  const destinationMatches = await DestinationModel.find({
+    slug,
+    ...DEFAULT_TENANT_FILTER,
+    ...NOT_ARCHIVED_FILTER,
+  })
     .select('name description image country metaTitle metaDescription translations')
     .lean();
   const destinationCandidate = selectLocalizedTaxonomyEntries(
@@ -72,7 +77,12 @@ export async function getDestinationMetadata(slug: string, locale: string, canon
 async function getPageData(slug: string, locale: string) {
   await dbConnect();
 
-  const destinationMatches = await DestinationModel.find({ slug, ...DEFAULT_TENANT_FILTER }).lean();
+  // A trashed destination must not keep serving its page.
+  const destinationMatches = await DestinationModel.find({
+    slug,
+    ...DEFAULT_TENANT_FILTER,
+    ...NOT_ARCHIVED_FILTER,
+  }).lean();
   if (destinationMatches.length === 0) {
     return {
       destination: null,
@@ -123,7 +133,10 @@ async function getPageData(slug: string, locale: string) {
     ...DEFAULT_TENANT_FILTER,
   }).populate('destination').populate('category').lean();
 
-  const allCategories = await CategoryModel.find({}).lean();
+  const allCategories = await CategoryModel.find({
+    ...DEFAULT_TENANT_FILTER,
+    ...NOT_ARCHIVED_FILTER,
+  }).lean();
 
   const serializedBaseTours = JSON.parse(JSON.stringify(baseDestinationTours)) as Record<string, unknown>[];
   const candidateSlugs = serializedBaseTours
@@ -158,6 +171,9 @@ async function getPageData(slug: string, locale: string) {
 
   const relatedDestinationsRaw = await DestinationModel.find({
     _id: { $nin: destinationIds },
+    // Trashed destinations must never resurface here — this section is
+    // where deleted test records reached customers (client report 2026-08-21).
+    ...PUBLIC_CONTENT_FILTER,
     $and: [
       DEFAULT_TENANT_FILTER,
       {

@@ -3,6 +3,7 @@ import { Metadata } from 'next';
 import dbConnect from '@/lib/dbConnect';
 import Blog from '@/lib/models/Blog';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
+import { NOT_ARCHIVED_FILTER, PUBLIC_CONTENT_FILTER } from '@/lib/content/publicContentFilter';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import BlogClientPage from './BlogClientPage';
@@ -68,15 +69,15 @@ async function getBlogsWithCategoryCounts(): Promise<{
     // Get all published blogs
     const blogs = await Blog.find({ status: 'published', ...DEFAULT_TENANT_FILTER })
       .sort({ publishedAt: -1 })
-      .populate('relatedDestinations', 'name slug')
-      .populate('relatedTours', 'title slug');
+      .populate({ path: 'relatedDestinations', select: 'name slug', match: NOT_ARCHIVED_FILTER })
+      .populate({ path: 'relatedTours', select: 'title slug', match: PUBLIC_CONTENT_FILTER });
 
     // Get featured posts
     const featuredPosts = await Blog.find({ status: 'published', featured: true, ...DEFAULT_TENANT_FILTER })
       .sort({ publishedAt: -1 })
       .limit(3)
-      .populate('relatedDestinations', 'name slug')
-      .populate('relatedTours', 'title slug');
+      .populate({ path: 'relatedDestinations', select: 'name slug', match: NOT_ARCHIVED_FILTER })
+      .populate({ path: 'relatedTours', select: 'title slug', match: PUBLIC_CONTENT_FILTER });
 
     // Get category counts
     const categoryCounts = await Promise.all(

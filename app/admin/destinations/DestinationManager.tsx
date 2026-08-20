@@ -601,6 +601,55 @@ setTimeout(() => router.refresh(), 0);
     });
   };
 
+  // Empty trash is irreversible, so it confirms first, then reports exactly
+  // what was removed and what was kept because something still references it.
+  const [isEmptyingTrash, setIsEmptyingTrash] = useState(false);
+  const handleEmptyTrash = async () => {
+    const preview = await fetch('/api/admin/trash?kind=destination', { headers: getAuthHeaders() })
+      .then((res) => res.json())
+      .catch(() => null);
+    if (!preview?.success) {
+      toast.error('Could not read the trash. Try again.');
+      return;
+    }
+    const removable = preview.inspected - preview.blocked.length;
+    if (removable <= 0) {
+      toast.error(
+        preview.blocked.length > 0
+          ? `Nothing can be deleted yet — ${preview.blocked.length} destination${preview.blocked.length === 1 ? ' is' : 's are'} still linked to tours or blog posts.`
+          : 'The trash is already empty.',
+      );
+      return;
+    }
+    const confirmed = window.confirm(
+      `Permanently delete ${removable} destination${removable === 1 ? '' : 's'}? This cannot be undone.`
+      + (preview.blocked.length > 0 ? `\n\n${preview.blocked.length} will be kept because they are still in use.` : ''),
+    );
+    if (!confirmed) return;
+
+    setIsEmptyingTrash(true);
+    const promise = fetch('/api/admin/trash?kind=destination', {
+      method: 'DELETE',
+      headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
+    }).then(async (res) => {
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.success) throw new Error(data.error || 'Failed to empty the trash.');
+      return data;
+    });
+
+    toast.promise(promise, {
+      loading: 'Deleting trashed destinations...',
+      success: (data: { deleted: string[]; blocked: Array<{ title: string; blockedReason?: string }> }) => {
+        router.refresh();
+        const kept = data.blocked.length > 0 ? ` ${data.blocked.length} kept (still in use).` : '';
+        return `Deleted ${data.deleted.length} destination${data.deleted.length === 1 ? '' : 's'}.${kept}`;
+      },
+      error: (error: Error) => error.message || 'Failed to empty the trash.',
+    });
+    promise.finally(() => setIsEmptyingTrash(false));
+  };
+
   const handleDuplicate = async (dest: IDestination) => {
     const destinationId = String(dest._id);
     setDuplicatingDestinationId(destinationId);
@@ -755,7 +804,19 @@ setTimeout(() => router.refresh(), 0);
           Trash ({trashDestinationCount})
         </button>
         {listView === 'trash' && (
-          <span className="text-sm text-slate-500">Restore destinations safely; linked tours remain intact.</span>
+          <>
+            <span className="text-sm text-slate-500">Restore destinations safely; linked tours remain intact.</span>
+            {trashDestinationCount > 0 && (
+              <button
+                type="button"
+                onClick={handleEmptyTrash}
+                disabled={isEmptyingTrash}
+                className="rounded-lg border border-rose-200 bg-white px-3 py-2 text-sm font-semibold text-rose-700 hover:bg-rose-50 disabled:opacity-60"
+              >
+                {isEmptyingTrash ? 'Deleting…' : 'Empty trash'}
+              </button>
+            )}
+          </>
         )}
         <div className="relative ml-auto min-w-[240px] flex-1 sm:max-w-sm">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />

@@ -4,6 +4,7 @@ import dbConnect from '@/lib/dbConnect';
 import Blog from '@/lib/models/Blog';
 import TourModel from '@/lib/models/Tour';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
+import { NOT_ARCHIVED_FILTER, PUBLIC_CONTENT_FILTER } from '@/lib/content/publicContentFilter';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import BlogPostClient, { type BlogPost, type TourPreview } from './BlogPostClient';
@@ -74,8 +75,8 @@ async function getBlogPost(slug: string) {
   await dbConnect();
 
   const blog = await Blog.findOne({ slug, status: 'published', ...DEFAULT_TENANT_FILTER })
-    .populate('relatedDestinations', 'name slug image')
-    .populate('relatedTours', 'title slug image discountPrice')
+    .populate({ path: 'relatedDestinations', select: 'name slug image', match: NOT_ARCHIVED_FILTER })
+    .populate({ path: 'relatedTours', select: 'title slug image discountPrice', match: PUBLIC_CONTENT_FILTER })
     .lean();
 
   if (!blog) {

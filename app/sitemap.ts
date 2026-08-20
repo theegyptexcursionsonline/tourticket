@@ -4,6 +4,7 @@ import mongoose from 'mongoose';
 import { locales, defaultLocale } from '@/i18n/config';
 import { contentPath, attractionPagePath } from '@/lib/content/contentUrl';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
+import { NOT_ARCHIVED_FILTER } from '@/lib/content/publicContentFilter';
 
 const BASE_URL = 'https://egypt-excursionsonline.com';
 
@@ -102,7 +103,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const Destination = mongoose.models.Destination;
     if (Destination) {
       const destinations = await Destination.find(
-        { isPublished: { $ne: false }, ...DEFAULT_TENANT_FILTER },
+        { isPublished: { $ne: false }, ...DEFAULT_TENANT_FILTER, ...NOT_ARCHIVED_FILTER },
         { slug: 1, updatedAt: 1, urlType: 1, parentPage: 1 }
       ).lean();
 
