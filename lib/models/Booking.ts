@@ -110,6 +110,8 @@ export interface IBooking extends Document {
   };
   priceSnapshot?: {
     guestPrices: { adult: number; child: number; infant: number };
+    /** Present when the option priced per couple/family/group: one unit's price and the participants it covers (0 = whole booking). */
+    unitPricing?: { unitSize: number; unitPrice: number };
     version: number;
     executionId?: string;
     overrideId?: string;
@@ -495,6 +497,10 @@ const BookingSchema: Schema<IBooking> = new Schema({
   priceSnapshot: {
     type: {
       guestPrices: { adult: Number, child: Number, infant: Number },
+      unitPricing: {
+        type: { unitSize: Number, unitPrice: Number },
+        required: false,
+      },
       version: { type: Number, required: true },
       executionId: String,
       overrideId: String,

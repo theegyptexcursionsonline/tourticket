@@ -474,12 +474,15 @@ export interface CartItem extends Tour {
     id: string;
     pricingKey?: string;
     title: string;
+    type?: string;
     price: number;
     originalPrice?: number;
     duration?: string;
     badge?: string;
   };
   guestPrices?: { adult: number; child: number; infant: number };
+  /** Set for per-couple/family/group options: one unit's price and the participants it covers (0 = whole booking). */
+  unitPricing?: { unitSize: number; unitPrice: number } | null;
   priceVersion?: number;
   priceExecutionId?: string | null;
   priceOverrideId?: string | null;

@@ -73,11 +73,12 @@ describe('PUT /api/tours/[tourId]/booking-options slot boundary', () => {
     };
     mockFindOne.mockResolvedValue(tour);
 
-    const option = { label: 'Private', price: 100, timeSlots: [{ time: '09:00', price: 125 }] };
+    const option = { type: 'Per Person', label: 'Private', price: 100, timeSlots: [{ time: '09:00', price: 125 }] };
     const response = await PUT(request({ index: 0, option }), context);
 
     expect(response.status).toBe(200);
-    expect(tour.bookingOptions).toEqual([option]);
+    // The route persists the cleaned shape (array fields normalized).
+    expect(tour.bookingOptions).toEqual([{ ...option, languages: [], highlights: [] }]);
     expect(save).toHaveBeenCalledTimes(1);
   });
 });

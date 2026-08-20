@@ -33,7 +33,7 @@ jest.mock('@/lib/dbConnect', () => jest.fn().mockResolvedValue(undefined));
 jest.mock('@/lib/auth/verifyAdmin', () => ({ verifyAdmin: mockVerifyAdmin }));
 jest.mock('@/lib/algolia', () => ({ syncTourToAlgolia: jest.fn() }));
 jest.mock('@/lib/i18n/autoTranslate', () => ({ autoTranslateTour: jest.fn() }));
-jest.mock('@/lib/admin/cleanBookingOptions', () => ({ cleanBookingOptions: jest.fn((value) => value) }));
+jest.mock('@/lib/admin/cleanBookingOptions', () => ({ cleanBookingOptions: jest.fn((value) => value), bookingOptionCapacityError: jest.fn(() => null) }));
 jest.mock('@/lib/revenue/pricingSummary', () => ({ refreshTourPricingSummary: jest.fn() }));
 jest.mock('@/lib/models/Tour', () => ({
   __esModule: true,

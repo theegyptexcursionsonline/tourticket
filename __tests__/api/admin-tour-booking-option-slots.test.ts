@@ -39,7 +39,7 @@ jest.mock('@/lib/algolia', () => ({
 jest.mock('@/lib/admin/auditStamp', () => ({ auditStamp: jest.fn(() => ({ id: 'admin-1' })) }));
 jest.mock('@/lib/revenue/pricingKeys', () => ({ ensureBookingOptionPricingKeys: jest.fn((_id, value) => value) }));
 jest.mock('@/lib/i18n/autoTranslate', () => ({ autoTranslateTour: jest.fn() }));
-jest.mock('@/lib/admin/cleanBookingOptions', () => ({ cleanBookingOptions: jest.fn((value) => value) }));
+jest.mock('@/lib/admin/cleanBookingOptions', () => ({ cleanBookingOptions: jest.fn((value) => value), bookingOptionCapacityError: jest.fn(() => null) }));
 jest.mock('@/lib/revenue/pricingSummary', () => ({ refreshTourPricingSummary: jest.fn().mockResolvedValue(null) }));
 jest.mock('@/lib/storefront/revalidateTourStorefront', () => ({ revalidateTourStorefront: jest.fn() }));
 

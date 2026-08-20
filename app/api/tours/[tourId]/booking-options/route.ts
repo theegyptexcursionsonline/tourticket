@@ -5,6 +5,8 @@ import Tour from '@/lib/models/Tour';
 import { requireAdminAuth } from '@/lib/auth/adminAuth';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 import { hasOnlyConfiguredTimeSlots } from '@/lib/pricing/bookingOptionSlots';
+import { bookingOptionCapacityError, cleanBookingOptions } from '@/lib/admin/cleanBookingOptions';
+import type { IBookingOption } from '@/lib/models/Tour';
 
 async function PUTHandler(
   request: NextRequest,
@@ -39,6 +41,16 @@ async function PUTHandler(
       );
     }
 
+    const [cleanedInput] = cleanBookingOptions([option]);
+    if (!cleanedInput || typeof cleanedInput.type !== 'string' || !cleanedInput.type.trim()) {
+      return NextResponse.json({ error: 'Invalid booking option' }, { status: 400 });
+    }
+    const capacityError = bookingOptionCapacityError([cleanedInput]);
+    if (capacityError) {
+      return NextResponse.json({ error: capacityError }, { status: 400 });
+    }
+    const cleanedOption = cleanedInput as unknown as IBookingOption;
+
     // Ensure bookingOptions array exists
     if (!tour.bookingOptions) {
       tour.bookingOptions = [];
@@ -46,9 +58,9 @@ async function PUTHandler(
 
     // Update or add the option at the specified index
     if (index < tour.bookingOptions.length) {
-      tour.bookingOptions[index] = option;
+      tour.bookingOptions[index] = cleanedOption;
     } else {
-      tour.bookingOptions.push(option);
+      tour.bookingOptions.push(cleanedOption);
     }
 
     await tour.save();

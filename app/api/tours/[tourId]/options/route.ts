@@ -6,6 +6,7 @@ import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 import { effectiveSlotGuestPrices, explicitCatalogueGuestPrices } from '@/lib/revenue/guestPrices';
 import { effectiveOptionPrice, effectiveTourPrice, percentageOff } from '@/lib/pricing/effectivePrice';
 import { authoritativeBasePrice } from '@/lib/pricing/authoritativePrice';
+import { effectiveMaxCapacity, effectiveMinCapacity } from '@/lib/bookings/unitPricing';
 
 // Helper function to check if string is a valid MongoDB ObjectId
 const isValidObjectId = (id: string): boolean => {
@@ -100,6 +101,10 @@ export async function GET(
           pricingKey: option.pricingKey || null,
           title: option.label || `${tour.title} - ${option.type}`,
           type: option.type || 'Per Person',
+          // Effective capacity gates (type defaults applied) so the booking
+          // surface can disable the option and step prices in whole units.
+          minCapacity: effectiveMinCapacity(option),
+          maxCapacity: effectiveMaxCapacity(option),
           price: pricing.price,
           guestPrices: explicitCatalogueGuestPrices(pricing.price, option.guestPrices).prices,
           originalPrice: pricing.discountApplied
@@ -127,6 +132,9 @@ export async function GET(
           id: 'standard-default',
           pricingKey: 'standard',
           title: `${tour.title} - Standard Experience`,
+          type: 'Per Person',
+          minCapacity: null,
+          maxCapacity: null,
           price: tourPricing.price,
           guestPrices: explicitCatalogueGuestPrices(tourPricing.price, tour.revenueGuestPrices).prices,
           originalPrice: tourPricing.discountApplied ? tourPricing.originalPrice : tour.originalPrice,

@@ -59,6 +59,7 @@ import { pruneBookingOptionTimeSlots } from '@/lib/pricing/bookingOptionSlots';
 import ContentNavigationFields from '@/components/admin/ContentNavigationFields';
 import type { ParentPageValue } from '@/lib/content/contentNavigation';
 import { practicalDefaultText, type PracticalDefaultKey } from '@/lib/tours/practicalDefaults';
+import { defaultMinCapacity, isUnitPricedType, minCapacityRequired } from '@/lib/bookings/unitPricing';
 
 // --- Interface Definitions ---
 interface Category {
@@ -107,6 +108,8 @@ interface BookingOption {
     type: string;
     label: string;
     price: number | string;
+    minCapacity?: number | string;
+    maxCapacity?: number | string;
     guestPrices?: GuestPriceInput;
     description?: string;
     originalPrice?: number | string;
@@ -851,6 +854,7 @@ export default function TourForm({ tourToEdit, onSave }: { tourToEdit?: Tour, on
                 type: 'Per Person',
                 label: '',
                 price: 0,
+                minCapacity: 1,
                 guestPrices: { child: '', infant: '' },
                 timeSlots: [{ time: '10:00', capacity: 10 }],
             }],
@@ -1028,7 +1032,44 @@ const addItineraryItem = () => {
     const handleBookingOptionChange = (index: number, field: string, value: string | number | boolean | string[] | GuestPriceInput) => {
         const updatedOptions = [...formData.bookingOptions];
         updatedOptions[index] = { ...updatedOptions[index], [field]: value };
+        if (field === 'type') {
+            // Capacity defaults follow the pricing type (client decision):
+            // Per Person 1, Per Couple 2, Per Family 4 (editable); Per Group
+            // starts empty and must be authored before the tour can save.
+            const fallback = defaultMinCapacity(String(value));
+            updatedOptions[index] = {
+                ...updatedOptions[index],
+                minCapacity: fallback === null ? '' : fallback,
+            };
+        }
         setFormData((p) => ({ ...p, bookingOptions: updatedOptions }));
+    };
+
+    // Shared capacity validation for whole-form save and individual option
+    // save; mirrors the server's bookingOptionCapacityError.
+    const bookingOptionCapacityIssue = (options: typeof formData.bookingOptions): string | null => {
+        for (const [index, option] of options.entries()) {
+            const name = option.label?.trim() || `Booking option ${index + 1}`;
+            const minText = String(option.minCapacity ?? '').trim();
+            const maxText = String(option.maxCapacity ?? '').trim();
+            const min = minText === '' ? undefined : Number(minText);
+            const max = maxText === '' ? undefined : Number(maxText);
+            if (min !== undefined && (!Number.isInteger(min) || min < 1 || min > 100)) {
+                return `${name}: minimum capacity must be a whole number between 1 and 100.`;
+            }
+            if (max !== undefined && (!Number.isInteger(max) || max < 1 || max > 1000)) {
+                return `${name}: maximum capacity must be a whole number between 1 and 1000.`;
+            }
+            if (min !== undefined && max !== undefined && max < min) {
+                return `${name}: maximum capacity cannot be below the minimum capacity.`;
+            }
+            // Couple/Family inherit their type default when blank (matching
+            // the server); only Per Group has no default and must be authored.
+            if (min === undefined && minCapacityRequired(option.type) && defaultMinCapacity(option.type) === null) {
+                return `${name}: enter a minimum capacity — a ${option.type} option cannot be saved without one.`;
+            }
+        }
+        return null;
     };
 
     const handleBookingOptionSlotToggle = (optionIndex: number, slot: TimeSlot) => {
@@ -1082,6 +1123,7 @@ const addItineraryItem = () => {
                 type: 'Per Person',
                 label: '',
                 price: 0,
+                minCapacity: 1,
                 guestPrices: { child: '', infant: '' },
                 timeSlots: (p.availability?.slots || []).map((slot) => ({
                     time: slot.time,
@@ -1117,6 +1159,11 @@ const addItineraryItem = () => {
         }
         if (hasPartialGuestPrices(option.guestPrices)) {
             toast.error('Enter both child and infant prices, or leave both blank');
+            return;
+        }
+        const optionCapacityIssue = bookingOptionCapacityIssue([option]);
+        if (optionCapacityIssue) {
+            toast.error(optionCapacityIssue);
             return;
         }
 
@@ -1283,6 +1330,13 @@ const addItineraryItem = () => {
         }
         if (hasPartialGuestPrices(formData.revenueGuestPrices) || formData.bookingOptions.some((option) => hasPartialGuestPrices(option.guestPrices))) {
             toast.error('Each price set must include both child and infant prices, or leave both blank.');
+            setIsSubmitting(false);
+            return;
+        }
+        const capacityIssue = bookingOptionCapacityIssue(formData.bookingOptions);
+        if (capacityIssue) {
+            toast.error(capacityIssue);
+            setActiveTab('booking');
             setIsSubmitting(false);
             return;
         }
@@ -2655,10 +2709,46 @@ const addItineraryItem = () => {
                                                                             <option value="Per Person">Per Person</option>
                                                                             <option value="Per Group">Per Group</option>
                                                                             <option value="Per Couple">Per Couple</option>
-                                                                            <option value="Per Family">Per Family (up to 4)</option>
+                                                                            <option value="Per Family">Per Family</option>
                                                                         </select>
                                                                         <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 pointer-events-none" />
                                                                     </div>
+                                                                </div>
+
+                                                                <div className="space-y-2">
+                                                                    <label className="block text-sm font-medium text-slate-700">
+                                                                        Minimum Capacity{minCapacityRequired(option.type) ? ' *' : ''}
+                                                                    </label>
+                                                                    <input
+                                                                        type="number"
+                                                                        min="1"
+                                                                        max="100"
+                                                                        step="1"
+                                                                        value={option.minCapacity ?? ''}
+                                                                        onChange={(e) => handleBookingOptionChange(index, 'minCapacity', e.target.value === '' ? '' : parseInt(e.target.value, 10) || '')}
+                                                                        className={inputBase}
+                                                                        placeholder={isUnitPricedType(option.type) ? 'Required for this pricing type' : '1'}
+                                                                    />
+                                                                    <p className="text-xs text-slate-500">
+                                                                        {isUnitPricedType(option.type)
+                                                                            ? `Participants one ${String(option.type).replace(/^Per /i, '').toLowerCase()} covers — also the minimum to book. Larger groups are charged in whole ${String(option.type).replace(/^Per /i, '').toLowerCase()}s, rounded up.`
+                                                                            : 'Fewest participants who can book this option. Leave at 1 for no minimum.'}
+                                                                    </p>
+                                                                </div>
+
+                                                                <div className="space-y-2">
+                                                                    <label className="block text-sm font-medium text-slate-700">Maximum Capacity</label>
+                                                                    <input
+                                                                        type="number"
+                                                                        min="1"
+                                                                        max="1000"
+                                                                        step="1"
+                                                                        value={option.maxCapacity ?? ''}
+                                                                        onChange={(e) => handleBookingOptionChange(index, 'maxCapacity', e.target.value === '' ? '' : parseInt(e.target.value, 10) || '')}
+                                                                        className={inputBase}
+                                                                        placeholder="No limit"
+                                                                    />
+                                                                    <p className="text-xs text-slate-500">Optional — most participants one booking of this option may include.</p>
                                                                 </div>
 
                                                                 <div className="space-y-2">

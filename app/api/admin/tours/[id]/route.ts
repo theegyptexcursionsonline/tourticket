@@ -14,7 +14,7 @@ import { finalizeAddOnAssignments, stripBookingOptionClientKeys } from '@/lib/ad
 import { ensureBookingOptionPricingKeys } from '@/lib/revenue/pricingKeys';
 import { autoTranslateTour } from '@/lib/i18n/autoTranslate';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
-import { cleanBookingOptions } from '@/lib/admin/cleanBookingOptions';
+import { bookingOptionCapacityError, cleanBookingOptions } from '@/lib/admin/cleanBookingOptions';
 import { refreshTourPricingSummary } from '@/lib/revenue/pricingSummary';
 import { revalidateTourStorefront } from '@/lib/storefront/revalidateTourStorefront';
 import { hasOnlyConfiguredTimeSlots } from '@/lib/pricing/bookingOptionSlots';
@@ -168,7 +168,12 @@ async function PUTHandler(
 
         // Clean booking options to remove invalid enum values
         if (body.bookingOptions && Array.isArray(body.bookingOptions)) {
-            const keyedOptions = ensureBookingOptionPricingKeys(id, cleanBookingOptions(body.bookingOptions));
+            const cleanedOptions = cleanBookingOptions(body.bookingOptions);
+            const capacityError = bookingOptionCapacityError(cleanedOptions);
+            if (capacityError) {
+                return NextResponse.json({ error: capacityError }, { status: 400 });
+            }
+            const keyedOptions = ensureBookingOptionPricingKeys(id, cleanedOptions);
             body.addOns = finalizeAddOnAssignments(body.addOns, keyedOptions || []);
             body.bookingOptions = stripBookingOptionClientKeys(keyedOptions || []);
         }

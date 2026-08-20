@@ -27,6 +27,7 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import AuthModal from '@/components/AuthModal';
+import { unitCount } from '@/lib/bookings/unitPricing';
 import ConfiguredStripePaymentForm from '@/components/ConfiguredStripePaymentForm';
 import HotelPickupMap from '@/components/HotelPickupMap';
 import { useSettings } from '@/hooks/useSettings';
@@ -187,7 +188,10 @@ const SummaryItem: React.FC<{ item: CartItem }> = ({ item }) => {
     const adultPrice = Number(item.guestPrices?.adult ?? basePrice) * (item.quantity || 1);
     const childPrice = Number(item.guestPrices?.child ?? basePrice / 2) * (item.childQuantity || 0);
     const infantPrice = Number(item.guestPrices?.infant ?? 0) * (item.infantQuantity || 0);
-    const tourTotal = adultPrice + childPrice + infantPrice;
+    // Per couple/family/group options charge whole units, rounded up.
+    const tourTotal = item.unitPricing
+      ? unitCount((item.quantity || 1) + (item.childQuantity || 0) + (item.infantQuantity || 0), item.unitPricing.unitSize || null) * item.unitPricing.unitPrice
+      : adultPrice + childPrice + infantPrice;
 
     let addOnsTotal = 0;
     if (item.selectedAddOns && item.selectedAddOnDetails) {
@@ -983,7 +987,10 @@ const handleDownloadReceipt = async () => {
                     const adultPrice = Number(item.guestPrices?.adult ?? basePrice) * (item.quantity || 1);
                     const childPrice = Number(item.guestPrices?.child ?? basePrice / 2) * (item.childQuantity || 0);
                     const infantPrice = Number(item.guestPrices?.infant ?? 0) * (item.infantQuantity || 0);
-                    const tourTotal = adultPrice + childPrice + infantPrice;
+                    // Per couple/family/group options charge whole units, rounded up.
+    const tourTotal = item.unitPricing
+      ? unitCount((item.quantity || 1) + (item.childQuantity || 0) + (item.infantQuantity || 0), item.unitPricing.unitSize || null) * item.unitPricing.unitPrice
+      : adultPrice + childPrice + infantPrice;
                     let addOnsTotal = 0;
                     if (item.selectedAddOns && item.selectedAddOnDetails) {
                       Object.entries(item.selectedAddOns).forEach(([addOnId, quantity]) => {
@@ -1179,7 +1186,10 @@ export default function CheckoutPage() {
     const adultPrice = Number(item.guestPrices?.adult ?? basePrice) * (item.quantity || 1);
     const childPrice = Number(item.guestPrices?.child ?? basePrice / 2) * (item.childQuantity || 0);
     const infantPrice = Number(item.guestPrices?.infant ?? 0) * (item.infantQuantity || 0);
-    const tourTotal = adultPrice + childPrice + infantPrice;
+    // Per couple/family/group options charge whole units, rounded up.
+    const tourTotal = item.unitPricing
+      ? unitCount((item.quantity || 1) + (item.childQuantity || 0) + (item.infantQuantity || 0), item.unitPricing.unitSize || null) * item.unitPricing.unitPrice
+      : adultPrice + childPrice + infantPrice;
 
     let addOnsTotal = 0;
     if (item.selectedAddOns && item.selectedAddOnDetails) {

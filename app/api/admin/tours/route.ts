@@ -8,7 +8,7 @@ import { syncTourToAlgolia } from '@/lib/algolia';
 import { verifyAdmin } from '@/lib/auth/verifyAdmin';
 import { autoTranslateTour } from '@/lib/i18n/autoTranslate';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
-import { cleanBookingOptions } from '@/lib/admin/cleanBookingOptions';
+import { bookingOptionCapacityError, cleanBookingOptions } from '@/lib/admin/cleanBookingOptions';
 import { refreshTourPricingSummary } from '@/lib/revenue/pricingSummary';
 import { revalidateTourStorefront } from '@/lib/storefront/revalidateTourStorefront';
 import { ensureBookingOptionPricingKeys } from '@/lib/revenue/pricingKeys';
@@ -132,9 +132,14 @@ async function POSTHandler(request: NextRequest) {
 
     // Clean booking options to remove invalid enum values
     if (body.bookingOptions && Array.isArray(body.bookingOptions)) {
+      const cleanedOptions = cleanBookingOptions(body.bookingOptions);
+      const capacityError = bookingOptionCapacityError(cleanedOptions);
+      if (capacityError) {
+        return NextResponse.json({ error: capacityError }, { status: 400 });
+      }
       const keyedOptions = ensureBookingOptionPricingKeys(
         String(tourId),
-        cleanBookingOptions(body.bookingOptions),
+        cleanedOptions,
       );
       body.addOns = finalizeAddOnAssignments(body.addOns, keyedOptions || []);
       body.bookingOptions = stripBookingOptionClientKeys(keyedOptions || []);

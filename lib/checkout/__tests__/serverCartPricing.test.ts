@@ -283,3 +283,71 @@ describe('secureCartPricing applies the tour discount exactly like the sidebar q
     expect(item.guestPrices).toEqual({ adult: 111, child: 55, infant: 0 });
   });
 });
+
+describe('unit-priced booking options (per couple/family/group)', () => {
+  const withOptions = (options: any[]) => {
+    lean.mockResolvedValue({
+      _id: { toString: () => '507f1f77bcf86cd799439011' },
+      title: 'Catalogue Tour',
+      discountPrice: 80,
+      originalPrice: 100,
+      bookingOptions: options,
+      addOns: [],
+    });
+  };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    withOptions([{ label: 'Premium', type: 'Per Person', price: 120, pricingKey: 'premium-key' }]);
+  });
+
+  it('emits the unit contract for a configured couple option', async () => {
+    withOptions([{ label: 'Couples', type: 'Per Couple', minCapacity: 2, price: 200, pricingKey: 'couple-key' }]);
+    const [item] = await secureCartPricing([{
+      id: '507f1f77bcf86cd799439011',
+      quantity: 2,
+      childQuantity: 2,
+      selectedBookingOption: { id: 'option-0', pricingKey: 'couple-key' },
+    }]);
+    expect(item.unitPricing).toEqual({ unitSize: 2, unitPrice: 200 });
+  });
+
+  it('fails closed below the minimum capacity — graying in the UI is not authorization', async () => {
+    withOptions([{ label: 'Couples', type: 'Per Couple', minCapacity: 2, price: 200, pricingKey: 'couple-key' }]);
+    await expect(secureCartPricing([{
+      id: '507f1f77bcf86cd799439011',
+      quantity: 1,
+      selectedBookingOption: { id: 'option-0', pricingKey: 'couple-key' },
+    }])).rejects.toThrow('Requires at least 2 participants');
+  });
+
+  it('fails closed above an authored maximum capacity', async () => {
+    withOptions([{ label: 'Small group', type: 'Per Group', minCapacity: 5, maxCapacity: 8, price: 500, pricingKey: 'group-key' }]);
+    await expect(secureCartPricing([{
+      id: '507f1f77bcf86cd799439011',
+      quantity: 7,
+      childQuantity: 2,
+      selectedBookingOption: { id: 'option-0', pricingKey: 'group-key' },
+    }])).rejects.toThrow('Available for up to 8 participants');
+  });
+
+  it('a legacy Per Group option with no capacity prices as one whole-booking unit', async () => {
+    withOptions([{ label: 'Private group', type: 'Per Group', price: 323.18, pricingKey: 'legacy-group' }]);
+    const [item] = await secureCartPricing([{
+      id: '507f1f77bcf86cd799439011',
+      quantity: 3,
+      childQuantity: 1,
+      selectedBookingOption: { id: 'option-0', pricingKey: 'legacy-group' },
+    }]);
+    expect(item.unitPricing).toEqual({ unitSize: 0, unitPrice: 323.18 });
+  });
+
+  it('per-person options carry no unit contract and no capacity gate', async () => {
+    const [item] = await secureCartPricing([{
+      id: '507f1f77bcf86cd799439011',
+      quantity: 1,
+      selectedBookingOption: { id: 'option-0', pricingKey: 'premium-key' },
+    }]);
+    expect(item.unitPricing).toBeNull();
+  });
+});

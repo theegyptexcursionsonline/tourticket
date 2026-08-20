@@ -12,6 +12,7 @@ import { parseLocalDate } from '@/utils/date';
 import { useLocale } from 'next-intl';
 import { isRTL } from '@/i18n/config';
 import type { CartItem } from '@/types';
+import { unitCount } from '@/lib/bookings/unitPricing';
 import { useModalBehavior } from '@/hooks/useModalBehavior';
 
 const CartSidebar: FC = () => {
@@ -27,10 +28,15 @@ const CartSidebar: FC = () => {
     const getItemTotal = (item: CartItem) => {
         // Use selected booking option price if available, otherwise fall back to item price
         const basePrice = item.selectedBookingOption?.price || item.discountPrice || 0;
-        
+
+        // Unit-priced options (per couple/family/group) charge whole units
+        // over the total participant count — mirror of checkoutTourSubtotal.
+        const totalParticipants = (item.quantity || 1) + (item.childQuantity || 0) + (item.infantQuantity || 0);
         const adultPrice = basePrice * (item.quantity || 1);
         const childPrice = Number(item.guestPrices?.child ?? basePrice / 2) * (item.childQuantity || 0);
-        const tourTotal = adultPrice + childPrice;
+        const tourTotal = item.unitPricing
+            ? unitCount(totalParticipants, item.unitPricing.unitSize || null) * item.unitPricing.unitPrice
+            : adultPrice + childPrice;
 
         let addOnsTotal = 0;
         if (item.selectedAddOns && item.selectedAddOnDetails) {

@@ -137,6 +137,9 @@ function recoveryCart(cart: SecureCartItem[]) {
     bot: item.selectedBookingOption?.title,
     ok: item.selectedBookingOption?.pricingKey,
     gp: item.guestPrices,
+    ...(item.unitPricing
+      ? { us: item.unitPricing.unitSize, up: item.unitPricing.unitPrice }
+      : {}),
     pv: item.priceVersion,
     pe: item.priceExecutionId,
     po: item.priceOverrideId,

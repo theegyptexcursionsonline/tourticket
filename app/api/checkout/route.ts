@@ -9,6 +9,7 @@ import Discount from '@/lib/models/Discount';
 import { EmailService } from '@/lib/email/emailService';
 import Stripe from 'stripe';
 import { parseLocalDate, ensureDateOnlyString } from '@/utils/date';
+import { unitCount, unitCountLabel } from '@/lib/bookings/unitPricing';
 import { buildGoogleMapsLink, buildStaticMapImageUrl } from '@/lib/utils/mapImage';
 import { generateDeterministicBookingReference, generateUniqueBookingReference } from '@/lib/utils/bookingReference';
 import { PriceChangedError, secureCartPricing, type SecureCartItem } from '@/lib/checkout/serverCartPricing';
@@ -607,6 +608,7 @@ export async function POST(request: NextRequest) {
           selectedBookingOption: cartItem.selectedBookingOption,
           priceSnapshot: {
             guestPrices: cartItem.guestPrices,
+            unitPricing: cartItem.unitPricing || undefined,
             version: cartItem.priceVersion,
             executionId: cartItem.priceExecutionId || undefined,
             overrideId: cartItem.priceOverrideId || undefined,
@@ -781,18 +783,29 @@ export async function POST(request: NextRequest) {
     const infantCount = mainCartItem?.infantQuantity || 0;
 
     const participantParts = [];
-    if (adultCount > 0) {
-      const basePrice = mainCartItem?.selectedBookingOption?.price || mainCartItem?.discountPrice || mainCartItem?.price || 0;
-      participantParts.push(`${adultCount} x Adult${adultCount > 1 ? 's' : ''} ($${basePrice.toFixed(2)})`);
-    }
-    if (childCount > 0) {
-      const basePrice = mainCartItem?.selectedBookingOption?.price || mainCartItem?.discountPrice || mainCartItem?.price || 0;
-      const childPrice = Number(mainCartItem?.guestPrices?.child ?? basePrice / 2);
-      participantParts.push(`${childCount} x Child${childCount > 1 ? 'ren' : ''} ($${childPrice.toFixed(2)})`);
-    }
-    if (infantCount > 0) {
-      const infantPrice = Number(mainCartItem?.guestPrices?.infant ?? 0);
-      participantParts.push(`${infantCount} x Infant${infantCount > 1 ? 's' : ''} ($${infantPrice.toFixed(2)})`);
+    if (mainCartItem?.unitPricing) {
+      // Unit-priced options (per couple/family/group) are charged in whole
+      // units — a per-guest price breakdown here would misstate the charge.
+      const totalParticipants = adultCount + childCount + infantCount;
+      const units = unitCount(totalParticipants, mainCartItem.unitPricing.unitSize || null);
+      participantParts.push(
+        `${totalParticipants} participant${totalParticipants === 1 ? '' : 's'} — `
+        + `${unitCountLabel(mainCartItem.selectedBookingOption?.type, units)} x $${Number(mainCartItem.unitPricing.unitPrice).toFixed(2)}`,
+      );
+    } else {
+      if (adultCount > 0) {
+        const basePrice = mainCartItem?.selectedBookingOption?.price || mainCartItem?.discountPrice || mainCartItem?.price || 0;
+        participantParts.push(`${adultCount} x Adult${adultCount > 1 ? 's' : ''} ($${basePrice.toFixed(2)})`);
+      }
+      if (childCount > 0) {
+        const basePrice = mainCartItem?.selectedBookingOption?.price || mainCartItem?.discountPrice || mainCartItem?.price || 0;
+        const childPrice = Number(mainCartItem?.guestPrices?.child ?? basePrice / 2);
+        participantParts.push(`${childCount} x Child${childCount > 1 ? 'ren' : ''} ($${childPrice.toFixed(2)})`);
+      }
+      if (infantCount > 0) {
+        const infantPrice = Number(mainCartItem?.guestPrices?.infant ?? 0);
+        participantParts.push(`${infantCount} x Infant${infantCount > 1 ? 's' : ''} ($${infantPrice.toFixed(2)})`);
+      }
     }
 
     // SEND ADMIN ALERT IMMEDIATELY (before customer email)

@@ -74,6 +74,8 @@ type RecoveryCartItem = {
   bot?: string;
   ok?: string;
   gp?: { adult?: number; child?: number; infant?: number };
+  us?: number;
+  up?: number;
   pv?: number;
   pe?: string;
   po?: string;
@@ -614,6 +616,9 @@ async function processSuccessfulPayment(paymentIntent: Stripe.PaymentIntent) {
         } : undefined,
         priceSnapshot: item.gp ? {
           guestPrices: item.gp,
+          unitPricing: item.us !== undefined && Number.isFinite(Number(item.up))
+            ? { unitSize: Number(item.us), unitPrice: Number(item.up) }
+            : undefined,
           version: Number(item.pv || 0),
           executionId: item.pe || undefined,
           overrideId: item.po || undefined,

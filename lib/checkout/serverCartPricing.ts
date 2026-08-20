@@ -7,6 +7,11 @@ import { effectiveOptionPrice, effectiveTourPrice } from '@/lib/pricing/effectiv
 import { authoritativeBasePrice } from '@/lib/pricing/authoritativePrice';
 import { isAddOnAvailableForOption, normalizedBookingOptionKeys } from '@/lib/bookings/addOnAvailability';
 import { effectiveSlotGuestPrices } from '@/lib/revenue/guestPrices';
+import {
+  capacityAvailability,
+  capacityBlockedMessage,
+  unitPricingForOption,
+} from '@/lib/bookings/unitPricing';
 
 type EffectivePriceQuote = Awaited<ReturnType<typeof resolveEffectivePrice>>;
 
@@ -36,6 +41,8 @@ interface LeanBookingOption {
   type: string;
   price: number;
   originalPrice?: number;
+  minCapacity?: number;
+  maxCapacity?: number;
   duration?: string;
   badge?: string;
   applyTourDiscount?: boolean;
@@ -68,6 +75,7 @@ export interface SecureBookingOption {
   id: string;
   pricingKey: string;
   title: string;
+  type?: string;
   price: number;
   originalPrice: number;
   duration?: string;
@@ -98,6 +106,8 @@ export interface SecureCartItem extends Record<string, unknown> {
   originalPrice: number;
   selectedBookingOption: SecureBookingOption;
   guestPrices: { adult: number; child: number; infant: number };
+  /** Set for per-couple/family/group options: the price of one unit and the participants it covers (0 = whole booking). */
+  unitPricing: { unitSize: number; unitPrice: number } | null;
   priceVersion: number;
   priceSourceVersion: string | null;
   priceExecutionId: string | null;
@@ -153,8 +163,14 @@ export async function secureCartPricing(
       throw new Error('Invalid booking option');
     }
 
+    const adultCount = quantity(rawItem?.quantity, 1, 1);
+    const childCount = quantity(rawItem?.childQuantity, 0);
+    const infantCount = quantity(rawItem?.infantQuantity, 0);
+
     let option: SecureBookingOption;
     let catalogueGuestPrices: { adult: number; child: number; infant: number };
+    // Capacity/unit rules come from the stored option, never the request.
+    let capacitySource: { type?: string; minCapacity?: number; maxCapacity?: number } | null = null;
     if (!optionIdIsStandard || !pricingKeyIsStandard) {
       const match = optionId.match(/^option-(\d+)$/);
       const pricingKeyIndex = requestedPricingKey
@@ -187,10 +203,16 @@ export async function secureCartPricing(
         ? dbOption.timeSlots.find((entry) => entry.time === requestedTime)
         : undefined;
       const pricing = effectiveOptionPrice(tour, dbOption, slot);
+      capacitySource = {
+        type: dbOption.type,
+        minCapacity: dbOption.minCapacity,
+        maxCapacity: dbOption.maxCapacity,
+      };
       option = {
         id: `option-${optionIndex}`,
         pricingKey: dbOption.pricingKey,
         title: dbOption.label || `${tour.title} - ${dbOption.type}`,
+        type: dbOption.type,
         price: pricing.price,
         originalPrice: pricing.discountApplied
           ? pricing.originalPrice
@@ -218,6 +240,7 @@ export async function secureCartPricing(
         id: 'standard-default',
         pricingKey: STANDARD_OPTION_KEY,
         title: `${tour.title} - Standard Experience`,
+        type: 'Per Person',
         // The standard path honours a universal availability-slot price for
         // the selected time, exactly like the resolver's catalogue baseline.
         price: authoritativeBasePrice(tour, {
@@ -255,6 +278,21 @@ export async function secureCartPricing(
       }
       option.price = quote.prices.adult;
     }
+
+    // Capacity gates are server-enforced: UI graying is presentation, not
+    // authorization. Fail closed before any charge can be derived.
+    if (capacitySource) {
+      const availability = capacityAvailability(capacitySource, adultCount + childCount + infantCount);
+      if (!availability.available) {
+        throw new Error(
+          capacityBlockedMessage(availability) || 'This booking option is unavailable for the selected group size',
+        );
+      }
+    }
+    const unitPricingQuote = capacitySource ? unitPricingForOption(capacitySource, option.price) : null;
+    const unitPricing = unitPricingQuote
+      ? { unitSize: unitPricingQuote.unitSize, unitPrice: unitPricingQuote.unitPrice }
+      : null;
 
     // Checkout may only sell add-ons authored on the tour. Invented fallbacks
     // are not a pricing authority and must never appear in a mobile quote.
@@ -299,14 +337,15 @@ export async function secureCartPricing(
       title: tour.title,
       selectedDate: rawItem.selectedDate ? String(rawItem.selectedDate).slice(0, 10) : undefined,
       selectedTime: rawItem.selectedTime ? String(rawItem.selectedTime) : undefined,
-      quantity: quantity(rawItem?.quantity, 1, 1),
-      childQuantity: quantity(rawItem?.childQuantity, 0),
-      infantQuantity: quantity(rawItem?.infantQuantity, 0),
+      quantity: adultCount,
+      childQuantity: childCount,
+      infantQuantity: infantCount,
       price: option.price,
       discountPrice: option.price,
       originalPrice: option.originalPrice,
       selectedBookingOption: option,
       guestPrices: quote?.prices || catalogueGuestPrices,
+      unitPricing,
       priceVersion: quote?.version || 0,
       priceSourceVersion: quote?.sourceVersion || null,
       priceExecutionId: quote?.executionId || null,

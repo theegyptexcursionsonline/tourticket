@@ -26,6 +26,15 @@ import { effectiveSlotGuestPrices } from '@/lib/revenue/guestPrices';
 import { isPerPersonAddOn } from '@/lib/checkout/addOnPricing';
 import { groupAvailableAddOns, isAddOnAvailableForOption, normalizedBookingOptionKeys } from '@/lib/bookings/addOnAvailability';
 import { bookingOptionUnitLabel } from '@/lib/bookings/bookingOptionLabels';
+import {
+  capacityAvailability,
+  capacityBlockedMessage,
+  effectiveUnitSize,
+  isUnitPricedType,
+  unitCount,
+  unitCountLabel,
+  unitPricingForOption,
+} from '@/lib/bookings/unitPricing';
 import { provableRating, ratingLabel } from '@/lib/tours/ratingDisplay';
 import { useModalBehavior } from '@/hooks/useModalBehavior';
 import {
@@ -101,6 +110,8 @@ interface BookingOption {
   label: string;
   price: number;
   originalPrice?: number;
+  minCapacity?: number | null;
+  maxCapacity?: number | null;
   description?: string;
   duration?: string;
   languages?: string[];
@@ -179,6 +190,9 @@ interface TourOption {
   title: string;
   price: number;
   originalPrice?: number;
+  /** Booking gates for unit-priced options; null/undefined = unrestricted. */
+  minCapacity?: number | null;
+  maxCapacity?: number | null;
   duration: string;
   languages: string[];
   description: string;
@@ -584,8 +598,9 @@ const TourOptionCard: React.FC<{
   selectedTimeSlot: TimeSlot | null;
   adults: number;
   childCount: number;
+  infantCount: number;
   tour: Tour; // Added tour prop
-}> = ({ option, onSelect, selectedTimeSlot, adults, childCount, tour }) => {
+}> = ({ option, onSelect, selectedTimeSlot, adults, childCount, infantCount, tour }) => {
   const { formatPrice } = useSettings();
   const [descExpanded, setDescExpanded] = useState(false);
   const [descOverflows, setDescOverflows] = useState(false);
@@ -598,9 +613,25 @@ const TourOptionCard: React.FC<{
   }, [option.description]);
 
   const basePrice = option.price;
-  const subtotal = (adults * basePrice) + (childCount * basePrice * 0.5);
-  const originalSubtotal = option.originalPrice ? (adults * option.originalPrice) + (childCount * option.originalPrice * 0.5) : subtotal;
+  // Per Couple/Family/Group options charge whole units rounded UP over the
+  // total participant count — never price-per-participant (client sheet
+  // 2026-08-20: a per-group price was being multiplied per guest).
+  const totalParticipants = adults + childCount + infantCount;
+  const isUnitPriced = isUnitPricedType(option.type);
+  const units = isUnitPriced ? unitCount(totalParticipants, effectiveUnitSize(option)) : null;
+  const subtotal = units !== null
+    ? units * basePrice
+    : (adults * basePrice) + (childCount * basePrice * 0.5);
+  const originalSubtotal = option.originalPrice
+    ? (units !== null
+      ? units * option.originalPrice
+      : (adults * option.originalPrice) + (childCount * option.originalPrice * 0.5))
+    : subtotal;
   const savings = originalSubtotal - subtotal;
+  // Availability gates: disabled until the group meets the option's minimum,
+  // and again past its maximum (client rule).
+  const capacity = capacityAvailability(option, totalParticipants);
+  const capacityBlocked = !capacity.available;
 
   // Use real tour data instead of hardcoded values
   const provenRating = provableRating(tour.rating, tour.reviews);
@@ -755,7 +786,7 @@ const TourOptionCard: React.FC<{
       <div className="bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl px-3 py-2 mb-2 border border-gray-200">
         <div className="flex justify-between items-center text-xs mb-1">
           <span className="text-gray-700 font-medium">
-            {adults} Adult{adults > 1 ? 's' : ''}{childCount > 0 && `, ${childCount} Child${childCount > 1 ? 'ren' : ''}`}
+            {adults} Adult{adults > 1 ? 's' : ''}{childCount > 0 && `, ${childCount} Child${childCount > 1 ? 'ren' : ''}`}{infantCount > 0 && `, ${infantCount} Infant${infantCount > 1 ? 's' : ''}`}
           </span>
           {savings > 0 && (
             <span className="text-green-600 font-bold bg-green-100 px-1.5 py-0.5 rounded-full text-[10px]">
@@ -764,7 +795,10 @@ const TourOptionCard: React.FC<{
           )}
         </div>
         <div className="flex justify-between items-center">
-          <span className="text-gray-600 text-xs capitalize">{bookingOptionUnitLabel(option.type)}: {formatPrice(basePrice)}</span>
+          <span className="text-gray-600 text-xs capitalize">
+            {bookingOptionUnitLabel(option.type)}: {formatPrice(basePrice)}
+            {units !== null && ` · ${unitCountLabel(option.type, units)}`}
+          </span>
           <span className="text-sm font-bold text-gray-900">{formatPrice(subtotal)}</span>
         </div>
       </div>
@@ -785,6 +819,15 @@ const TourOptionCard: React.FC<{
           </div>
         )}
 
+        {capacityBlocked && (
+          <div className="mb-2 rounded-xl border border-gray-200 bg-gray-100 px-3 py-2 text-xs text-gray-700">
+            <div className="font-semibold">{capacityBlockedMessage(capacity)}</div>
+            <div className="mt-0.5 text-gray-500">
+              Adjust the number of participants in step 1 to book this option.
+            </div>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 gap-2">
           {option.timeSlots.map(timeSlot => {
             const isSelected = isSelectedTimeSlot(selectedTimeSlot, option.id, timeSlot.id);
@@ -795,14 +838,14 @@ const TourOptionCard: React.FC<{
             return (
               <motion.button
                 key={timeSlot.id}
-                onClick={() => !isSoldOut && onSelect(timeSlot)}
-                disabled={isSoldOut}
-                whileHover={{ scale: isSoldOut ? 1 : 1.02 }}
+                onClick={() => !isSoldOut && !capacityBlocked && onSelect(timeSlot)}
+                disabled={isSoldOut || capacityBlocked}
+                whileHover={{ scale: isSoldOut || capacityBlocked ? 1 : 1.02 }}
                 whileTap={{ scale: isSoldOut ? 1 : 0.98 }}
                 className={`relative px-3 py-2 rounded-full text-sm font-medium transition-all border-2 ${
                   isSelected
                     ? 'bg-gradient-to-r from-red-600 to-orange-600 text-white border-red-600 shadow-md'
-                    : isSoldOut
+                    : isSoldOut || capacityBlocked
                     ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'
                     : 'bg-white border-gray-300 text-gray-800 hover:border-red-400 hover:shadow-sm hover:bg-red-50'
                 }`}
@@ -1244,6 +1287,9 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
   const [showParticipantsDropdown, setShowParticipantsDropdown] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [availability, setAvailability] = useState<AvailabilityData | null>(null);
+  // Read inside state-updater callbacks (they must not close over stale state).
+  const availabilityRef = useRef<AvailabilityData | null>(null);
+  useEffect(() => { availabilityRef.current = availability; }, [availability]);
   const [animationKey, setAnimationKey] = useState(0);
 
   const [bookingData, setBookingData] = useState<BookingData>({
@@ -1576,6 +1622,8 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
             id: optionId,
             pricingKey: option.pricingKey,
             type: option.type,
+            minCapacity: option.minCapacity ?? null,
+            maxCapacity: option.maxCapacity ?? null,
             title: option.label || option.title || 'Tour Option',
             price: optionPrice,
             originalPrice: pricing.discountApplied
@@ -1616,6 +1664,8 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
             id: fallbackOptionId,
             pricingKey: 'standard',
             type: 'Per Person',
+            minCapacity: null,
+            maxCapacity: null,
             title: 'Standard Tour Experience',
             price: standardPrice,
             originalPrice: standardPricing.discountApplied
@@ -1698,14 +1748,20 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
     // Paying guests for per-person add-ons: infants are free.
     const totalGuests = bookingData.adults + bookingData.children;
 
+    let unitSizeForTotals: number | null = null;
+    let optionIsUnitPriced = false;
     if (bookingData.selectedTimeSlot) {
       basePrice = bookingData.selectedTimeSlot.price;
-      
+
       const selectedOption = findSelectedBookingOption(
         availability?.tourOptions,
         bookingData.selectedTimeSlot,
       );
-      
+      if (selectedOption && isUnitPricedType(selectedOption.type)) {
+        optionIsUnitPriced = true;
+        unitSizeForTotals = effectiveUnitSize(selectedOption);
+      }
+
       originalBasePrice = bookingData.selectedTimeSlot.originalPrice ||
                          selectedOption?.originalPrice ||
                          bookingData.selectedTimeSlot.price;
@@ -1716,10 +1772,20 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
 
     const childPrice = bookingData.selectedTimeSlot?.guestPrices?.child ?? basePrice * 0.5;
     const infantPrice = bookingData.selectedTimeSlot?.guestPrices?.infant ?? 0;
-    const subtotalCalc = (bookingData.adults * basePrice)
-      + (bookingData.children * childPrice)
-      + (bookingData.infants * infantPrice);
-    const originalSubtotal = (bookingData.adults * originalBasePrice) + (bookingData.children * originalBasePrice * 0.5);
+    // Unit-priced options (per couple/family/group) charge whole units over
+    // the total participant count, rounded up — mirror of checkoutTourSubtotal.
+    const totalParticipants = bookingData.adults + bookingData.children + bookingData.infants;
+    const chargedUnits = optionIsUnitPriced
+      ? unitCount(totalParticipants, unitSizeForTotals)
+      : null;
+    const subtotalCalc = chargedUnits !== null
+      ? chargedUnits * basePrice
+      : (bookingData.adults * basePrice)
+        + (bookingData.children * childPrice)
+        + (bookingData.infants * infantPrice);
+    const originalSubtotal = chargedUnits !== null
+      ? chargedUnits * originalBasePrice
+      : (bookingData.adults * originalBasePrice) + (bookingData.children * originalBasePrice * 0.5);
 
     const addOnsCalc = Object.entries(bookingData.selectedAddOns).reduce((acc, [addOnId, quantity]) => {
       const addOn = availability?.addOns.find(a => a.id === addOnId);
@@ -1991,6 +2057,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
 
   // Enhanced participant controls
   const handleParticipantChange = useCallback((type: 'adults' | 'children' | 'infants', increment: boolean) => {
+    let capacityNotice: string | null = null;
     setBookingData(prev => {
       const currentCount = prev[type];
       const minValue = type === 'adults' ? 1 : 0;
@@ -2004,8 +2071,33 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
         newCount = currentCount + 1;
       }
 
-      return { ...prev, [type]: newCount };
+      const next = { ...prev, [type]: newCount };
+
+      // A participant change can push the selected option outside its
+      // capacity gates; an invalid selection must never survive silently
+      // into checkout, so it is cleared in the same state transition.
+      if (next.selectedTimeSlot) {
+        const selectedOption = findSelectedBookingOption(
+          availabilityRef.current?.tourOptions,
+          next.selectedTimeSlot,
+        );
+        if (selectedOption) {
+          const capacity = capacityAvailability(
+            selectedOption,
+            next.adults + next.children + next.infants,
+          );
+          if (!capacity.available) {
+            capacityNotice = capacityBlockedMessage(capacity);
+            return { ...next, selectedTimeSlot: null };
+          }
+        }
+      }
+
+      return next;
     });
+    if (capacityNotice) {
+      toast(`${capacityNotice} — the selected option was cleared.`, { icon: 'ℹ️' });
+    }
   }, [tourDisplayData?.maxGroupSize]);
 
   const getParticipantsText = useCallback(() => {
@@ -2088,11 +2180,21 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
         id: selectedOption.id,
         pricingKey: selectedOption.id === 'standard-default' ? 'standard' : selectedOption.pricingKey,
         title: selectedOption.title,
+        type: selectedOption.type,
         price: selectedTimeSlot.price,
         originalPrice: selectedOption.originalPrice,
         duration: selectedOption.duration,
         badge: selectedOption.badge,
       } : undefined;
+      // Display-only mirror of the server's unit pricing so the cart and
+      // checkout summaries can show the stepped unit charge; the server
+      // re-derives the authoritative value from the stored option.
+      const cartUnitPricingQuote = selectedOption
+        ? unitPricingForOption(selectedOption, selectedTimeSlot.price)
+        : null;
+      const cartUnitPricing = cartUnitPricingQuote
+        ? { unitSize: cartUnitPricingQuote.unitSize, unitPrice: cartUnitPricingQuote.unitPrice }
+        : null;
 
       if (!selectedBookingOptionDetails?.pricingKey) {
         throw new Error('The selected booking option is not ready for checkout. Please choose another option.');
@@ -2112,6 +2214,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
         selectedAddOnDetails,
         selectedBookingOption: selectedBookingOptionDetails,
         guestPrices: selectedTimeSlot.guestPrices,
+        unitPricing: cartUnitPricing,
         priceVersion: selectedTimeSlot.priceVersion,
         priceExecutionId: selectedTimeSlot.priceExecutionId,
         priceOverrideId: selectedTimeSlot.priceOverrideId,
@@ -2492,6 +2595,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
                 selectedTimeSlot={bookingData.selectedTimeSlot}
                 adults={bookingData.adults}
                 childCount={bookingData.children}
+                infantCount={bookingData.infants}
                 tour={tour}
               />
             ))}

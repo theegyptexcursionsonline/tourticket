@@ -64,3 +64,53 @@ describe('authoritative checkout totals', () => {
     })).toBe(300);
   });
 });
+
+describe('unit-priced items (per couple/family/group, client sheet 2026-08-20)', () => {
+  const unitItem = (participants: { a: number; c?: number; n?: number }, unitSize: number, unitPrice: number) => ({
+    quantity: participants.a,
+    childQuantity: participants.c || 0,
+    infantQuantity: participants.n || 0,
+    // Deliberately wrong per-guest prices: unit pricing must ignore them.
+    guestPrices: { adult: 9999, child: 9999, infant: 9999 },
+    unitPricing: { unitSize, unitPrice },
+  });
+
+  it('charges whole units: 4 participants on a $200 couple option are 2 couples = $400', () => {
+    expect(checkoutItemSubtotal(unitItem({ a: 2, c: 2 }, 2, 200))).toBe(400);
+  });
+
+  it('rounds odd counts UP: 3 participants on a couple option charge 2 couples', () => {
+    expect(checkoutItemSubtotal(unitItem({ a: 2, c: 1 }, 2, 200))).toBe(400);
+  });
+
+  it('family and group step-ups match the client examples (5→$800, 6→$1000)', () => {
+    expect(checkoutItemSubtotal(unitItem({ a: 4, c: 1 }, 4, 400))).toBe(800);
+    expect(checkoutItemSubtotal(unitItem({ a: 5, c: 1 }, 5, 500))).toBe(1000);
+  });
+
+  it('infants occupy capacity in unit pricing', () => {
+    expect(checkoutItemSubtotal(unitItem({ a: 2, n: 1 }, 2, 200))).toBe(400);
+  });
+
+  it('a legacy whole-booking group (unit size 0) charges exactly one unit', () => {
+    expect(checkoutItemSubtotal(unitItem({ a: 3, c: 1 }, 0, 323.18))).toBe(323.18);
+  });
+
+  it('add-ons still charge on top of the unit price', () => {
+    const item = {
+      ...unitItem({ a: 2 }, 2, 200),
+      selectedAddOns: { lunch: 1 },
+      selectedAddOnDetails: { lunch: { price: 25 } },
+    };
+    expect(checkoutItemSubtotal(item)).toBe(225);
+  });
+
+  it('recovery records carry the unit contract through us/up', () => {
+    expect(recoveryCartItemSubtotal({ a: 2, c: 1, bp: 200, gp: { adult: 200 }, us: 2, up: 200 })).toBe(400);
+    expect(recoveryCartItemSubtotal({ a: 3, c: 1, bp: 323.18, gp: { adult: 323.18 }, us: 0, up: 323.18 })).toBe(323.18);
+  });
+
+  it('a recovery record without unit fields keeps per-guest pricing', () => {
+    expect(recoveryCartItemSubtotal({ a: 2, bp: 100, gp: { adult: 100, child: 50, infant: 0 } })).toBe(200);
+  });
+});

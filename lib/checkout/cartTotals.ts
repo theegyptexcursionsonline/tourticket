@@ -9,11 +9,22 @@ export type CheckoutAddOnDetail = {
   perGuest?: boolean;
 };
 
+/**
+ * Present when the booking option prices per couple/family/group: one unit's
+ * price and the participants it covers. `unitSize: 0` is the legacy
+ * whole-booking group contract — one unit regardless of participants.
+ */
+export type CheckoutUnitPricing = {
+  unitSize: number;
+  unitPrice: number;
+};
+
 export type CheckoutPricedItem = {
   quantity?: number;
   childQuantity?: number;
   infantQuantity?: number;
   guestPrices: CheckoutGuestPrices;
+  unitPricing?: CheckoutUnitPricing | null;
   selectedAddOns?: Record<string, unknown>;
   selectedAddOnDetails?: Record<string, CheckoutAddOnDetail>;
 };
@@ -24,6 +35,9 @@ export type RecoveryPricedItem = {
   n?: number;
   bp?: number;
   gp?: Partial<CheckoutGuestPrices>;
+  /** Unit size / unit price for unit-priced options (us may be 0 = whole booking). */
+  us?: number;
+  up?: number;
   ao?: Array<{ id?: string; q?: number; p?: number; pg?: boolean }>;
 };
 
@@ -65,11 +79,28 @@ export function checkoutAddOnsTotal(item: CheckoutPricedItem) {
   return roundMoney(total);
 }
 
-export function checkoutItemSubtotal(item: CheckoutPricedItem) {
+/**
+ * The tour part of an item's price, before add-ons. Unit-priced options
+ * (per couple/family/group) charge whole units rounded UP over the total
+ * participant count — 3 people on a per-couple option are 2 couples. A unit
+ * size of 0 is the legacy whole-booking group: exactly one unit.
+ */
+export function checkoutTourSubtotal(item: CheckoutPricedItem) {
+  const unit = item.unitPricing;
+  if (unit && Number.isFinite(Number(unit.unitPrice)) && Number(unit.unitPrice) >= 0
+    && Number.isFinite(Number(unit.unitSize)) && Number(unit.unitSize) >= 0) {
+    const participants = Math.max(1, checkoutGuestCount(item));
+    const units = unit.unitSize >= 1 ? Math.ceil(participants / unit.unitSize) : 1;
+    return roundMoney(units * unit.unitPrice);
+  }
   const adultTotal = item.guestPrices.adult * finiteQuantity(item.quantity);
   const childTotal = item.guestPrices.child * finiteQuantity(item.childQuantity);
   const infantTotal = item.guestPrices.infant * finiteQuantity(item.infantQuantity);
-  return roundMoney(adultTotal + childTotal + infantTotal + checkoutAddOnsTotal(item));
+  return roundMoney(adultTotal + childTotal + infantTotal);
+}
+
+export function checkoutItemSubtotal(item: CheckoutPricedItem) {
+  return roundMoney(checkoutTourSubtotal(item) + checkoutAddOnsTotal(item));
 }
 
 export function checkoutCartSubtotal(items: CheckoutPricedItem[]) {
@@ -97,6 +128,9 @@ export function recoveryCartItemSubtotal(item: RecoveryPricedItem) {
     childQuantity: finiteQuantity(item.c),
     infantQuantity: finiteQuantity(item.n),
     guestPrices: { adult, child, infant },
+    unitPricing: item.us !== undefined && Number.isFinite(Number(item.up))
+      ? { unitSize: Number(item.us), unitPrice: Number(item.up) }
+      : null,
     selectedAddOns,
     selectedAddOnDetails,
   });
