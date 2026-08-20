@@ -9,7 +9,7 @@ import { useNavData } from '@/contexts/NavDataContext';
 import toast from 'react-hot-toast';
 import { useLocale, useTranslations } from 'next-intl';
 import { isRTL } from '@/i18n/config';
-import { requestHostedAISearch } from '@/lib/hostedAISearch';
+import type { EeoWindow } from './componentTypes';
 import {OFFICIAL_SOCIAL_LINKS} from '@/lib/config/socialLinks';
 
 // Import the single, consolidated switcher component
@@ -124,13 +124,25 @@ export default function Footer() {
     }
   };
 
+  // The PLAIN support entry (client request 19-20/08): "Chat with us" opens the
+  // FoxesConnect support widget, not the AI Search surface. The embed loads
+  // async with a hidden launcher, so retry briefly if a visitor clicks
+  // immediately after page load.
   const openChatbot = (e?: React.MouseEvent) => {
     if (e) e.preventDefault();
-    requestHostedAISearch({
-      query: '',
-      mode: 'ai',
-      locale,
-    });
+    try {
+      const win = window as EeoWindow;
+      if (win.FoxesConnect?.open) {
+        win.FoxesConnect.open();
+        return;
+      }
+      setTimeout(() => {
+        const late = window as EeoWindow;
+        if (late.FoxesConnect?.open) late.FoxesConnect.open();
+      }, 600);
+    } catch {
+      /* embed absent (non-production host): the link simply does nothing */
+    }
   };
 
   return (
@@ -420,7 +432,7 @@ export default function Footer() {
                     type="button"
                     onClick={openChatbot}
                     className="text-sm font-semibold text-slate-900 hover:text-red-600 transition-colors cursor-pointer text-left"
-                    aria-label="Open AI trip assistant"
+                    aria-label="Open support chat"
                   >
                     {t('chatWithUs')}
                   </button>

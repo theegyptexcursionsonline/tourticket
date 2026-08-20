@@ -69,6 +69,11 @@ export interface EeoWindow extends Window {
   FoxesCalendarEmbed?: {
     init: (options: Record<string, unknown>) => void;
   };
+  /** FoxesConnect support widget (embed.js) — the plain support entry. */
+  FoxesConnect?: {
+    open?: () => void;
+    close?: () => void;
+  };
 }
 
 export function isRecord(value: unknown): value is Record<string, unknown> {
