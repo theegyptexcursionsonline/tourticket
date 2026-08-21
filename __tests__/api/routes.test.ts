@@ -278,7 +278,8 @@ describe('API Route Handlers', () => {
       );
 
       expect(bookingOptionsResponse.status).toBe(401);
-      expect(algoliaResponse.status).toBe(401);
+      // Retired 2026-08-21: 410 for every caller — tighter than the old 401.
+      expect(algoliaResponse.status).toBe(410);
     });
 
     it('rejects unauthenticated image uploads', async () => {
