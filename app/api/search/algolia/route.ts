@@ -1,6 +1,7 @@
 // app/api/search/algolia/route.ts
 import { NextResponse } from 'next/server';
 import { algoliaClient, ALGOLIA_INDEX_NAME } from '@/lib/algolia';
+import { buildAlgoliaTenantFilter } from '@/lib/algoliaTenant';
 
 export async function GET(request: Request) {
   try {
@@ -25,7 +26,10 @@ export async function GET(request: Request) {
     const hitsPerPage = parseInt(searchParams.get('hitsPerPage') || '100'); // Increased to 100 to show more results
 
     // Build filters
-    const filters: string[] = ['isPublished:true'];
+    const filters: string[] = [
+      'isPublished:true',
+      buildAlgoliaTenantFilter('default'),
+    ];
 
     // Categories filter
     const categories = searchParams.get('categories');
@@ -108,7 +112,9 @@ export async function GET(request: Request) {
         'destination',
         'highlights',
         'included',
-        'excluded'
+        'excluded',
+        'tenantId',
+        'tenantIds'
       ]
     };
 

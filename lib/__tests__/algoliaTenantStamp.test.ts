@@ -10,10 +10,31 @@
 
 jest.mock('algoliasearch', () => ({ algoliasearch: jest.fn() }));
 
-import { formatBlogForAlgolia, formatCategoryForAlgolia, formatDestinationForAlgolia } from '../algolia';
+import {
+  ALGOLIA_TENANT_FILTER_ATTRIBUTES,
+  ALGOLIA_TENANT_RETRIEVE_ATTRIBUTES,
+  formatBlogForAlgolia,
+  formatCategoryForAlgolia,
+  formatDestinationForAlgolia,
+  formatTourForAlgolia,
+} from '../algolia';
 import { searchHitBelongsToTenant } from '../tenantSearchHitFilter';
 
 describe('Algolia records carry their owning tenant', () => {
+  it('configures both ownership fields for filtering and retrieval', () => {
+    expect(ALGOLIA_TENANT_FILTER_ATTRIBUTES).toEqual([
+      'filterOnly(tenantId)',
+      'filterOnly(tenantIds)',
+    ]);
+    expect(ALGOLIA_TENANT_RETRIEVE_ATTRIBUTES).toEqual(['tenantId', 'tenantIds']);
+  });
+
+  it('stamps tours with their owning tenant', () => {
+    expect(formatTourForAlgolia({ _id: 't1', tenantId: 'sharm-ausfluege' })).toEqual(
+      expect.objectContaining({ tenantId: 'sharm-ausfluege' })
+    );
+  });
+
   it('stamps a default-site blog as the default tenant', () => {
     const record = formatBlogForAlgolia({ _id: 'b1', title: 'Hurghada guide', slug: 'hurghada' });
 
