@@ -4,7 +4,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import dbConnect from "@/lib/dbConnect";
 import Destination from "@/lib/models/Destination";
-import { verifyContentEngine } from "@/lib/auth/verifyContentEngine";
+import {
+  verifyContentEngine,
+  verifyContentEngineTenant,
+} from "@/lib/auth/verifyContentEngine";
 import { tenantSlugFilter } from "@/lib/tenant/tenantScope";
 
 export async function GET(
@@ -19,7 +22,9 @@ export async function GET(
 
   // Optional ?tenantId= scopes the lookup; absent means the default site,
   // matching how the publish route namespaces slugs per tenant.
-  const tenantId = req.nextUrl.searchParams.get("tenantId");
+  const tenant = verifyContentEngineTenant(req.nextUrl.searchParams.get("tenantId"));
+  if (!tenant.ok) return tenant.response;
+  const tenantId = tenant.tenantId;
   const doc = (await Destination.findOne(tenantSlugFilter(slug, tenantId)).lean()) as
     | { _id: unknown; slug?: string; name?: string; isPublished?: boolean; tenantId?: string; updatedAt?: Date }
     | null;

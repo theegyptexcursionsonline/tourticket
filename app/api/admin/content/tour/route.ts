@@ -15,8 +15,25 @@ import dbConnect from "@/lib/dbConnect";
 import Tour from "@/lib/models/Tour";
 import Destination from "@/lib/models/Destination";
 import Category from "@/lib/models/Category";
-import { verifyContentEngine } from "@/lib/auth/verifyContentEngine";
-import { DEFAULT_TENANT_FILTER } from "@/lib/tenant/defaultTenantFilter";
+import {
+  verifyContentEngine,
+  verifyContentEngineTenant,
+} from "@/lib/auth/verifyContentEngine";
+import { storedTenantId, tenantFilter, tenantSlugFilter } from "@/lib/tenant/tenantScope";
+import {
+  filterSupportedTranslations,
+  resolveBaseLocale,
+  withBaseLocaleBucket,
+} from "@/lib/i18n/supportedTranslations";
+import {
+  beginPublish,
+  completePublish,
+  hashPublishRequest,
+  readIdempotencyKey,
+  releasePublishClaim,
+  type PublishClaim,
+} from "@/lib/content/publishIdempotency";
+import { localizedContentPath } from "@/lib/content/contentUrl";
 import { revalidateStorefrontContent } from "@/lib/storefront/revalidateTourStorefront";
 
 type ItineraryItem = { time?: string; title: string; description: string };
@@ -44,16 +61,34 @@ type IncomingPayload = {
 
 type IncomingBody = {
   tenantId?: string;
+  defaultLocale?: string;
   payload?: IncomingPayload;
   translations?: Record<string, Record<string, unknown>>;
 };
 
-function liveUrlFor(slug: string): string {
+function baseLocaleBucket(p: IncomingPayload): Record<string, unknown> {
+  return {
+    title: p.title,
+    description: p.description,
+    longDescription: p.longDescription,
+    location: p.location,
+    duration: p.duration,
+    highlights: p.highlights,
+    whatsIncluded: p.whatsIncluded,
+    whatsNotIncluded: p.whatsNotIncluded,
+    itinerary: p.itinerary,
+    faq: p.faq,
+    tags: p.tags,
+    metaTitle: p.metaTitle,
+    metaDescription: p.metaDescription,
+  };
+}
+
+function liveUrlFor(slug: string, locale: string): string {
   const base =
     process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ??
     "https://www.egypt-excursionsonline.com";
-  const locale = process.env.NEXT_PUBLIC_DEFAULT_LOCALE ?? "en";
-  return `${base}/${locale}/tours/${slug}`;
+  return `${base}${localizedContentPath("tour", slug, "default", locale)}`;
 }
 
 function validate(p: IncomingPayload | undefined): string | null {
@@ -85,14 +120,64 @@ async function POSTHandler(req: NextRequest) {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
+  const tenant = verifyContentEngineTenant(body.tenantId);
+  if (!tenant.ok) return tenant.response;
+  body.tenantId = tenant.tenantId;
+
   const err = validate(body.payload);
   if (err) return NextResponse.json({ error: err }, { status: 400 });
   const p = body.payload!;
 
+  const base = resolveBaseLocale(body.defaultLocale);
+  if (!base.ok) return NextResponse.json({ error: base.error }, { status: 400 });
+
+  const { key: idempotencyKey, error: keyError } = readIdempotencyKey(
+    req.headers.get("idempotency-key"),
+  );
+  if (keyError) return NextResponse.json({ error: keyError }, { status: 400 });
+
   await dbConnect();
 
-  const existing = await Tour.findOne({ slug: p.slug });
+  let claim: PublishClaim | null = null;
+  if (idempotencyKey) {
+    const begun = await beginPublish({
+      idempotencyKey,
+      tenantId: body.tenantId,
+      contentType: "tour",
+      requestHash: hashPublishRequest(body),
+    });
+    if (begun.outcome === "replay") {
+      return NextResponse.json(begun.body, { status: begun.status });
+    }
+    if (begun.outcome === "error") {
+      return NextResponse.json({ error: begun.error }, { status: begun.status });
+    }
+    claim = begun;
+  }
+
+  const filtered = filterSupportedTranslations(body.translations);
+  const droppedLocales = filtered.droppedLocales;
+  const translations = withBaseLocaleBucket(
+    filtered.translations,
+    base.baseLocale,
+    baseLocaleBucket(p),
+  );
+
+  const existing = await Tour.findOne(tenantSlugFilter(p.slug!, body.tenantId));
   if (existing) {
+    if (claim?.resumed) {
+      const adopted = {
+        id: String(existing._id),
+        slug: existing.slug,
+        liveUrl: liveUrlFor(existing.slug, base.baseLocale),
+        droppedLocales,
+        warning:
+          "Tour created in DRAFT mode (isPublished=false). Complete pricing, booking options and categorization before publishing.",
+      };
+      await completePublish(claim, 201, adopted);
+      return NextResponse.json(adopted, { status: 201 });
+    }
+    if (claim) await releasePublishClaim(claim);
     return NextResponse.json(
       { error: `A tour with slug "${p.slug}" already exists`, existingId: String(existing._id) },
       { status: 409 },
@@ -104,15 +189,16 @@ async function POSTHandler(req: NextRequest) {
   if (p.location) {
     const d = await Destination.findOne({
       name: { $regex: `^${p.location.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`, $options: "i" },
-      ...DEFAULT_TENANT_FILTER,
+      ...tenantFilter(body.tenantId),
     });
     if (d) destinationId = d._id;
   }
   if (!destinationId) {
-    const fallback = await Destination.findOne({ ...DEFAULT_TENANT_FILTER }).sort({ createdAt: 1 });
+    const fallback = await Destination.findOne(tenantFilter(body.tenantId)).sort({ createdAt: 1 });
     destinationId = fallback?._id;
   }
   if (!destinationId) {
+    if (claim) await releasePublishClaim(claim);
     return NextResponse.json(
       {
         error:
@@ -123,8 +209,9 @@ async function POSTHandler(req: NextRequest) {
   }
 
   // Resolve category — pick first available; admin retargets later
-  const cat = await Category.findOne({}).sort({ createdAt: 1 });
+  const cat = await Category.findOne(tenantFilter(body.tenantId)).sort({ createdAt: 1 });
   if (!cat) {
+    if (claim) await releasePublishClaim(claim);
     return NextResponse.json(
       {
         error:
@@ -134,6 +221,7 @@ async function POSTHandler(req: NextRequest) {
     );
   }
 
+  let contentCommitted = false;
   try {
     const doc = await Tour.create({
       title: p.title,
@@ -159,23 +247,25 @@ async function POSTHandler(req: NextRequest) {
       currency: "USD",
       isPublished: false, // safety: admin must complete pricing before going live
       featured: false,
-      tenantId: body.tenantId,
-      translations: body.translations ?? {},
+      tenantId: storedTenantId(body.tenantId),
+      translations,
     });
+    contentCommitted = true;
 
+    const created = {
+      id: String(doc._id),
+      slug: doc.slug,
+      liveUrl: liveUrlFor(doc.slug, base.baseLocale),
+      droppedLocales,
+      warning:
+        "Tour created in DRAFT mode (isPublished=false). Complete pricing, booking options and categorization before publishing.",
+    };
+
+    if (claim) await completePublish(claim, 201, created);
     revalidateStorefrontContent();
-
-    return NextResponse.json(
-      {
-        id: String(doc._id),
-        slug: doc.slug,
-        liveUrl: liveUrlFor(doc.slug),
-        warning:
-          "Tour created in DRAFT mode (isPublished=false). Set pricing, booking options, and final destination/category in the tourticket admin before publishing.",
-      },
-      { status: 201 },
-    );
+    return NextResponse.json(created, { status: 201 });
   } catch (e) {
+    if (claim && !contentCommitted) await releasePublishClaim(claim);
     const message = e instanceof Error ? e.message : "Insert failed";
     return NextResponse.json({ error: message }, { status: 500 });
   }

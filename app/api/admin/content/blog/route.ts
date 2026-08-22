@@ -7,13 +7,17 @@ import { withAdminAudit } from '@/lib/admin/adminAudit';
 import { NextRequest, NextResponse } from "next/server";
 import dbConnect from "@/lib/dbConnect";
 import Blog from "@/lib/models/Blog";
-import { verifyContentEngine } from "@/lib/auth/verifyContentEngine";
+import {
+  verifyContentEngine,
+  verifyContentEngineTenant,
+} from "@/lib/auth/verifyContentEngine";
 import { storedTenantId, tenantSlugFilter } from "@/lib/tenant/tenantScope";
 import {
   filterSupportedTranslations,
   resolveBaseLocale,
   withBaseLocaleBucket,
 } from "@/lib/i18n/supportedTranslations";
+import { defaultLocale } from "@/i18n/config";
 import {
   beginPublish,
   completePublish,
@@ -95,12 +99,12 @@ function baseLocaleBucket(payload: IncomingPayload): Record<string, unknown> {
   };
 }
 
-function liveUrlForBlog(slug: string): string {
+function liveUrlForBlog(slug: string, locale: string = defaultLocale): string {
   const base =
     process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ??
     "https://www.egypt-excursionsonline.com";
-  const locale = process.env.NEXT_PUBLIC_DEFAULT_LOCALE ?? "en";
-  return `${base}/${locale}/blog/${slug}`;
+  const prefix = locale === defaultLocale ? "" : `/${locale}`;
+  return `${base}${prefix}/blog/${slug}`;
 }
 
 function validate(payload: IncomingPayload | undefined): string | null {
@@ -128,6 +132,10 @@ async function POSTHandler(req: NextRequest) {
   } catch {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
+
+  const tenant = verifyContentEngineTenant(body.tenantId);
+  if (!tenant.ok) return tenant.response;
+  body.tenantId = tenant.tenantId;
 
   const error = validate(body.payload);
   if (error) return NextResponse.json({ error }, { status: 400 });
@@ -186,7 +194,7 @@ async function POSTHandler(req: NextRequest) {
       const adopted = {
         id: String(existing._id),
         slug: existing.slug,
-        liveUrl: liveUrlForBlog(existing.slug),
+        liveUrl: liveUrlForBlog(existing.slug, base.baseLocale),
         droppedLocales,
       };
       await completePublish(claim, 201, adopted);
@@ -199,6 +207,7 @@ async function POSTHandler(req: NextRequest) {
     );
   }
 
+  let contentCommitted = false;
   try {
     const doc = await Blog.create({
       title: payload.title,
@@ -222,11 +231,12 @@ async function POSTHandler(req: NextRequest) {
       tenantId: storedTenantId(body.tenantId),
       translations,
     });
+    contentCommitted = true;
 
     const created = {
       id: String(doc._id),
       slug: doc.slug,
-      liveUrl: liveUrlForBlog(doc.slug),
+      liveUrl: liveUrlForBlog(doc.slug, base.baseLocale),
       droppedLocales,
     };
 
@@ -238,7 +248,10 @@ async function POSTHandler(req: NextRequest) {
 
     return NextResponse.json(created, { status: 201 });
   } catch (err) {
-    if (claim) await releasePublishClaim(claim);
+    // Once the content document exists, retain the pending receipt. A retry
+    // can reclaim it after the lease and adopt the already-written document.
+    // Deleting that receipt here would turn response-loss into a false 409.
+    if (claim && !contentCommitted) await releasePublishClaim(claim);
     const message = err instanceof Error ? err.message : "Insert failed";
     return NextResponse.json({ error: message }, { status: 500 });
   }
@@ -254,6 +267,10 @@ async function PUTHandler(req: NextRequest) {
   } catch {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
+
+  const tenant = verifyContentEngineTenant(body.tenantId);
+  if (!tenant.ok) return tenant.response;
+  body.tenantId = tenant.tenantId;
 
   const error = validate(body.payload);
   if (error) return NextResponse.json({ error }, { status: 400 });
@@ -306,7 +323,7 @@ async function PUTHandler(req: NextRequest) {
     return NextResponse.json({
       id: String(existing._id),
       slug: existing.slug,
-      liveUrl: liveUrlForBlog(existing.slug),
+      liveUrl: liveUrlForBlog(existing.slug, base.baseLocale),
       droppedLocales,
     });
   } catch (err) {

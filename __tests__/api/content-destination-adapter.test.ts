@@ -32,6 +32,10 @@ jest.mock('next/server', () => {
 jest.mock('@/lib/dbConnect', () => jest.fn().mockResolvedValue(undefined));
 jest.mock('@/lib/auth/verifyContentEngine', () => ({
   verifyContentEngine: jest.fn().mockReturnValue(null),
+  verifyContentEngineTenant: jest.fn((input: unknown) => ({
+    ok: true,
+    tenantId: typeof input === 'string' && input.trim() ? input.trim() : 'default',
+  })),
 }));
 
 const destinationFindOne = jest.fn();
@@ -62,8 +66,25 @@ jest.mock('@/lib/models/ContentPublishReceipt', () => ({
 
 import { POST } from '@/app/api/admin/content/destination/route';
 import { GET } from '@/app/api/admin/content/destination/[slug]/route';
+import { verifyContentEngineTenant } from '@/lib/auth/verifyContentEngine';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 import { createReceiptStore, type ReceiptStore } from '@/__mocks__/contentPublishReceiptStore';
+
+const tenantVerifier = verifyContentEngineTenant as jest.MockedFunction<typeof verifyContentEngineTenant>;
+
+function allowTenant(input: unknown) {
+  return {
+    ok: true as const,
+    tenantId: typeof input === 'string' && input.trim() ? input.trim() : 'default',
+  };
+}
+
+function denyNextTenant() {
+  tenantVerifier.mockReturnValueOnce({
+    ok: false,
+    response: { status: 422, json: async () => ({ error: 'Content tenant is not enabled' }) } as never,
+  });
+}
 
 const validPayload = {
   name: 'Makadi Bay',
@@ -84,10 +105,21 @@ function postReq(body: Record<string, unknown>, headers: Record<string, string> 
 beforeEach(() => {
   destinationFindOne.mockReset();
   destinationCreate.mockReset();
+  tenantVerifier.mockImplementation(allowTenant);
   mockReceiptStore.current = createReceiptStore();
 });
 
 describe('POST /api/admin/content/destination', () => {
+  it('rejects a non-allowlisted tenant before any content lookup or write', async () => {
+    denyNextTenant();
+
+    const res = await POST(postReq({ tenantId: 'wrong-tenant', payload: validPayload }));
+
+    expect(res.status).toBe(422);
+    expect(destinationFindOne).not.toHaveBeenCalled();
+    expect(destinationCreate).not.toHaveBeenCalled();
+  });
+
   it('dedupes slug and name within the default tenant and stores no tenantId', async () => {
     destinationFindOne.mockResolvedValue(null);
     destinationCreate.mockResolvedValue({ _id: 'id1', slug: validPayload.slug });
@@ -197,6 +229,11 @@ describe('POST /api/admin/content/destination', () => {
         }),
       }),
     );
+    expect(await res.json()).toEqual(
+      expect.objectContaining({
+        liveUrl: `https://www.egypt-excursionsonline.com/de/destinations/${validPayload.slug}`,
+      }),
+    );
   });
 });
 
@@ -229,6 +266,17 @@ describe('POST /api/admin/content/destination — Idempotency-Key', () => {
 });
 
 describe('GET /api/admin/content/destination/[slug]', () => {
+  it('rejects a non-allowlisted tenant before lookup', async () => {
+    denyNextTenant();
+
+    const res = await GET(getReq('wrong-tenant'), {
+      params: Promise.resolve({ slug: 'some-slug' }),
+    });
+
+    expect(res.status).toBe(422);
+    expect(destinationFindOne).not.toHaveBeenCalled();
+  });
+
   function getReq(tenantId?: string) {
     const searchParams = new Map(tenantId ? [['tenantId', tenantId]] : []);
     return { nextUrl: { searchParams } } as never;

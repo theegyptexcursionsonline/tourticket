@@ -29,6 +29,7 @@ function duplicateKeyError() {
 export function createReceiptStore() {
   const receipts: FakeReceipt[] = [];
   let sequence = 0;
+  let loseNextCompletion = false;
 
   const sameKey = (receipt: FakeReceipt, selector: Selector) =>
     receipt.idempotencyKey === selector.idempotencyKey &&
@@ -73,6 +74,10 @@ export function createReceiptStore() {
     },
 
     async updateOne(selector: Selector, update: Update) {
+      if (loseNextCompletion) {
+        loseNextCompletion = false;
+        return { modifiedCount: 0 };
+      }
       const receipt = receipts.find(
         (candidate) =>
           candidate._id === selector._id && candidate.claimToken === selector.claimToken,
@@ -108,6 +113,9 @@ export function createReceiptStore() {
       for (const receipt of receipts) {
         if (receipt.claimExpiresAt) receipt.claimExpiresAt = new Date(0);
       }
+    },
+    loseNextCompletion() {
+      loseNextCompletion = true;
     },
   };
 }

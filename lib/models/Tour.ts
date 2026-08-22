@@ -606,6 +606,10 @@ const TourTranslationSchema = new Schema<ITourTranslation>(
 
 // COMPLETE Tour Schema with all fields and validation
 const TourSchema: Schema<ITour> = new Schema({
+  // Tours share one collection across the flagship and network tenants. The
+  // content receiver and every public/admin resolver must scope this field;
+  // slug identity is tenant-local rather than global.
+  tenantId: { type: String, trim: true, index: true },
   // Basic fields
   title: { 
     type: String, 
@@ -618,7 +622,6 @@ const TourSchema: Schema<ITour> = new Schema({
   slug: { 
     type: String, 
     required: [true, 'Slug is required'], 
-    unique: true,
     lowercase: true,
     trim: true,
     match: [/^[a-z0-9-]+$/, 'Slug can only contain lowercase letters, numbers, and hyphens'],
@@ -1184,6 +1187,7 @@ TourSchema.index({
 });
 
 // Additional performance indexes
+TourSchema.index({ tenantId: 1, slug: 1 }, { unique: true });
 TourSchema.index({ category: 1, isPublished: 1 });
 TourSchema.index({ destination: 1, isPublished: 1 });
 TourSchema.index({ rating: -1, bookings: -1 });

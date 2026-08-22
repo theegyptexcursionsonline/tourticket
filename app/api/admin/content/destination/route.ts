@@ -5,7 +5,10 @@ import { withAdminAudit } from '@/lib/admin/adminAudit';
 import { NextRequest, NextResponse } from "next/server";
 import dbConnect from "@/lib/dbConnect";
 import Destination from "@/lib/models/Destination";
-import { verifyContentEngine } from "@/lib/auth/verifyContentEngine";
+import {
+  verifyContentEngine,
+  verifyContentEngineTenant,
+} from "@/lib/auth/verifyContentEngine";
 import { storedTenantId, tenantFilter, tenantSlugFilter } from "@/lib/tenant/tenantScope";
 import {
   filterSupportedTranslations,
@@ -20,6 +23,7 @@ import {
   releasePublishClaim,
   type PublishClaim,
 } from "@/lib/content/publishIdempotency";
+import { localizedContentPath } from "@/lib/content/contentUrl";
 import { revalidateStorefrontContent } from "@/lib/storefront/revalidateTourStorefront";
 
 type IncomingPayload = {
@@ -62,12 +66,11 @@ function baseLocaleBucket(p: IncomingPayload): Record<string, unknown> {
   };
 }
 
-function liveUrlFor(slug: string): string {
+function liveUrlFor(slug: string, locale: string): string {
   const base =
     process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ??
     "https://www.egypt-excursionsonline.com";
-  const locale = process.env.NEXT_PUBLIC_DEFAULT_LOCALE ?? "en";
-  return `${base}/${locale}/destinations/${slug}`;
+  return `${base}${localizedContentPath("destination", slug, "default", locale)}`;
 }
 
 function validate(p: IncomingPayload | undefined): string | null {
@@ -97,6 +100,10 @@ async function POSTHandler(req: NextRequest) {
   } catch {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
+
+  const tenant = verifyContentEngineTenant(body.tenantId);
+  if (!tenant.ok) return tenant.response;
+  body.tenantId = tenant.tenantId;
 
   const error = validate(body.payload);
   if (error) return NextResponse.json({ error }, { status: 400 });
@@ -149,7 +156,7 @@ async function POSTHandler(req: NextRequest) {
       const adopted = {
         id: String(existing._id),
         slug: existing.slug,
-        liveUrl: liveUrlFor(existing.slug),
+        liveUrl: liveUrlFor(existing.slug, base.baseLocale),
         droppedLocales,
       };
       await completePublish(claim, 201, adopted);
@@ -171,6 +178,7 @@ async function POSTHandler(req: NextRequest) {
     );
   }
 
+  let contentCommitted = false;
   try {
     const doc = await Destination.create({
       name: p.name,
@@ -192,11 +200,12 @@ async function POSTHandler(req: NextRequest) {
       tenantId: storedTenantId(body.tenantId),
       translations,
     });
+    contentCommitted = true;
 
     const created = {
       id: String(doc._id),
       slug: doc.slug,
-      liveUrl: liveUrlFor(doc.slug),
+      liveUrl: liveUrlFor(doc.slug, base.baseLocale),
       droppedLocales,
     };
 
@@ -208,7 +217,7 @@ async function POSTHandler(req: NextRequest) {
 
     return NextResponse.json(created, { status: 201 });
   } catch (err) {
-    if (claim) await releasePublishClaim(claim);
+    if (claim && !contentCommitted) await releasePublishClaim(claim);
     const message = err instanceof Error ? err.message : "Insert failed";
     return NextResponse.json({ error: message }, { status: 500 });
   }

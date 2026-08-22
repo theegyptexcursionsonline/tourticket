@@ -52,6 +52,9 @@ Copy `.env.local` and provide values for the keys used in code, including:
 - `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`
 - `MAILGUN_API_KEY`, `MAILGUN_DOMAIN`
 - `OPENAI_API_KEY`
+- Content Engine receiver: `CONTENT_ENGINE_API_KEY` and
+  `CONTENT_ENGINE_ALLOWED_TENANTS=default` (comma-separated exact tenant IDs;
+  absent configuration intentionally permits only the flagship tenant)
 - Firebase: `NEXT_PUBLIC_FIREBASE_*` (client) and `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY` (server secrets)
 - Optional Foxes integration: `NEXT_PUBLIC_FOXES_*`
 - Controlled RevenuePilot integration: `REVENUEPILOT_HMAC_KEYS`, `REVENUEPILOT_HMAC_SCOPES`, `REVENUEPILOT_ALLOWED_TOUR_IDS=<comma-separated exact Tour ObjectIds>`, `REVENUEPILOT_MAX_WRITE_PERCENT=5`, and `REVENUEPILOT_PRICING_API_ENABLED=false` until launch approval
@@ -81,6 +84,7 @@ pnpm revenue:verify-production # read-only live deploy, auth-boundary, schedule 
 pnpm bookings:verify-payment-index # read-only multi-item payment-index gate
 pnpm checkout:verify-inventory     # disposable localhost concurrency/expiry gate
 pnpm bookings:verify-refunds       # disposable localhost, mocked Stripe state-machine gate
+pnpm content:migrate-tenant-index  # read-only index migration plan (dry run by default)
 ```
 
 ### Algolia sync
