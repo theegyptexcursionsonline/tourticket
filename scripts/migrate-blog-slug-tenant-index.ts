@@ -1,12 +1,12 @@
 // scripts/migrate-blog-slug-tenant-index.ts
 //
-// Replaces the legacy single-field unique indexes on `blogs` and `destinations`
-// with the tenant-scoped compound indexes the models now declare.
+// Replaces legacy single-field unique indexes on content collections with the
+// tenant-scoped compound indexes the models now declare.
 //
 // WHY THIS EXISTS
 // ---------------
-// `Blog` and `Destination` declare `{ slug: 1, tenantId: 1 }` (and
-// `{ name: 1, tenantId: 1 }` for destinations) as unique. Mongoose only ever
+// `Blog`, `Destination`, `Category`, and `Tour` declare tenant-scoped slug
+// uniqueness (destinations and categories also scope name uniqueness). Mongoose only ever
 // ADDS indexes — it never drops one that already exists in a live database. A
 // production collection created before per-tenant scoping still carries the old
 // `slug_1` / `name_1` unique indexes, which keep enforcing global uniqueness.
@@ -17,8 +17,8 @@
 // to share a slug on this storefront.
 //
 // USAGE
-//   pnpm blog:migrate-tenant-index                        # dry run (default)
-//   pnpm blog:migrate-tenant-index --apply --confirm <db> # performs the changes
+//   pnpm content:migrate-tenant-index                        # dry run (default)
+//   pnpm content:migrate-tenant-index --apply --confirm <db> # performs changes
 //
 // Dry run is the default and writes nothing. `--apply` additionally requires
 // `--confirm <database>` naming the database it is about to modify, because
@@ -61,6 +61,21 @@ const PLANS: CollectionPlan[] = [
     requiredIndexes: [
       { name: 'slug_1_tenantId_1', key: { slug: 1, tenantId: 1 }, unique: true },
       { name: 'name_1_tenantId_1', key: { name: 1, tenantId: 1 }, unique: true },
+    ],
+  },
+  {
+    collection: 'tours',
+    legacyIndexNames: ['slug_1'],
+    requiredIndexes: [
+      { name: 'tenantId_1_slug_1', key: { tenantId: 1, slug: 1 }, unique: true },
+    ],
+  },
+  {
+    collection: 'categories',
+    legacyIndexNames: ['slug_1', 'name_1'],
+    requiredIndexes: [
+      { name: 'tenantId_1_slug_1', key: { tenantId: 1, slug: 1 }, unique: true },
+      { name: 'tenantId_1_name_1', key: { tenantId: 1, name: 1 }, unique: true },
     ],
   },
 ];

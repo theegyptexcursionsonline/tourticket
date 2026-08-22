@@ -197,7 +197,7 @@ export async function completePublish(
   status: number,
   body: Record<string, unknown>,
 ): Promise<void> {
-  await ContentPublishReceipt.updateOne(
+  const result = await ContentPublishReceipt.updateOne(
     { _id: claim.receiptId, claimToken: claim.claimToken },
     {
       $set: {
@@ -209,6 +209,14 @@ export async function completePublish(
       $unset: { claimToken: 1, claimExpiresAt: 1 },
     },
   );
+
+  // A zero-row update means this request no longer owns the claim (for
+  // example, its lease elapsed while the receiver write was in flight). Never
+  // report success without a durable replay receipt: the caller must return a
+  // retryable error and leave the pending receipt available for recovery.
+  if (result.modifiedCount !== 1) {
+    throw new Error('Publish receipt claim was lost before completion; retry shortly');
+  }
 }
 
 /**

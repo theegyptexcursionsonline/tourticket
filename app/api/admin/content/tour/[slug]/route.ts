@@ -4,7 +4,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import dbConnect from "@/lib/dbConnect";
 import Tour from "@/lib/models/Tour";
-import { verifyContentEngine } from "@/lib/auth/verifyContentEngine";
+import {
+  verifyContentEngine,
+  verifyContentEngineTenant,
+} from "@/lib/auth/verifyContentEngine";
+import { tenantSlugFilter } from "@/lib/tenant/tenantScope";
 
 export async function GET(
   req: NextRequest,
@@ -14,8 +18,11 @@ export async function GET(
   if (authError) return authError;
 
   const { slug } = await ctx.params;
+  const tenant = verifyContentEngineTenant(req.nextUrl.searchParams.get("tenantId"));
+  if (!tenant.ok) return tenant.response;
+  const tenantId = tenant.tenantId;
   await dbConnect();
-  const doc = await Tour.findOne({ slug }).lean();
+  const doc = await Tour.findOne(tenantSlugFilter(slug, tenantId)).lean();
   if (!doc) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
@@ -23,6 +30,7 @@ export async function GET(
     id: String(doc._id),
     slug: doc.slug,
     title: doc.title,
+    tenantId: doc.tenantId ?? null,
     isPublished: doc.isPublished,
     updatedAt: doc.updatedAt,
   });

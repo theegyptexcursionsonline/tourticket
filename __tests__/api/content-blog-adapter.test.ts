@@ -32,6 +32,10 @@ jest.mock('next/server', () => {
 jest.mock('@/lib/dbConnect', () => jest.fn().mockResolvedValue(undefined));
 jest.mock('@/lib/auth/verifyContentEngine', () => ({
   verifyContentEngine: jest.fn().mockReturnValue(null),
+  verifyContentEngineTenant: jest.fn((input: unknown) => ({
+    ok: true,
+    tenantId: typeof input === 'string' && input.trim() ? input.trim() : 'default',
+  })),
 }));
 
 const blogFindOne = jest.fn();
@@ -59,8 +63,25 @@ jest.mock('@/lib/models/ContentPublishReceipt', () => ({
 
 import { POST, PUT } from '@/app/api/admin/content/blog/route';
 import { GET } from '@/app/api/admin/content/blog/[slug]/route';
+import { verifyContentEngineTenant } from '@/lib/auth/verifyContentEngine';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 import { createReceiptStore, type ReceiptStore } from '@/__mocks__/contentPublishReceiptStore';
+
+const tenantVerifier = verifyContentEngineTenant as jest.MockedFunction<typeof verifyContentEngineTenant>;
+
+function allowTenant(input: unknown) {
+  return {
+    ok: true as const,
+    tenantId: typeof input === 'string' && input.trim() ? input.trim() : 'default',
+  };
+}
+
+function denyNextTenant() {
+  tenantVerifier.mockReturnValueOnce({
+    ok: false,
+    response: { status: 422, json: async () => ({ error: 'Content tenant is not enabled' }) } as never,
+  });
+}
 
 const validPayload = {
   title: 'Red Sea Snorkeling Guide',
@@ -83,10 +104,21 @@ function postReq(body: Record<string, unknown>, headers: Record<string, string> 
 beforeEach(() => {
   blogFindOne.mockReset();
   blogCreate.mockReset();
+  tenantVerifier.mockImplementation(allowTenant);
   mockReceiptStore.current = createReceiptStore();
 });
 
 describe('POST /api/admin/content/blog', () => {
+  it('rejects a non-allowlisted tenant before any content lookup or write', async () => {
+    denyNextTenant();
+
+    const res = await POST(postReq({ tenantId: 'wrong-tenant', payload: validPayload }));
+
+    expect(res.status).toBe(422);
+    expect(blogFindOne).not.toHaveBeenCalled();
+    expect(blogCreate).not.toHaveBeenCalled();
+  });
+
   it('dedupes slugs within the default tenant and stores no tenantId', async () => {
     blogFindOne.mockResolvedValue(null);
     blogCreate.mockResolvedValue({ _id: 'id1', slug: validPayload.slug });
@@ -177,6 +209,11 @@ describe('POST /api/admin/content/blog', () => {
         translations: expect.objectContaining({
           de: expect.objectContaining({ title: validPayload.title, content: validPayload.content }),
         }),
+      }),
+    );
+    expect(await res.json()).toEqual(
+      expect.objectContaining({
+        liveUrl: `https://www.egypt-excursionsonline.com/de/blog/${validPayload.slug}`,
       }),
     );
   });
@@ -290,6 +327,18 @@ describe('POST /api/admin/content/blog — Idempotency-Key', () => {
     expect(mockReceiptStore.current!.receipts).toHaveLength(0);
   });
 
+  it('retains the claim when the post committed but receipt completion was lost', async () => {
+    blogFindOne.mockResolvedValue(null);
+    blogCreate.mockResolvedValue({ _id: 'blog-1', slug: validPayload.slug });
+    mockReceiptStore.current!.loseNextCompletion();
+
+    const res = await POST(postReq({ payload: validPayload }, headers));
+
+    expect(res.status).toBe(500);
+    expect(mockReceiptStore.current!.receipts).toHaveLength(1);
+    expect(mockReceiptStore.current!.receipts[0].state).toBe('pending');
+  });
+
   it('rejects a malformed Idempotency-Key', async () => {
     const res = await POST(
       postReq({ payload: validPayload }, { 'Idempotency-Key': 'x'.repeat(201) }),
@@ -343,6 +392,17 @@ describe('PUT /api/admin/content/blog', () => {
 });
 
 describe('GET /api/admin/content/blog/[slug]', () => {
+  it('rejects a non-allowlisted tenant before lookup', async () => {
+    denyNextTenant();
+
+    const res = await GET(getReq('wrong-tenant'), {
+      params: Promise.resolve({ slug: 'some-slug' }),
+    });
+
+    expect(res.status).toBe(422);
+    expect(blogFindOne).not.toHaveBeenCalled();
+  });
+
   function getReq(tenantId?: string) {
     const searchParams = new Map(tenantId ? [['tenantId', tenantId]] : []);
     return { nextUrl: { searchParams } } as never;
