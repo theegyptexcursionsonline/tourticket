@@ -9,6 +9,9 @@ on:
 permissions:
   contents: read
 
+env:
+  TESTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+
 concurrency:
   group: tourticket-gates-${{ github.ref }}
   cancel-in-progress: true
@@ -35,6 +38,12 @@ jobs:
       STRIPE_WEBHOOK_SECRET: whsec_ci_placeholder
     steps:
       - uses: actions/checkout@v6
+        with:
+          ref: ${{ env.TESTED_SHA }}
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Verify checkout identity
+        run: test "$(git rev-parse HEAD)" = "$TESTED_SHA"
       - uses: pnpm/action-setup@v6
         with:
           version: 10.26.2
@@ -106,6 +115,12 @@ jobs:
       STRIPE_WEBHOOK_SECRET: whsec_ci_placeholder
     steps:
       - uses: actions/checkout@v6
+        with:
+          ref: ${{ env.TESTED_SHA }}
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Verify checkout identity
+        run: test "$(git rev-parse HEAD)" = "$TESTED_SHA"
       - uses: pnpm/action-setup@v6
         with:
           version: 10.26.2
@@ -134,7 +149,11 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
+          ref: ${{ env.TESTED_SHA }}
           fetch-depth: 2
+          persist-credentials: false
+      - name: Verify checkout identity
+        run: test "$(git rev-parse HEAD)" = "$TESTED_SHA"
       - name: Reject whitespace errors and committed secrets
         shell: bash
         run: |
