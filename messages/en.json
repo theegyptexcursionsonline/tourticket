@@ -567,13 +567,12 @@
   },
   "redirectingPage": {
     "defaultTourName": "your experience",
-    "imageAlt": "Preparing your booking",
+    "imageAlt": "Your selected experience",
     "badge": "Securing your booking",
-    "title": "Preparing {tourName}",
-    "description": "Please hold tight while we confirm availability and finalize your checkout experience. This only takes a few seconds.",
-    "estimatedTime": "Estimated time",
-    "eta": "~3 seconds",
-    "loading": "Loading..."
+    "title": "Taking you to checkout for {tourName}",
+    "description": "Your place is held. We are opening the secure payment step now.",
+    "secureNote": "Encrypted checkout",
+    "continueManually": "Continue to checkout"
   },
   "searchPage": {
     "title": "Find Your Next Adventure",

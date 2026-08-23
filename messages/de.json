@@ -566,14 +566,13 @@
     "exploreTours": "Touren entdecken"
   },
   "redirectingPage": {
-    "defaultTourName": "Ihrem Erlebnis",
-    "imageAlt": "Ihre Buchung wird vorbereitet",
-    "badge": "Ihre Buchung wird gesichert",
-    "title": "Vorbereitung von {tourName}",
-    "description": "Bitte warten Sie kurz, wahrend wir die Verfugbarkeit bestatigen und Ihren Checkout abschliessen. Das dauert nur wenige Sekunden.",
-    "estimatedTime": "Geschaetzte Zeit",
-    "eta": "~3 Sekunden",
-    "loading": "Ladt..."
+    "defaultTourName": "Ihr Erlebnis",
+    "imageAlt": "Ihr ausgewähltes Erlebnis",
+    "badge": "Buchung wird gesichert",
+    "title": "Weiter zur Kasse für {tourName}",
+    "description": "Ihr Platz ist reserviert. Wir öffnen jetzt den sicheren Zahlungsschritt.",
+    "secureNote": "Verschlüsselte Kasse",
+    "continueManually": "Weiter zur Kasse"
   },
   "searchPage": {
     "title": "Finden Sie Ihr nachstes Abenteuer",

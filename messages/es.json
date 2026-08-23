@@ -567,13 +567,12 @@
   },
   "redirectingPage": {
     "defaultTourName": "tu experiencia",
-    "imageAlt": "Preparando tu reserva",
+    "imageAlt": "Tu experiencia seleccionada",
     "badge": "Asegurando tu reserva",
-    "title": "Preparando {tourName}",
-    "description": "Espera un momento mientras confirmamos disponibilidad y finalizamos tu pago. Esto solo toma unos segundos.",
-    "estimatedTime": "Tiempo estimado",
-    "eta": "~3 segundos",
-    "loading": "Cargando..."
+    "title": "Te llevamos al pago de {tourName}",
+    "description": "Tu plaza está reservada. Abrimos ahora el paso de pago seguro.",
+    "secureNote": "Pago cifrado",
+    "continueManually": "Continuar al pago"
   },
   "searchPage": {
     "title": "Encuentra tu proxima aventura",

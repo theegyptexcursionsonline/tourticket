@@ -566,14 +566,13 @@
     "exploreTours": "Explorer les tours"
   },
   "redirectingPage": {
-    "defaultTourName": "votre experience",
-    "imageAlt": "Preparation de votre reservation",
-    "badge": "Reservation en cours de securisation",
-    "title": "Preparation de {tourName}",
-    "description": "Veuillez patienter pendant que nous confirmons la disponibilite et finalisons votre paiement. Cela prend seulement quelques secondes.",
-    "estimatedTime": "Temps estime",
-    "eta": "~3 secondes",
-    "loading": "Chargement..."
+    "defaultTourName": "votre expérience",
+    "imageAlt": "Votre expérience sélectionnée",
+    "badge": "Réservation sécurisée",
+    "title": "Direction le paiement pour {tourName}",
+    "description": "Votre place est réservée. Nous ouvrons l’étape de paiement sécurisé.",
+    "secureNote": "Paiement chiffré",
+    "continueManually": "Continuer vers le paiement"
   },
   "searchPage": {
     "title": "Trouvez votre prochaine aventure",
