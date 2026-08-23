@@ -19,7 +19,9 @@ import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
  *   and the Stripe webhook re-reads tours by id when payment settles.
  * - A destination still referenced by a tour, or linked from a blog post,
  *   is refused — the operator must move those first.
- * - A category still used by a tour is refused for the same reason.
+ * - A category still used by a tour or a page is refused for the same reason.
+ * - A page still linked from another page, or the parent of a tour or page,
+ *   is refused — the link would otherwise dangle.
  */
 export type TrashKind = 'tour' | 'destination' | 'category' | 'page';
 
@@ -53,9 +55,11 @@ async function inspectTour(doc: Record<string, unknown>): Promise<TrashPurgeVerd
 
 async function inspectDestination(doc: Record<string, unknown>): Promise<TrashPurgeVerdict> {
   const id = String(doc._id);
-  const [tours, blogs] = await Promise.all([
+  const [tours, blogs, pages] = await Promise.all([
     Tour.countDocuments({ destination: doc._id }),
     Blog.countDocuments({ relatedDestinations: doc._id }),
+    // An attraction page pins its city by id; purging it dangles that link.
+    AttractionPage.countDocuments({ cityDestination: doc._id }),
   ]);
   if (tours > 0) {
     return { id, title: titleOf(doc), deletable: false, blockedReason: `Still linked to ${tours} tour${tours === 1 ? '' : 's'}` };
@@ -63,15 +67,45 @@ async function inspectDestination(doc: Record<string, unknown>): Promise<TrashPu
   if (blogs > 0) {
     return { id, title: titleOf(doc), deletable: false, blockedReason: `Linked from ${blogs} blog post${blogs === 1 ? '' : 's'}` };
   }
+  if (pages > 0) {
+    return { id, title: titleOf(doc), deletable: false, blockedReason: `Still the city of ${pages} page${pages === 1 ? '' : 's'}` };
+  }
   return { id, title: titleOf(doc), deletable: true };
 }
 
 async function inspectCategory(doc: Record<string, unknown>): Promise<TrashPurgeVerdict> {
   const id = String(doc._id);
-  const tours = await Tour.countDocuments({ category: doc._id });
-  return tours > 0
-    ? { id, title: titleOf(doc), deletable: false, blockedReason: `Still used by ${tours} tour${tours === 1 ? '' : 's'}` }
-    : { id, title: titleOf(doc), deletable: true };
+  const [tours, pages] = await Promise.all([
+    Tour.countDocuments({ category: doc._id }),
+    // A category page's `categoryId` is a required hard ref; purging the
+    // category would leave that page unable to save again.
+    AttractionPage.countDocuments({ $or: [{ categoryId: doc._id }, { linkedCategoryIds: doc._id }] }),
+  ]);
+  if (tours > 0) {
+    return { id, title: titleOf(doc), deletable: false, blockedReason: `Still used by ${tours} tour${tours === 1 ? '' : 's'}` };
+  }
+  if (pages > 0) {
+    return { id, title: titleOf(doc), deletable: false, blockedReason: `Still linked from ${pages} page${pages === 1 ? '' : 's'}` };
+  }
+  return { id, title: titleOf(doc), deletable: true };
+}
+
+async function inspectPage(doc: Record<string, unknown>): Promise<TrashPurgeVerdict> {
+  const id = String(doc._id);
+  const [pages, tours] = await Promise.all([
+    AttractionPage.countDocuments({ linkedPageIds: doc._id }),
+    // Tours and pages nest under a parent page by id for breadcrumbs/URLs.
+    Tour.countDocuments({ 'parentPage.id': id }),
+  ]);
+  const parents = await AttractionPage.countDocuments({ 'parentPage.id': id });
+  const links = pages + parents;
+  if (links > 0) {
+    return { id, title: titleOf(doc), deletable: false, blockedReason: `Still linked from ${links} page${links === 1 ? '' : 's'}` };
+  }
+  if (tours > 0) {
+    return { id, title: titleOf(doc), deletable: false, blockedReason: `Still the parent of ${tours} tour${tours === 1 ? '' : 's'}` };
+  }
+  return { id, title: titleOf(doc), deletable: true };
 }
 
 const MODELS = {
@@ -85,8 +119,7 @@ const INSPECTORS: Record<TrashKind, (doc: Record<string, unknown>) => Promise<Tr
   tour: inspectTour,
   destination: inspectDestination,
   category: inspectCategory,
-  // A content page owns no other record; being in the trash is enough.
-  page: async (doc) => ({ id: String(doc._id), title: titleOf(doc), deletable: true }),
+  page: inspectPage,
 };
 
 /** Read-only preview: what an Empty trash would delete, and what it would refuse. */

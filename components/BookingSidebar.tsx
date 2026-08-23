@@ -707,7 +707,7 @@ const TourOptionCard: React.FC<{
                 {option.badge || 'Recommended'}
               </span>
             )}
-            {option.discount && option.discount > 0 && (
+            {Boolean(option.discount && option.discount > 0) && (
               <span className="bg-gradient-to-r from-green-600 to-emerald-600 text-white px-2 py-0.5 rounded-full text-[10px] font-bold shadow-sm">
                 Save {option.discount}%
               </span>
@@ -1152,7 +1152,7 @@ const AddOnCard: React.FC<{
           {/* Price Section */}
           <div className="flex items-center justify-between">
             <div>
-              {addOn.originalPrice && addOn.originalPrice > addOn.price && (
+              {addOn.originalPrice != null && addOn.originalPrice > addOn.price && (
                 <span className="text-sm text-gray-400 line-through block">
                   {formatPrice(addOn.originalPrice)}
                 </span>
@@ -1929,6 +1929,31 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
     } else if (tourDisplayData) {
       basePrice = tourBasePricing.price;
       originalBasePrice = tourBasePricing.originalPrice;
+      // Before a departure is chosen the running total is an estimate. Basing
+      // it on the tour's per-guest price contradicts the option cards when the
+      // options are whole-unit priced — the footer read a per-head total beside
+      // a whole-unit card. Estimate from the cheapest option the party can
+      // actually take, through the same rule the cards use.
+      const party = bookingData.adults + bookingData.children + bookingData.infants;
+      const estimate = (availability?.tourOptions ?? [])
+        .filter((candidate) => capacityAvailability(candidate, party).available)
+        .map((candidate) => {
+          const unitPriced = isUnitPricedType(candidate.type);
+          const units = unitPriced ? unitCount(party, effectiveUnitSize(candidate)) : null;
+          const price = units !== null
+            ? units * candidate.price
+            : (bookingData.adults * candidate.price) + (bookingData.children * candidate.price * 0.5);
+          return { candidate, price, unitPriced };
+        })
+        .sort((a, b) => a.price - b.price)[0];
+      if (estimate) {
+        basePrice = estimate.candidate.price;
+        originalBasePrice = estimate.candidate.originalPrice || estimate.candidate.price;
+        if (estimate.unitPriced) {
+          optionIsUnitPriced = true;
+          unitSizeForTotals = effectiveUnitSize(estimate.candidate);
+        }
+      }
     }
 
     const childPrice = bookingData.selectedTimeSlot?.guestPrices?.child ?? basePrice * 0.5;
