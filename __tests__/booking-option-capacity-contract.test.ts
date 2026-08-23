@@ -127,7 +127,7 @@ describe('checkout option list collapses and puts multiple times in a dropdown',
 
   it('keeps price and remaining spots visible on every dropdown row', () => {
     const menu = sidebar.slice(sidebar.indexOf('role="listbox"'), sidebar.indexOf('role="listbox"') + 2600);
-    expect(menu).toContain('spots left');
+    expect(menu).toContain("t('tour.spotsLeft', { count: timeSlot.available })");
     expect(menu).toContain('formatPrice(timeSlot.price)');
   });
 
@@ -135,7 +135,7 @@ describe('checkout option list collapses and puts multiple times in a dropdown',
     const menu = sidebar.slice(sidebar.indexOf('role="listbox"'), sidebar.indexOf('role="listbox"') + 2600);
     expect(menu).toContain('disabled={isSoldOut}');
     expect(menu).toContain('if (isSoldOut) return;');
-    expect(menu).toContain('Fully booked');
+    expect(menu).toContain("t('tour.fullyBooked')");
   });
 });
 

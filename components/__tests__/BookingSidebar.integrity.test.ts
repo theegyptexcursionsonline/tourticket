@@ -47,7 +47,7 @@ describe('BookingSidebar states only what the data proves', () => {
   });
 
   it('gates the "Highly rated" chip on a proven rating', () => {
-    const marker = source.indexOf('Highly rated');
+    const marker = source.indexOf("t('booking.highlyRated')");
     expect(marker).toBeGreaterThan(-1);
     // The nearest preceding conditional must be the proven-rating guard.
     expect(source.slice(Math.max(0, marker - 320), marker)).toContain('provenRating');

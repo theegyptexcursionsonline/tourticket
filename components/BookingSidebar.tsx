@@ -12,6 +12,7 @@ import {
   Coffee, Calculator, BadgeDollarSign, Edit,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useTranslations } from 'next-intl';
 import { useCart } from '@/hooks/useCart';
 import { useSettings } from '@/hooks/useSettings';
 import { toDateOnlyString } from '@/utils/date';
@@ -264,6 +265,7 @@ const StepsIndicator: React.FC<{
   onStepClick?: (step: number) => void;
   isClickable?: boolean;
 }> = ({ currentStep, onStepClick, isClickable = false }) => {
+  const t = useTranslations();
   const locale = useLocale();
   const rtl = isRTL(locale);
   const StepArrow = rtl ? ArrowLeft : ArrowRight;
@@ -363,6 +365,7 @@ const CalendarWidget: React.FC<{
   stopSaleLoadFailed?: boolean;
   onRetryStopSales?: () => void;
 }> = ({ selectedDate, onDateSelect, availabilityData = {}, availableDays, hasLoadedStopSales = true, stopSaleLoadFailed = false, onRetryStopSales }) => {
+  const t = useTranslations();
   const locale = useLocale();
   const rtl = isRTL(locale);
   const PrevMonthIcon = rtl ? ChevronRight : ChevronLeft;
@@ -437,7 +440,7 @@ const CalendarWidget: React.FC<{
       const unavailableTitle = isPast
         ? undefined
         : isFull || isDayUnavailable
-        ? 'Unavailable'
+        ? t('booking.unavailable')
         : undefined;
 
       days.push(
@@ -514,7 +517,7 @@ const CalendarWidget: React.FC<{
         <div className="rounded-2xl border border-amber-300 bg-amber-50 p-4 text-center">
           <p className="text-sm font-semibold text-amber-900">We couldn&apos;t confirm live availability</p>
           <p className="mt-1 text-xs text-amber-800">
-            Dates can&apos;t be shown as bookable until we can check them. Please try again in a moment.
+            {t('booking.availabilityUnknown')}
           </p>
           {onRetryStopSales && (
             <button
@@ -522,7 +525,7 @@ const CalendarWidget: React.FC<{
               onClick={onRetryStopSales}
               className="mt-3 inline-flex min-h-[44px] items-center justify-center rounded-full bg-amber-600 px-5 text-sm font-bold text-white hover:bg-amber-700"
             >
-              Try again
+              {t('common.tryAgain')}
             </button>
           )}
         </div>
@@ -605,6 +608,7 @@ const TourOptionCard: React.FC<{
   expanded?: boolean;
   onToggleExpanded?: () => void;
 }> = ({ option, onSelect, selectedTimeSlot, adults, childCount, infantCount, tour, collapsible = false, expanded = true, onToggleExpanded }) => {
+  const t = useTranslations();
   const { formatPrice } = useSettings();
   const [descExpanded, setDescExpanded] = useState(false);
   const [descOverflows, setDescOverflows] = useState(false);
@@ -704,12 +708,12 @@ const TourOptionCard: React.FC<{
             {option.isRecommended && (
               <span className="bg-gradient-to-r from-red-600 to-orange-600 text-white px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1 shadow-sm">
                 <Sparkles size={10} />
-                {option.badge || 'Recommended'}
+                {option.badge || t('booking.recommended')}
               </span>
             )}
             {Boolean(option.discount && option.discount > 0) && (
               <span className="bg-gradient-to-r from-green-600 to-emerald-600 text-white px-2 py-0.5 rounded-full text-[10px] font-bold shadow-sm">
-                Save {option.discount}%
+                {t('price.save')} {option.discount}%
               </span>
             )}
           </div>
@@ -734,7 +738,7 @@ const TourOptionCard: React.FC<{
             )}
             <div className="flex items-center gap-1 bg-gray-100 px-2 py-0.5 rounded-full">
               <User size={11} className="text-purple-500" />
-              <span className="text-xs font-medium text-gray-700">Max {maxParticipants}</span>
+              <span className="text-xs font-medium text-gray-700">{t('tourCard.max')} {maxParticipants}</span>
             </div>
           </div>
         </div>
@@ -750,7 +754,7 @@ const TourOptionCard: React.FC<{
             {formatPrice(subtotal)}
           </div>
           <div className="text-[10px] text-gray-500 whitespace-nowrap">
-            Total price
+            {t('price.totalPrice')}
           </div>
         </div>
       </div>
@@ -778,7 +782,7 @@ const TourOptionCard: React.FC<{
         </div>
         {collapsible && (
           <div className="ml-auto flex items-center gap-1 text-[11px] font-semibold text-red-600">
-            {isOpen ? 'Hide details' : 'View times'}
+            {isOpen ? t('common.showLess') : t('booking.selectTime')}
             <ChevronDown size={14} className={`transition-transform ${isOpen ? 'rotate-180' : ''}`} />
           </div>
         )}
@@ -809,7 +813,7 @@ const TourOptionCard: React.FC<{
               }}
               className="flex items-center gap-1 px-3 pb-2 text-[11px] font-semibold text-red-600 hover:text-red-700"
             >
-              {descExpanded ? 'Show less' : 'Read more'}
+              {descExpanded ? t('common.showLess') : t('common.readMore')}
               <ChevronDown
                 size={12}
                 className={`transition-transform ${descExpanded ? 'rotate-180' : ''}`}
@@ -847,7 +851,7 @@ const TourOptionCard: React.FC<{
           </span>
           {savings > 0 && (
             <span className="text-green-600 font-bold bg-green-100 px-1.5 py-0.5 rounded-full text-[10px]">
-              You Save {formatPrice(savings)}
+              {t('price.save')} {formatPrice(savings)}
             </span>
           )}
         </div>
@@ -880,7 +884,7 @@ const TourOptionCard: React.FC<{
           <div className="mb-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
             <div className="font-semibold">Unavailable on the selected date</div>
             <div className="mt-0.5 text-amber-700">
-              {option.stopSaleReason || 'This option has been stop-saled by the operator for this date.'}
+              {option.stopSaleReason || t('booking.optionStopSaled')}
             </div>
           </div>
         )}
@@ -889,7 +893,7 @@ const TourOptionCard: React.FC<{
           <div className="mb-2 rounded-xl border border-gray-200 bg-gray-100 px-3 py-2 text-xs text-gray-700">
             <div className="font-semibold">{capacityBlockedMessage(capacity)}</div>
             <div className="mt-0.5 text-gray-500">
-              Adjust the number of participants in step 1 to book this option.
+              {t('booking.adjustParticipants')}
             </div>
           </div>
         )}
@@ -916,12 +920,12 @@ const TourOptionCard: React.FC<{
             >
               <span className="min-w-0">
                 <span className="block text-sm font-bold leading-tight">
-                  {selectedSlotForOption ? selectedSlotForOption.time : 'Choose a departure time'}
+                  {selectedSlotForOption ? selectedSlotForOption.time : t('booking.selectTime')}
                 </span>
                 <span className="block text-[10px] text-gray-500">
                   {selectedSlotForOption
-                    ? `${selectedSlotForOption.available} spots left`
-                    : `${bookableSlotCount} of ${option.timeSlots.length} times available`}
+                    ? t('tour.spotsLeft', { count: selectedSlotForOption.available })
+                    : t('booking.timesAvailable', { available: bookableSlotCount, total: option.timeSlots.length })}
                 </span>
               </span>
               <span className="flex items-center gap-2 flex-shrink-0">
@@ -964,7 +968,7 @@ const TourOptionCard: React.FC<{
                       <span className="min-w-0">
                         <span className="block text-sm font-bold leading-tight">{timeSlot.time}</span>
                         <span className={`block text-[10px] ${isSoldOut ? 'text-gray-400' : 'text-gray-500'}`}>
-                          {isSoldOut ? 'Fully booked' : `${timeSlot.available} spots left`}
+                          {isSoldOut ? t('tour.fullyBooked') : t('tour.spotsLeft', { count: timeSlot.available })}
                         </span>
                       </span>
                       <span className="flex items-center gap-2 flex-shrink-0">
@@ -1012,14 +1016,14 @@ const TourOptionCard: React.FC<{
                   <div className="text-left">
                     <div className="font-bold text-sm leading-tight">{timeSlot.time}</div>
                     <div className={`text-[10px] ${isSelected ? 'text-red-100' : 'text-gray-500'}`}>
-                      {isSoldOut ? 'Fully Booked' : `${timeSlot.available} spots left`}
+                      {isSoldOut ? t('tour.fullyBooked') : t('tour.spotsLeft', { count: timeSlot.available })}
                     </div>
                   </div>
 
                   <div className="text-right">
                     {timeSlot.isPopular && !isSelected && (
                       <div className="bg-orange-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold">
-                        Popular
+                        {t('booking.popular')}
                       </div>
                     )}
                     <div className="flex items-center justify-end gap-1.5">
@@ -1047,7 +1051,7 @@ const TourOptionCard: React.FC<{
                 {isLowAvailability && !isSoldOut && !isSelected && (
                   <div className="absolute -top-1.5 left-1/2 transform -translate-x-1/2">
                     <div className="bg-red-500 text-white text-[10px] px-2 py-0.5 rounded-full font-bold shadow">
-                      Almost Full!
+                      {t('booking.almostFull')}
                     </div>
                   </div>
                 )}
@@ -1067,16 +1071,16 @@ const TourOptionCard: React.FC<{
       <div className="flex items-center gap-2.5 mt-2 pt-2 border-t border-gray-200">
         <div className="flex items-center gap-1 text-[10px] text-gray-600">
           <Shield size={10} className="text-green-500" />
-          <span>Tiered refunds</span>
+          <span>{t('tour.tieredRefunds')}</span>
         </div>
         <div className="flex items-center gap-1 text-[10px] text-gray-600">
           <CheckCircle size={10} className="text-blue-500" />
-          <span>Instant confirmation</span>
+          <span>{t('tour.instantConfirmation')}</span>
         </div>
         {provenRating && provenRating.rating >= 4.5 && (
           <div className="flex items-center gap-1 text-[10px] text-gray-600">
             <Heart size={10} className="text-red-500" />
-            <span>Highly rated</span>
+            <span>{t('booking.highlyRated')}</span>
           </div>
         )}
       </div>
@@ -1092,6 +1096,7 @@ const AddOnCard: React.FC<{
   onQuantityChange: (id: string, quantity: number) => void;
   guestCount: number;
 }> = ({ addOn, quantity, onQuantityChange, guestCount: _guestCount }) => {
+  const t = useTranslations();
   const { formatPrice } = useSettings();
   const IconComponent = addOn.icon || Gift;
   const isSelected = quantity > 0;
@@ -1133,7 +1138,7 @@ const AddOnCard: React.FC<{
         <div className="absolute -top-2 right-4">
           <span className="bg-gradient-to-r from-yellow-400 to-orange-400 text-white px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1">
             <Star size={10} fill="white" />
-            Popular
+            {t('booking.popular')}
           </span>
         </div>
       )}
@@ -1163,12 +1168,12 @@ const AddOnCard: React.FC<{
                 </span>
                 {addOn.savings && (
                   <span className="text-xs text-green-600 font-semibold bg-green-100 px-2 py-1 rounded-full">
-                    Save {formatPrice(addOn.savings)}
+                    {t('price.save')} {formatPrice(addOn.savings)}
                   </span>
                 )}
               </div>
               <div className="text-xs text-gray-500 mt-1">
-                {addOn.perGuest ? `Price is per person` : `Price is for the group`}
+                {addOn.perGuest ? t('booking.pricePerPerson') : t('booking.pricePerGroup')}
               </div>
             </div>
 
@@ -1203,6 +1208,7 @@ const BookingSummaryCard: React.FC<{
   availability: AvailabilityData | null;
   onEditClick: (section: 'date' | 'guests' | 'language') => void;
 }> = ({ bookingData, tour, availability, onEditClick }) => {
+  const t = useTranslations();
   const formatDate = (date: Date) => {
     return date.toLocaleDateString('en-US', {
       weekday: 'long',
@@ -1238,7 +1244,7 @@ const BookingSummaryCard: React.FC<{
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg sm:text-xl font-bold text-slate-900">Booking Summary</h3>
         <div className="bg-red-100 text-red-700 px-3 py-1 rounded-full text-xs font-semibold">
-          Final Review
+          {t('booking.finalReview')}
         </div>
       </div>
 
@@ -1254,10 +1260,10 @@ const BookingSummaryCard: React.FC<{
             </div>
             <div>
               <div className="font-semibold text-slate-800 text-sm sm:text-base">
-                {bookingData.selectedDate ? formatDate(bookingData.selectedDate) : 'No date selected'}
+                {bookingData.selectedDate ? formatDate(bookingData.selectedDate) : t('booking.noDateSelected')}
               </div>
               <div className="text-xs sm:text-sm text-slate-500">
-                {bookingData.selectedTimeSlot ? `at ${bookingData.selectedTimeSlot.time}` : 'No time selected'}
+                {bookingData.selectedTimeSlot ? `at ${bookingData.selectedTimeSlot.time}` : t('booking.noTimeSelected')}
               </div>
             </div>
           </div>
@@ -1285,7 +1291,7 @@ const BookingSummaryCard: React.FC<{
                 {formatParticipants()}
               </div>
               <div className="text-xs sm:text-sm text-slate-500">
-                Group size
+                {t('tour.groupSize')}
               </div>
             </div>
           </div>
@@ -1313,7 +1319,7 @@ const BookingSummaryCard: React.FC<{
                 {bookingData.selectedLanguage || 'English'}
               </div>
               <div className="text-xs sm:text-sm text-slate-500">
-                Tour language
+                {t('tour.languages')}
               </div>
             </div>
           </div>
@@ -1422,6 +1428,7 @@ interface BookingSidebarProps {
 }
 
 const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, initialStopSaleDates }) => {
+  const t = useTranslations();
   const dialogRef = useRef<HTMLDivElement>(null);
   useModalBehavior(dialogRef, isOpen, onClose);
   const router = useRouter();
@@ -2080,7 +2087,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
   // Enhanced navigation handlers
   const handleNext = useCallback(() => {
     if (currentStep === 2 && !bookingData.selectedTimeSlot) {
-      toast.error('Please select a time slot to continue', {
+      toast.error(t('booking.selectTimeToContinue'), {
         icon: '⏰',
         style: { background: '#FEF2F2', color: '#DC2626' }
       });
@@ -2116,21 +2123,21 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
   // Enhanced availability check
   const handleCheckAvailability = useCallback(async () => {
     if (!bookingData.selectedDate) {
-      setError('Please select a date to continue');
+      setError(t('booking.selectDateFirst'));
       toast.error('Date selection required', { icon: '📅' });
       return;
     }
 
     const totalGuests = bookingData.adults + bookingData.children + bookingData.infants;
     if (totalGuests === 0) {
-      setError('Please select at least one guest');
+      setError(t('booking.selectGuestRequired'));
       toast.error('Guest selection required', { icon: '👥' });
       return;
     }
 
     const maxSize = tourDisplayData?.maxGroupSize || 20;
     if (totalGuests > maxSize) {
-      setError(`Maximum group size is ${maxSize} guests`);
+      setError(t('booking.groupTooLarge', { max: maxSize }));
       toast.error(`Group too large (max ${maxSize} guests)`, { icon: '⚠️' });
       return;
     }
@@ -2163,19 +2170,19 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
     const dayAvailability = calendarAvailability[dateKey];
 
     if (dayAvailability === 'full') {
-      toast.error('This date is fully booked. Please select another date.', {
+      toast.error(t('booking.dateFullyBooked'), {
         id: 'availability-toast',
         duration: 4000,
         icon: '😞'
       });
     } else if (dayAvailability === 'low') {
-      toast('Limited availability on this date! Book soon.', {
+      toast(t('booking.limitedAvailability'), {
         id: 'availability-toast',
         icon: '⚡',
         style: { background: '#FEF3C7', color: '#D97706' }
       });
     } else if (dayAvailability === 'high') {
-      toast.success('Great choice! Plenty of availability.', {
+      toast.success(t('booking.greatChoice'), {
         id: 'availability-toast',
         icon: '✨'
       });
@@ -2191,7 +2198,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
 
   const handleTimeSlotSelect = useCallback(async (timeSlot: TimeSlot) => {
     if (timeSlot.available === 0) {
-      toast.error('This time slot is fully booked');
+      toast.error(t('booking.timeSlotFullyBooked'));
       return;
     }
 
@@ -2300,15 +2307,17 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
 
   const getParticipantsText = useCallback(() => {
     const totalGuests = bookingData.adults + bookingData.children + bookingData.infants;
-    const text = `${totalGuests} participant${totalGuests !== 1 ? 's' : ''}`;
+    // Built from translated nouns, with the casing each language authored —
+    // lower-casing them in code turns German into "3 erwachsene, 1 kind".
+    const text = `${totalGuests} ${t('booking.participants')}`;
     const details = [];
 
-    if (bookingData.adults > 0) details.push(`${bookingData.adults} adult${bookingData.adults > 1 ? 's' : ''}`);
-    if (bookingData.children > 0) details.push(`${bookingData.children} child${bookingData.children > 1 ? 'ren' : ''}`);
-    if (bookingData.infants > 0) details.push(`${bookingData.infants} infant${bookingData.infants > 1 ? 's' : ''}`);
+    if (bookingData.adults > 0) details.push(`${bookingData.adults} ${bookingData.adults > 1 ? t('booking.adults') : t('booking.adult')}`);
+    if (bookingData.children > 0) details.push(`${bookingData.children} ${bookingData.children > 1 ? t('booking.children') : t('booking.child')}`);
+    if (bookingData.infants > 0) details.push(`${bookingData.infants} ${bookingData.infants > 1 ? t('booking.infants') : t('booking.infant')}`);
 
     return details.length > 0 ? `${text} (${details.join(', ')})` : text;
-  }, [bookingData]);
+  }, [bookingData, t]);
 
   // Enhanced add-on quantity management
   const handleAddOnQuantityChange = useCallback((addOnId: string, quantity: number) => {
@@ -2331,8 +2340,8 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
 
     const loadingToast = toast.loading(
       action === 'checkout'
-        ? 'Preparing your booking...'
-        : 'Adding to cart...',
+        ? t('booking.preparingBooking')
+        : t('booking.addingToCart'),
       {
         position: 'bottom-center',
         style: { background: '#1F2937', color: 'white' }
@@ -2431,7 +2440,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
       await new Promise(resolve => setTimeout(resolve, 300));
 
       if (action === 'checkout') {
-        toast.success('Redirecting to secure checkout...', {
+        toast.success(t('booking.redirectingToCheckout'), {
           icon: '🔒',
           duration: 1500,
           style: { background: '#10B981', color: 'white' }
@@ -2579,7 +2588,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
               )}
               <div className="bg-red-100 text-red-700 px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1">
                 <Users size={14} className="text-red-500" />
-                Max {tourDisplayData?.maxGroupSize || 15}
+                {t('tourCard.max')} {tourDisplayData?.maxGroupSize || 15}
               </div>
             </div>
 
@@ -2783,8 +2792,8 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
             transition={{ duration: 0.3 }}
             className="space-y-6 p-4 sm:p-6"
           >
-            <h2 ref={stepHeadingRef} tabIndex={-1} className="text-xl sm:text-2xl font-bold text-gray-800 mb-2 focus:outline-none">Choose your experience</h2>
-            <p className="text-gray-600 mb-6">Select the best option for your group of {getParticipantsText().toLowerCase()}.</p>
+            <h2 ref={stepHeadingRef} tabIndex={-1} className="text-xl sm:text-2xl font-bold text-gray-800 mb-2 focus:outline-none">{t('booking.tourOptions')}</h2>
+            <p className="text-gray-600 mb-6">{t('booking.selectBestOption')} {getParticipantsText()}.</p>
             {availability?.tourOptions.map(option => (
               <TourOptionCard
                 key={option.id}
@@ -2895,7 +2904,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
                           <div className="font-bold text-purple-600">{formatPrice(totalPrice)}</div>
                           {addOn.savings && (
                             <div className="text-xs text-green-600">
-                              Save {formatPrice(addOn.savings * (addOn.perGuest ? (bookingData.adults + bookingData.children) : quantity))}
+                              {t('price.save')} {formatPrice(addOn.savings * (addOn.perGuest ? (bookingData.adults + bookingData.children) : quantity))}
                             </div>
                           )}
                         </div>
