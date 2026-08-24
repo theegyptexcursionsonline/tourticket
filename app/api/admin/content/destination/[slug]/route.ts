@@ -4,7 +4,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import dbConnect from "@/lib/dbConnect";
 import Destination from "@/lib/models/Destination";
-import { verifyContentEngine } from "@/lib/auth/verifyContentEngine";
+import {
+  verifyContentEngine,
+  verifyContentEngineTenant,
+} from "@/lib/auth/verifyContentEngine";
 import { tenantSlugFilter } from "@/lib/tenant/tenantScope";
 
 export async function GET(
@@ -15,14 +18,22 @@ export async function GET(
   if (authError) return authError;
 
   const { slug } = await ctx.params;
-  await dbConnect();
-
-  // Optional ?tenantId= scopes the lookup; absent means the default site,
-  // matching how the publish route namespaces slugs per tenant.
-  const tenantId = req.nextUrl.searchParams.get("tenantId");
-  const doc = (await Destination.findOne(tenantSlugFilter(slug, tenantId)).lean()) as
+  const tenant = verifyContentEngineTenant(req.nextUrl.searchParams.get("tenantId"));
+  if (!tenant.ok) return tenant.response;
+  const tenantId = tenant.tenantId;
+  let doc:
     | { _id: unknown; slug?: string; name?: string; isPublished?: boolean; tenantId?: string; updatedAt?: Date }
     | null;
+  try {
+    await dbConnect();
+    doc = (await Destination.findOne(tenantSlugFilter(slug, tenantId)).lean()) as typeof doc;
+  } catch (error) {
+    console.error("[content-receiver] lookup failed", {
+      contentType: "destination",
+      errorName: error instanceof Error ? error.name : "UnknownError",
+    });
+    return NextResponse.json({ error: "Content lookup is temporarily unavailable" }, { status: 503 });
+  }
   if (!doc) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }

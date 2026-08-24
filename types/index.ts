@@ -47,6 +47,7 @@ export interface Destination {
   breadcrumbLabel?: string;
   parentPage?: import('@/lib/content/contentNavigation').ParentPageValue | null;
   country?: string;
+  region?: string;
   image: string;
   images?: string[];
   imageMetadata?: ImageMetadata[];
@@ -62,6 +63,8 @@ export interface Destination {
   thingsToDo?: string[];
   localCustoms?: string[];
   bestTimeToVisit?: string;
+  gettingThere?: string;
+  gettingAround?: string;
   currency?: string;
   timezone?: string;
   visaRequirements?: string;
@@ -84,9 +87,12 @@ export interface Destination {
     {
       name?: string;
       country?: string;
+      region?: string;
       description?: string;
       longDescription?: string;
       bestTimeToVisit?: string;
+      gettingThere?: string;
+      gettingAround?: string;
       currency?: string;
       timezone?: string;
       climate?: string;

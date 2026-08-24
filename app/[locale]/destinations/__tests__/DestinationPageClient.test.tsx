@@ -66,6 +66,7 @@ describe('DestinationPageClient', () => {
     name: 'Cairo',
     slug: 'cairo',
     country: 'Egypt',
+    region: 'Greater Cairo',
     image: '/images/cairo.jpg',
     images: ['/images/cairo1.jpg', '/images/cairo2.jpg'],
     description: 'The vibrant capital of Egypt',
@@ -74,6 +75,8 @@ describe('DestinationPageClient', () => {
     currency: 'EGP',
     timezone: 'EET',
     bestTimeToVisit: 'October to April',
+    gettingThere: 'Fly into Cairo International Airport or arrive by intercity rail.',
+    gettingAround: 'Use the metro for central routes and licensed transport for longer trips.',
     highlights: ['Pyramids', 'Egyptian Museum', 'Khan el-Khalili'],
     thingsToDo: ['Visit pyramids', 'Nile cruise'],
     localCustoms: ['Dress modestly'],
@@ -236,6 +239,16 @@ describe('DestinationPageClient', () => {
       render(<DestinationPageClient {...defaultProps} />)
 
       expect(screen.getByText('2 experiences')).toBeInTheDocument()
+    })
+  })
+
+  describe('Practical information', () => {
+    it('renders the complete destination receiver guidance', () => {
+      render(<DestinationPageClient {...defaultProps} />)
+
+      expect(screen.getByText('Greater Cairo')).toBeInTheDocument()
+      expect(screen.getByText('Fly into Cairo International Airport or arrive by intercity rail.')).toBeInTheDocument()
+      expect(screen.getByText('Use the metro for central routes and licensed transport for longer trips.')).toBeInTheDocument()
     })
   })
 

@@ -16,9 +16,12 @@ export interface IDestination extends Document {
   breadcrumbLabel?: string;
   parentPage?: { id?: string; slug: string; label: string; kind: 'destination' | 'attraction' | 'category' | 'category-2' | 'landing'; href?: string } | null;
   country?: string;
+  region?: string;
 
   // Owning tenant for multi-tenant publishing; absent = default EEO site.
   tenantId?: string;
+  // Internal crash-recovery provenance; never selected in customer reads.
+  contentEnginePublishReceiptId?: string;
   
   // Media
   image?: string;
@@ -39,6 +42,8 @@ export interface IDestination extends Document {
   currency?: string;
   timezone?: string;
   bestTimeToVisit?: string;
+  gettingThere?: string;
+  gettingAround?: string;
   
   // Content Arrays
   highlights?: string[];
@@ -86,9 +91,12 @@ export interface IDestination extends Document {
     {
       name?: string;
       country?: string;
+      region?: string;
       description?: string;
       longDescription?: string;
       bestTimeToVisit?: string;
+      gettingThere?: string;
+      gettingAround?: string;
       currency?: string;
       timezone?: string;
       climate?: string;
@@ -145,9 +153,12 @@ const DestinationTranslationSchema = new Schema(
   {
     name: { type: String, trim: true, maxlength: 100 },
     country: { type: String, trim: true, maxlength: 100 },
+    region: { type: String, trim: true, maxlength: 100 },
     description: { type: String, trim: true, maxlength: 500 },
     longDescription: { type: String, trim: true, maxlength: 2000 },
     bestTimeToVisit: { type: String, trim: true, maxlength: 200 },
+    gettingThere: { type: String, trim: true, maxlength: 500 },
+    gettingAround: { type: String, trim: true, maxlength: 500 },
     currency: { type: String, trim: true, uppercase: true },
     timezone: { type: String, trim: true, maxlength: 100 },
     climate: { type: String, trim: true, maxlength: 500 },
@@ -191,11 +202,18 @@ const DestinationSchema: Schema<IDestination> = new Schema({
     match: [/^[a-z0-9-]+$/, 'Slug can only contain lowercase letters, numbers, and hyphens'],
     index: true,
   },
-  // Owning tenant; absent/null means the default EEO site (see DEFAULT_TENANT_FILTER).
+  // Owning tenant. Legacy absent/null values remain readable as the default
+  // site, while every new document uses the canonical `default` sentinel.
   tenantId: {
     type: String,
     trim: true,
+    default: 'default',
     index: true,
+  },
+  contentEnginePublishReceiptId: {
+    type: String,
+    trim: true,
+    select: false,
   },
   // Admin-chosen public URL shape (see lib/content/contentUrl.ts).
   urlType: {
@@ -219,6 +237,11 @@ country: {
     message: 'Country must be at least 2 characters when provided'
   }
 },
+  region: {
+    type: String,
+    trim: true,
+    maxlength: [100, 'Region cannot exceed 100 characters'],
+  },
   
   // Media
   image: {
@@ -278,6 +301,16 @@ currency: {
     type: String,
     trim: true,
     maxlength: [200, 'Best time to visit cannot exceed 200 characters'],
+  },
+  gettingThere: {
+    type: String,
+    trim: true,
+    maxlength: [500, 'Getting there guidance cannot exceed 500 characters'],
+  },
+  gettingAround: {
+    type: String,
+    trim: true,
+    maxlength: [500, 'Getting around guidance cannot exceed 500 characters'],
   },
   
   // Content Arrays
@@ -423,6 +456,10 @@ metaDescription: {
   },
 }, {
   timestamps: true,
+  // Production receiver indexes are installed only by the reviewed migration.
+  // Keep model initialization read-only until that separately approved step.
+  autoIndex: process.env.NODE_ENV !== 'production',
+  autoCreate: process.env.NODE_ENV !== 'production',
   toJSON: { virtuals: true },
   toObject: { virtuals: true },
 });
@@ -434,6 +471,7 @@ metaDescription: {
 // slug/name (same migration as the blogs `slug_1` index).
 DestinationSchema.index({ slug: 1, tenantId: 1 }, { unique: true });
 DestinationSchema.index({ name: 1, tenantId: 1 }, { unique: true });
+DestinationSchema.index({ contentEnginePublishReceiptId: 1 }, { unique: true, sparse: true });
 DestinationSchema.index({ name: 'text', description: 'text', country: 'text' });
 DestinationSchema.index({ featured: 1, isPublished: 1 });
 DestinationSchema.index({ archivedAt: 1, name: 1 });

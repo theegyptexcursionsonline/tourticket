@@ -10,6 +10,8 @@ import type { AuditActor } from '@/lib/admin/auditStamp';
 
 export interface ICategory extends Document {
   tenantId?: string;
+  // Internal crash-recovery provenance; never selected in customer reads.
+  contentEnginePublishReceiptId?: string;
   archivedAt?: Date | null;
   archivedBy?: string;
   createdBy?: AuditActor;
@@ -122,9 +124,14 @@ const TravelTipSchema = new Schema({
 
 const CategorySchema: Schema<ICategory> = new Schema({
   // Categories share one collection across the main and network portals.
-  // Missing/empty values are legacy main-EEO records; new main records use
-  // `default`, while network records carry their brand tenant id.
-  tenantId: { type: String, trim: true, index: true },
+  // Missing/empty values are legacy main-EEO records; all new main records use
+  // `default`, while network records carry their explicit brand tenant id.
+  tenantId: { type: String, trim: true, default: 'default', index: true },
+  contentEnginePublishReceiptId: {
+    type: String,
+    trim: true,
+    select: false,
+  },
   // Basic Info
   name: {
     type: String,
@@ -307,6 +314,10 @@ const CategorySchema: Schema<ICategory> = new Schema({
   updatedBy: { type: AuditActorSchema, default: undefined },
 }, {
   timestamps: true,
+  // Production receiver indexes are installed only by the reviewed migration.
+  // Keep model initialization read-only until that separately approved step.
+  autoIndex: process.env.NODE_ENV !== 'production',
+  autoCreate: process.env.NODE_ENV !== 'production',
   toJSON: { virtuals: true },
   toObject: { virtuals: true },
 });
@@ -317,6 +328,7 @@ CategorySchema.index({ featured: 1, isPublished: 1 });
 CategorySchema.index({ order: 1 });
 CategorySchema.index({ tenantId: 1, name: 1 }, { unique: true });
 CategorySchema.index({ tenantId: 1, slug: 1 }, { unique: true });
+CategorySchema.index({ contentEnginePublishReceiptId: 1 }, { unique: true, sparse: true });
 
 // Pre-save middleware
 CategorySchema.pre('save', function(next) {

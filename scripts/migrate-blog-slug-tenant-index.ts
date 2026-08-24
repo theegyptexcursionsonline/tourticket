@@ -1,33 +1,22 @@
 // scripts/migrate-blog-slug-tenant-index.ts
 //
-// Replaces the legacy single-field unique indexes on `blogs` and `destinations`
-// with the tenant-scoped compound indexes the models now declare.
+// Non-destructive index preparation for the Content Engine receiver.
 //
-// WHY THIS EXISTS
-// ---------------
-// `Blog` and `Destination` declare `{ slug: 1, tenantId: 1 }` (and
-// `{ name: 1, tenantId: 1 }` for destinations) as unique. Mongoose only ever
-// ADDS indexes — it never drops one that already exists in a live database. A
-// production collection created before per-tenant scoping still carries the old
-// `slug_1` / `name_1` unique indexes, which keep enforcing global uniqueness.
-//
-// Until those legacy indexes are dropped, a content-engine publish for a second
-// tenant that reuses a default-site slug fails with E11000 even though the
-// application logic considers it valid. RUN THIS BEFORE two tenants are allowed
-// to share a slug on this storefront.
+// The receiver refuses every publish unless the live database contains the
+// exact compound uniqueness, crash-recovery provenance, receipt claim and TTL
+// indexes below. This script only creates missing collections/indexes. It never
+// drops or rewrites an existing index; an incompatible index aborts the apply so
+// remediation can be separately reviewed and backed up.
 //
 // USAGE
-//   pnpm blog:migrate-tenant-index                        # dry run (default)
-//   pnpm blog:migrate-tenant-index --apply --confirm <db> # performs the changes
+//   pnpm content:migrate-tenant-index
+//   CONFIRM_CONTENT_INDEX_MIGRATION=YES \\
+//   CONTENT_INDEX_MIGRATION_BACKUP_ID=<backup-or-snapshot-id> \\
+//   ALLOW_REMOTE_CONTENT_INDEX_MIGRATION=YES \\
+//   pnpm content:migrate-tenant-index --apply --confirm <database> --confirm-host <host>
 //
-// Dry run is the default and writes nothing. `--apply` additionally requires
-// `--confirm <database>` naming the database it is about to modify, because
-// MONGODB_URI is picked up from .env.local when it is not set explicitly — the
-// guard is what stops an accidental apply against the wrong (live) database.
-//
-// The script is idempotent: re-running it after a successful apply is a no-op.
-// It never drops a legacy index before the replacement compound index exists,
-// so uniqueness is enforced at every moment of the migration.
+// Dry-run is the default. Production application is an owner-approved launch
+// step and must not be bundled into a code release.
 
 import dotenv from 'dotenv';
 dotenv.config({ path: '.env.local' });
@@ -35,46 +24,183 @@ dotenv.config();
 
 import mongoose from 'mongoose';
 
+type IndexKey = Record<string, 1 | -1>;
 type IndexSpec = {
   name: string;
-  key: Record<string, 1 | -1>;
-  unique?: boolean;
+  key: IndexKey;
+  unique?: true;
+  sparse?: true;
+  expireAfterSeconds?: number;
 };
 
 type CollectionPlan = {
   collection: string;
-  // Legacy single-field unique indexes that must go.
-  legacyIndexNames: string[];
-  // Compound tenant-scoped indexes that must exist first.
+  createIfMissing?: boolean;
+  logicalDefaultUniqueFields?: string[];
   requiredIndexes: IndexSpec[];
 };
 
 const PLANS: CollectionPlan[] = [
   {
+    collection: 'contentpublishreceipts',
+    createIfMissing: true,
+    requiredIndexes: [
+      {
+        name: 'idempotencyKey_1_tenantId_1_contentType_1',
+        key: { idempotencyKey: 1, tenantId: 1, contentType: 1 },
+        unique: true,
+      },
+      {
+        name: 'expiresAt_1',
+        key: { expiresAt: 1 },
+        expireAfterSeconds: 0,
+      },
+    ],
+  },
+  {
     collection: 'blogs',
-    legacyIndexNames: ['slug_1'],
-    requiredIndexes: [{ name: 'slug_1_tenantId_1', key: { slug: 1, tenantId: 1 }, unique: true }],
+    logicalDefaultUniqueFields: ['slug'],
+    requiredIndexes: [
+      { name: 'slug_1_tenantId_1', key: { slug: 1, tenantId: 1 }, unique: true },
+      {
+        name: 'contentEnginePublishReceiptId_1',
+        key: { contentEnginePublishReceiptId: 1 },
+        unique: true,
+        sparse: true,
+      },
+    ],
   },
   {
     collection: 'destinations',
-    legacyIndexNames: ['slug_1', 'name_1'],
+    logicalDefaultUniqueFields: ['slug', 'name'],
     requiredIndexes: [
       { name: 'slug_1_tenantId_1', key: { slug: 1, tenantId: 1 }, unique: true },
       { name: 'name_1_tenantId_1', key: { name: 1, tenantId: 1 }, unique: true },
+      {
+        name: 'contentEnginePublishReceiptId_1',
+        key: { contentEnginePublishReceiptId: 1 },
+        unique: true,
+        sparse: true,
+      },
+    ],
+  },
+  {
+    collection: 'categories',
+    logicalDefaultUniqueFields: ['slug', 'name'],
+    requiredIndexes: [
+      { name: 'tenantId_1_slug_1', key: { tenantId: 1, slug: 1 }, unique: true },
+      { name: 'tenantId_1_name_1', key: { tenantId: 1, name: 1 }, unique: true },
+      {
+        name: 'contentEnginePublishReceiptId_1',
+        key: { contentEnginePublishReceiptId: 1 },
+        unique: true,
+        sparse: true,
+      },
     ],
   },
 ];
 
 const apply = process.argv.includes('--apply');
 
-function confirmedDatabase(): string | null {
-  const index = process.argv.indexOf('--confirm');
-  if (index === -1) return null;
-  return process.argv[index + 1] ?? null;
+function argument(name: string): string | null {
+  const index = process.argv.indexOf(name);
+  return index === -1 ? null : process.argv[index + 1] ?? null;
 }
 
-function label(dryRun: boolean) {
-  return dryRun ? '[dry-run]' : '[apply]';
+function tag(): string {
+  return apply ? '[apply]' : '[dry-run]';
+}
+
+function sameOrderedKey(actual: Record<string, unknown>, expected: IndexKey): boolean {
+  const actualEntries = Object.entries(actual);
+  const expectedEntries = Object.entries(expected);
+  return (
+    actualEntries.length === expectedEntries.length &&
+    actualEntries.every(
+      ([field, direction], index) =>
+        field === expectedEntries[index]?.[0] && direction === expectedEntries[index]?.[1],
+    )
+  );
+}
+
+function exactOptions(
+  actual: {
+    unique?: boolean;
+    sparse?: boolean;
+    expireAfterSeconds?: number;
+    partialFilterExpression?: unknown;
+    collation?: unknown;
+    hidden?: boolean;
+  },
+  expected: IndexSpec,
+): boolean {
+  return (
+    Boolean(actual.unique) === Boolean(expected.unique) &&
+    Boolean(actual.sparse) === Boolean(expected.sparse) &&
+    actual.expireAfterSeconds === expected.expireAfterSeconds &&
+    actual.partialFilterExpression === undefined &&
+    actual.collation === undefined &&
+    actual.hidden !== true
+  );
+}
+
+function isLocalHost(host: string): boolean {
+  return host === 'localhost' || host === '127.0.0.1' || host === '::1';
+}
+
+async function assertNoLogicalDefaultDuplicates(
+  collection: mongoose.mongo.Collection,
+  fields: string[],
+): Promise<void> {
+  for (const field of fields) {
+    const duplicates = await collection
+      .aggregate([
+        {
+          $match: {
+            [field]: { $type: 'string' },
+            $or: [
+              { tenantId: { $exists: false } },
+              { tenantId: null },
+              { tenantId: '' },
+              { tenantId: 'default' },
+            ],
+          },
+        },
+        { $group: { _id: `$${field}`, count: { $sum: 1 } } },
+        { $match: { count: { $gt: 1 } } },
+        { $limit: 1 },
+      ])
+      .toArray();
+
+    if (duplicates.length > 0) {
+      throw new Error(
+        `${collection.collectionName}: duplicate logical-default ${field} values exist; reconcile them before index preparation.`,
+      );
+    }
+    console.log(`${tag()} ${collection.collectionName}: logical-default ${field} values are unique`);
+  }
+}
+
+async function assertApplyAuthority(database: string, host: string): Promise<void> {
+  if (!apply) return;
+
+  if (argument('--confirm') !== database || argument('--confirm-host') !== host) {
+    throw new Error(
+      `Refusing to apply: expected --confirm ${database} --confirm-host ${host}.`,
+    );
+  }
+  if (process.env.CONFIRM_CONTENT_INDEX_MIGRATION !== 'YES') {
+    throw new Error('Refusing to apply without CONFIRM_CONTENT_INDEX_MIGRATION=YES.');
+  }
+  if (!process.env.CONTENT_INDEX_MIGRATION_BACKUP_ID?.trim()) {
+    throw new Error('Refusing to apply without CONTENT_INDEX_MIGRATION_BACKUP_ID.');
+  }
+  if (
+    !isLocalHost(host) &&
+    process.env.ALLOW_REMOTE_CONTENT_INDEX_MIGRATION !== 'YES'
+  ) {
+    throw new Error('Refusing remote apply without ALLOW_REMOTE_CONTENT_INDEX_MIGRATION=YES.');
+  }
 }
 
 async function migrate() {
@@ -86,78 +212,75 @@ async function migrate() {
   if (!db) throw new Error('No database handle after connect.');
 
   const database = mongoose.connection.name;
-  const tag = label(!apply);
-  console.log(`${tag} Connected to database "${database}" on ${mongoose.connection.host}`);
+  const host = mongoose.connection.host;
+  console.log(`${tag()} Connected to database "${database}" on ${host}`);
+  await assertApplyAuthority(database, host);
 
-  if (apply) {
-    const confirmed = confirmedDatabase();
-    if (confirmed !== database) {
-      await mongoose.disconnect();
-      throw new Error(
-        `Refusing to apply: --confirm must name the connected database. ` +
-          `Expected "--confirm ${database}", got ${confirmed ? `"${confirmed}"` : 'nothing'}.`,
-      );
-    }
-  } else {
-    console.log('[dry-run] No changes will be written. Re-run with --apply to perform them.\n');
+  if (!apply) {
+    console.log('[dry-run] No changes will be written.');
   }
 
   let changes = 0;
-
   for (const plan of PLANS) {
     const collections = await db.listCollections({ name: plan.collection }).toArray();
     if (collections.length === 0) {
-      console.log(`${tag} ${plan.collection}: collection not present — skipping`);
-      continue;
+      if (!plan.createIfMissing) {
+        throw new Error(
+          `${plan.collection}: required content collection is missing; refusing to create it implicitly.`,
+        );
+      }
+      changes += 1;
+      console.log(`${tag()} ${plan.collection}: CREATE COLLECTION`);
+      if (apply) await db.createCollection(plan.collection);
     }
 
     const collection = db.collection(plan.collection);
-    const existing = await collection.indexes();
-    const existingNames = new Set(existing.map((index) => index.name));
+    const existing = collections.length === 0 && !apply ? [] : await collection.indexes();
+    await assertNoLogicalDefaultDuplicates(
+      collection,
+      plan.logicalDefaultUniqueFields ?? [],
+    );
 
-    // 1. Ensure the compound replacement exists BEFORE dropping anything, so
-    //    slug uniqueness is never briefly unenforced.
     for (const required of plan.requiredIndexes) {
-      if (existingNames.has(required.name)) {
-        console.log(`${tag} ${plan.collection}: ${required.name} already present`);
+      const sameName = existing.find((index) => index.name === required.name);
+      if (
+        sameName &&
+        (!sameOrderedKey(sameName.key, required.key) || !exactOptions(sameName, required))
+      ) {
+        throw new Error(
+          `${plan.collection}: index ${required.name} exists with an incompatible specification.`,
+        );
+      }
+
+      const sameKey = existing.find((index) => sameOrderedKey(index.key, required.key));
+      if (sameKey) {
+        if (!exactOptions(sameKey, required)) {
+          throw new Error(
+            `${plan.collection}: key ${JSON.stringify(required.key)} exists with incompatible options.`,
+          );
+        }
+        console.log(
+          `${tag()} ${plan.collection}: ${sameKey.name ?? required.name} exact specification present`,
+        );
         continue;
       }
+
       changes += 1;
-      console.log(`${tag} ${plan.collection}: CREATE ${required.name} (unique)`);
+      console.log(`${tag()} ${plan.collection}: CREATE ${required.name}`);
       if (apply) {
         await collection.createIndex(required.key, {
           name: required.name,
           unique: required.unique,
+          sparse: required.sparse,
+          expireAfterSeconds: required.expireAfterSeconds,
         });
       }
-    }
-
-    // 2. Drop the legacy single-field unique indexes.
-    for (const legacyName of plan.legacyIndexNames) {
-      const legacy = existing.find((index) => index.name === legacyName);
-      if (!legacy) {
-        console.log(`${tag} ${plan.collection}: ${legacyName} already absent`);
-        continue;
-      }
-      if (!legacy.unique) {
-        // A non-unique helper index of the same name is harmless — the models
-        // declare plain `index: true` on slug — so leave it alone.
-        console.log(`${tag} ${plan.collection}: ${legacyName} is not unique — leaving in place`);
-        continue;
-      }
-      changes += 1;
-      console.log(`${tag} ${plan.collection}: DROP ${legacyName} (legacy global-unique)`);
-      if (apply) await collection.dropIndex(legacyName);
     }
   }
 
   console.log(
-    `\n${tag} ${changes === 0 ? 'Nothing to do — already migrated.' : `${changes} index change(s) ${apply ? 'applied' : 'pending'}.`}`,
+    `${tag()} ${changes === 0 ? 'Nothing to do; exact indexes are present.' : `${changes} non-destructive change(s) ${apply ? 'applied' : 'pending'}.`}`,
   );
-  if (!apply && changes > 0) {
-    console.log(`[dry-run] Re-run with --apply --confirm ${database} to perform them.`);
-  }
-
   await mongoose.disconnect();
 }
 

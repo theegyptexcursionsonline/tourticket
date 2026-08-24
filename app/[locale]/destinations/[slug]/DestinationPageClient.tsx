@@ -1771,6 +1771,7 @@ const DestinationGallerySection = ({ destination }: { destination: Destination }
 
 const DestinationPracticalSection = ({ destination }: { destination: Destination }) => {
   const detailCards = [
+    destination.region && { title: 'Region', value: destination.region, icon: <MapPin className="h-5 w-5" /> },
     destination.climate && { title: 'Climate', value: destination.climate, icon: <Sun className="h-5 w-5" /> },
     (destination.averageTemperature?.summer || destination.averageTemperature?.winter) && {
       title: 'Average temperature',
@@ -1778,6 +1779,8 @@ const DestinationPracticalSection = ({ destination }: { destination: Destination
       icon: <Sun className="h-5 w-5" />,
     },
     destination.languagesSpoken?.length && { title: 'Languages', value: destination.languagesSpoken.join(', '), icon: <Languages className="h-5 w-5" /> },
+    destination.gettingThere && { title: 'Getting there', value: destination.gettingThere, icon: <Compass className="h-5 w-5" /> },
+    destination.gettingAround && { title: 'Getting around', value: destination.gettingAround, icon: <MapPin className="h-5 w-5" /> },
     destination.visaRequirements && { title: 'Visa requirements', value: destination.visaRequirements, icon: <Shield className="h-5 w-5" /> },
     destination.emergencyNumber && { title: 'Emergency number', value: destination.emergencyNumber, icon: <Phone className="h-5 w-5" /> },
     destination.coordinates && {

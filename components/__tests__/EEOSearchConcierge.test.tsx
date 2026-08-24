@@ -85,6 +85,8 @@ describe('EEOSearchConcierge', () => {
     '/en/admin',
     '/fr/forgot',
     '/es/reset-password',
+    '/tools',
+    '/de/tools/visa-checker',
   ]) (
     'does not load on sensitive route %s',
     async (route) => {

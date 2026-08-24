@@ -5,7 +5,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import dbConnect from "@/lib/dbConnect";
 import Blog from "@/lib/models/Blog";
-import { verifyContentEngine } from "@/lib/auth/verifyContentEngine";
+import {
+  verifyContentEngine,
+  verifyContentEngineTenant,
+} from "@/lib/auth/verifyContentEngine";
 import { tenantSlugFilter } from "@/lib/tenant/tenantScope";
 
 export async function GET(
@@ -16,12 +19,20 @@ export async function GET(
   if (authError) return authError;
 
   const { slug } = await ctx.params;
-  await dbConnect();
-
-  // Optional ?tenantId= scopes the lookup; absent means the default site,
-  // matching how the publish routes namespace slugs per tenant.
-  const tenantId = req.nextUrl.searchParams.get("tenantId");
-  const blog = await Blog.findOne(tenantSlugFilter(slug, tenantId)).lean();
+  const tenant = verifyContentEngineTenant(req.nextUrl.searchParams.get("tenantId"));
+  if (!tenant.ok) return tenant.response;
+  const tenantId = tenant.tenantId;
+  let blog;
+  try {
+    await dbConnect();
+    blog = await Blog.findOne(tenantSlugFilter(slug, tenantId)).lean();
+  } catch (error) {
+    console.error("[content-receiver] lookup failed", {
+      contentType: "blog",
+      errorName: error instanceof Error ? error.name : "UnknownError",
+    });
+    return NextResponse.json({ error: "Content lookup is temporarily unavailable" }, { status: 503 });
+  }
   if (!blog) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }

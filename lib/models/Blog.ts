@@ -12,6 +12,8 @@ export interface IBlog extends Document {
 
   // Owning tenant for multi-tenant publishing; absent = default EEO site.
   tenantId?: string;
+  // Internal crash-recovery provenance; never selected in customer reads.
+  contentEnginePublishReceiptId?: string;
 
   // Media
   featuredImage: string;
@@ -100,11 +102,18 @@ const BlogSchema: Schema<IBlog> = new Schema({
     match: [/^[a-z0-9-]+$/, 'Slug can only contain lowercase letters, numbers, and hyphens'],
     index: true,
   },
-  // Owning tenant; absent/null means the default EEO site (see DEFAULT_TENANT_FILTER).
+  // Owning tenant. Legacy absent/null values remain readable as the default
+  // site, while every new document uses the canonical `default` sentinel.
   tenantId: {
     type: String,
     trim: true,
+    default: 'default',
     index: true,
+  },
+  contentEnginePublishReceiptId: {
+    type: String,
+    trim: true,
+    select: false,
   },
   excerpt: {
     type: String,
@@ -291,6 +300,11 @@ const BlogSchema: Schema<IBlog> = new Schema({
   },
 }, {
   timestamps: true,
+  // Production receiver indexes are installed only by the reviewed migration.
+  // Mongoose defaults both options to true, which would otherwise mutate the
+  // live database merely by loading this model after a deploy.
+  autoIndex: process.env.NODE_ENV !== 'production',
+  autoCreate: process.env.NODE_ENV !== 'production',
   toJSON: { virtuals: true },
   toObject: { virtuals: true },
 });
@@ -300,6 +314,7 @@ const BlogSchema: Schema<IBlog> = new Schema({
 // Ops note: the old single-field unique index `slug_1` must be dropped in prod
 // before two tenants can share a slug.
 BlogSchema.index({ slug: 1, tenantId: 1 }, { unique: true });
+BlogSchema.index({ contentEnginePublishReceiptId: 1 }, { unique: true, sparse: true });
 BlogSchema.index({ title: 'text', excerpt: 'text', content: 'text' });
 BlogSchema.index({ status: 1, publishedAt: -1 });
 BlogSchema.index({ category: 1, status: 1 });

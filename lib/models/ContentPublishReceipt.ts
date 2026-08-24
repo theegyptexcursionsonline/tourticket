@@ -47,7 +47,13 @@ const ContentPublishReceiptSchema: Schema<IContentPublishReceipt> = new Schema(
     response: { type: Schema.Types.Mixed },
     expiresAt: { type: Date, required: true },
   },
-  { timestamps: true },
+  {
+    timestamps: true,
+    // The receiver's production collection and indexes are an explicit
+    // migration step. Loading an inactive route must never create them.
+    autoIndex: process.env.NODE_ENV !== 'production',
+    autoCreate: process.env.NODE_ENV !== 'production',
+  },
 );
 
 // One receipt per (key, tenant, type). Scoping by tenant keeps a key replayed

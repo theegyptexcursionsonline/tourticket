@@ -9,22 +9,24 @@ export const PUBLISH_CLAIM_LEASE_MS = 60_000;
 // The adapter contract asks for the mapping to survive at least 24h.
 export const PUBLISH_RECEIPT_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
-const MAX_KEY_LENGTH = 200;
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-// Reads the `Idempotency-Key` header. The key is optional: the engine always
-// sends one, but an older engine build (or a manual curl) must still be able to
-// publish rather than be locked out. When absent, dedupe is simply skipped.
+// Every engine publish must carry the UUID it persisted before its first
+// attempt. Refusing a missing/malformed key is what prevents a legacy caller or
+// manual request from bypassing the claim-before-effects contract.
 export function readIdempotencyKey(value: string | null | undefined): {
   key: string | null;
   error: string | null;
 } {
   const key = value?.trim() || '';
-  if (!key) return { key: null, error: null };
-  if (key.length > MAX_KEY_LENGTH || /[\u0000-\u001f\u007f]/.test(key)) {
+  if (!key) {
     return {
       key: null,
-      error: `Idempotency-Key must be at most ${MAX_KEY_LENGTH} printable characters`,
+      error: 'Idempotency-Key header is required',
     };
+  }
+  if (!UUID_PATTERN.test(key)) {
+    return { key: null, error: 'Idempotency-Key must be a valid UUID' };
   }
   return { key, error: null };
 }
@@ -197,7 +199,7 @@ export async function completePublish(
   status: number,
   body: Record<string, unknown>,
 ): Promise<void> {
-  await ContentPublishReceipt.updateOne(
+  const result = await ContentPublishReceipt.updateOne(
     { _id: claim.receiptId, claimToken: claim.claimToken },
     {
       $set: {
@@ -209,6 +211,14 @@ export async function completePublish(
       $unset: { claimToken: 1, claimExpiresAt: 1 },
     },
   );
+
+  // A zero-row update means this request no longer owns the claim (for
+  // example, its lease elapsed while the receiver write was in flight). Never
+  // report success without a durable replay receipt: the caller must return a
+  // retryable error and leave the pending receipt available for recovery.
+  if (result.modifiedCount !== 1) {
+    throw new Error('Publish receipt claim was lost before completion; retry shortly');
+  }
 }
 
 /**

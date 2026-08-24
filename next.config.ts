@@ -6,6 +6,25 @@ const configuredSearchOrigin = process.env.NEXT_PUBLIC_FOXES_SEARCH_ORIGIN || ''
 const searchWidgetOrigin = /^http:\/\/(localhost|127\.0\.0\.1):\d+$/.test(configuredSearchOrigin)
   ? configuredSearchOrigin
   : 'https://search.foxestechnology.com';
+const configuredAuthorityEmbedOrigin = (() => {
+  try {
+    const url = new URL(process.env.AUTHORITY_EMBED_ORIGIN || '');
+    const normalizedHost = url.hostname.replace(/^\[|\]$/g, '');
+    const localDevelopmentOrigin =
+      process.env.NODE_ENV !== 'production' &&
+      url.protocol === 'http:' &&
+      ['localhost', '127.0.0.1', '::1'].includes(normalizedHost);
+    const productionAuthorityOrigin =
+      process.env.NODE_ENV !== 'production' ||
+      (normalizedHost === 'tools.egypt-excursionsonline.com' && !url.port);
+    if (url.protocol !== 'https:' && !localDevelopmentOrigin) return '';
+    if (!productionAuthorityOrigin) return '';
+    if (url.username || url.password || url.search || url.hash || (url.pathname !== '/' && url.pathname !== '')) return '';
+    return url.origin;
+  } catch {
+    return '';
+  }
+})();
 
 const contentSecurityPolicy = [
   "default-src 'self'",
@@ -15,8 +34,8 @@ const contentSecurityPolicy = [
   "font-src 'self' data: https://fonts.gstatic.com https://js.intercomcdn.com",
   "img-src 'self' data: blob: https:",
   "media-src 'self' blob: https:",
-  `connect-src 'self' ${searchWidgetOrigin} https://tiles.openfreemap.org https://*.algolia.net https://*.algolianet.com https://*.algolia.io https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://www.google.com https://www.gstatic.com https://apis.google.com https://accounts.google.com https://www.googletagmanager.com https://www.google-analytics.com https://analytics.google.com https://region1.google-analytics.com https://*.stripe.com https://*.intercom.io wss://*.intercom.io https://*.intercomcdn.com https://connect.foxestechnology.com wss://connect.foxestechnology.com https://*.sentry.io https://*.ingest.sentry.io https://*.ingest.us.sentry.io https://*.ingest.de.sentry.io https://static.cloudflareinsights.com https://*.elfsight.com https://*.elfsightcdn.com https://*.adroll.com https://connect.facebook.net https://www.facebook.com https://api.exchangerate-api.com https://api.fixer.io https://res.cloudinary.com https://foxes-tools-api-production.up.railway.app`,
-  `frame-src 'self' ${searchWidgetOrigin} https://www.googletagmanager.com https://*.stripe.com https://www.google.com https://accounts.google.com https://*.firebaseapp.com https://maps.google.com https://www.youtube.com https://www.youtube-nocookie.com https://player.vimeo.com https://static.elfsight.com https://elfsightcdn.com https://*.elfsightcdn.com https://connect.foxestechnology.com https://*.intercom.io https://intercom-sheets.com`,
+  `connect-src 'self' ${searchWidgetOrigin} https://tiles.openfreemap.org https://*.algolia.net https://*.algolianet.com https://*.algolia.io https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://www.google.com https://www.gstatic.com https://apis.google.com https://accounts.google.com https://www.googletagmanager.com https://www.google-analytics.com https://analytics.google.com https://region1.google-analytics.com https://*.stripe.com https://*.intercom.io wss://*.intercom.io https://*.intercomcdn.com https://connect.foxestechnology.com wss://connect.foxestechnology.com https://*.sentry.io https://*.ingest.sentry.io https://*.ingest.us.sentry.io https://*.ingest.de.sentry.io https://static.cloudflareinsights.com https://*.elfsight.com https://*.elfsightcdn.com https://*.adroll.com https://connect.facebook.net https://www.facebook.com https://api.exchangerate-api.com https://api.fixer.io https://res.cloudinary.com`,
+  `frame-src 'self' ${searchWidgetOrigin}${configuredAuthorityEmbedOrigin ? ` ${configuredAuthorityEmbedOrigin}` : ''} https://www.googletagmanager.com https://*.stripe.com https://www.google.com https://accounts.google.com https://*.firebaseapp.com https://maps.google.com https://www.youtube.com https://www.youtube-nocookie.com https://player.vimeo.com https://static.elfsight.com https://elfsightcdn.com https://*.elfsightcdn.com https://connect.foxestechnology.com https://*.intercom.io https://intercom-sheets.com`,
   "worker-src 'self' blob:",
   "object-src 'none'",
   "base-uri 'self'",

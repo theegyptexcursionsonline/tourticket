@@ -1,9 +1,8 @@
 /**
- * Content-engine blog adapter route tests.
+ * Flagship Content Engine blog receiver contract.
  *
- * Verifies tenant-scoped slug dedupe + the locale allow-list on the
- * POST/PUT bridge and the tenant-aware [slug] GET lookup, with the
- * database mocked out (same pattern as routes.test.ts).
+ * The database is mocked; the real idempotency helper runs against an in-memory
+ * unique receipt store so claim/replay/crash recovery ordering stays observable.
  */
 
 jest.mock('next/server', () => {
@@ -12,7 +11,7 @@ jest.mock('next/server', () => {
     _data: unknown;
 
     constructor(init?: { status?: number }) {
-      this.status = init?.status || 200;
+      this.status = init?.status ?? 200;
     }
 
     async json() {
@@ -20,29 +19,40 @@ jest.mock('next/server', () => {
     }
 
     static json(data: unknown, init?: { status?: number }) {
-      const resp = new MockNextResponse(init);
-      resp._data = data;
-      return resp;
+      const response = new MockNextResponse(init);
+      response._data = data;
+      return response;
     }
   }
 
   return { NextResponse: MockNextResponse, NextRequest: jest.fn() };
 });
+const mockDbConnect = jest.fn().mockResolvedValue({ connection: { db: {} } });
+jest.mock('@/lib/dbConnect', () => (...args: unknown[]) => mockDbConnect(...args));
+jest.mock('@/lib/storefront/revalidateTourStorefront', () => ({
+  revalidateStorefrontContent: jest.fn(),
+}));
 
-jest.mock('@/lib/dbConnect', () => jest.fn().mockResolvedValue(undefined));
+const receiverIndexesReady = jest.fn().mockResolvedValue(true);
+jest.mock('@/lib/content/receiverIndexReadiness', () => ({
+  contentReceiverIndexesReady: (...args: unknown[]) => receiverIndexesReady(...args),
+}));
+
 jest.mock('@/lib/auth/verifyContentEngine', () => ({
   verifyContentEngine: jest.fn().mockReturnValue(null),
+  verifyContentEngineTenant: jest.fn(),
 }));
 
 const blogFindOne = jest.fn();
 const blogCreate = jest.fn();
 jest.mock('@/lib/models/Blog', () => ({
   __esModule: true,
-  default: { findOne: (...args: unknown[]) => blogFindOne(...args), create: (...args: unknown[]) => blogCreate(...args) },
+  default: {
+    findOne: (...args: unknown[]) => blogFindOne(...args),
+    create: (...args: unknown[]) => blogCreate(...args),
+  },
 }));
 
-// The real claim helper runs against an in-memory receipt store so replay
-// behaviour is proven end-to-end rather than stubbed out.
 const mockReceiptStore: { current: ReceiptStore | null } = { current: null };
 jest.mock('@/lib/models/ContentPublishReceipt', () => ({
   __esModule: true,
@@ -59,8 +69,15 @@ jest.mock('@/lib/models/ContentPublishReceipt', () => ({
 
 import { POST, PUT } from '@/app/api/admin/content/blog/route';
 import { GET } from '@/app/api/admin/content/blog/[slug]/route';
+import { verifyContentEngineTenant } from '@/lib/auth/verifyContentEngine';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 import { createReceiptStore, type ReceiptStore } from '@/__mocks__/contentPublishReceiptStore';
+
+const tenantVerifier = verifyContentEngineTenant as jest.MockedFunction<
+  typeof verifyContentEngineTenant
+>;
+const IDEMPOTENCY_KEY = '9f7d2c8a-1234-4c5d-8e9f-000000000001';
+const DEFAULT_HEADERS = { 'Idempotency-Key': IDEMPOTENCY_KEY };
 
 const validPayload = {
   title: 'Red Sea Snorkeling Guide',
@@ -68,311 +85,357 @@ const validPayload = {
   excerpt: 'Where to snorkel on the Red Sea coast.',
   content: 'x'.repeat(150),
   category: 'travel-tips',
+  tags: ['red-sea', 'snorkeling', 'travel-guide'],
+  metaTitle: 'Red Sea Snorkeling Guide',
+  metaDescription: 'Plan a responsible Red Sea snorkeling trip with practical coastal guidance.',
+  author: 'EEO Editorial Team',
+  featuredImage: 'https://res.cloudinary.com/dm3sxllch/image/upload/example.jpg',
+  readTime: 4,
+  status: 'published',
+  featured: false,
 };
 
-function postReq(body: Record<string, unknown>, headers: Record<string, string> = {}) {
+function tenantResult(input: unknown) {
+  if (input === 'default') return { ok: true as const, tenantId: 'default' };
+  return {
+    ok: false as const,
+    response: {
+      status: 422,
+      json: async () => ({ error: input ? 'Content tenant is not enabled' : 'Invalid tenantId' }),
+    } as never,
+  };
+}
+
+function request(
+  body: Record<string, unknown>,
+  headers: Record<string, string> = DEFAULT_HEADERS,
+  injectTenant = true,
+) {
   const normalized = new Map(
     Object.entries(headers).map(([key, value]) => [key.toLowerCase(), value]),
   );
+  const requestBody = injectTenant ? { tenantId: 'default', ...body } : body;
   return {
-    json: async () => body,
+    json: async () => requestBody,
     headers: { get: (name: string) => normalized.get(name.toLowerCase()) ?? null },
   } as never;
 }
 
+function lookupRequest(tenantId?: string) {
+  const searchParams = new Map(tenantId ? [['tenantId', tenantId]] : []);
+  return { nextUrl: { searchParams } } as never;
+}
+
 beforeEach(() => {
+  mockDbConnect.mockReset().mockResolvedValue({ connection: { db: {} } });
   blogFindOne.mockReset();
   blogCreate.mockReset();
+  receiverIndexesReady.mockReset().mockResolvedValue(true);
+  tenantVerifier.mockReset().mockImplementation(tenantResult);
   mockReceiptStore.current = createReceiptStore();
 });
 
 describe('POST /api/admin/content/blog', () => {
-  it('dedupes slugs within the default tenant and stores no tenantId', async () => {
-    blogFindOne.mockResolvedValue(null);
-    blogCreate.mockResolvedValue({ _id: 'id1', slug: validPayload.slug });
-
-    const res = await POST(postReq({ tenantId: 'default', payload: validPayload }));
-
-    expect(res.status).toBe(201);
-    expect(blogFindOne).toHaveBeenCalledWith({ slug: validPayload.slug, ...DEFAULT_TENANT_FILTER });
-    expect(blogCreate).toHaveBeenCalledWith(expect.objectContaining({ tenantId: undefined }));
-  });
-
-  it('scopes the dedupe check per tenant and stores the tenantId', async () => {
-    blogFindOne.mockResolvedValue(null);
-    blogCreate.mockResolvedValue({ _id: 'id2', slug: validPayload.slug });
-
-    const res = await POST(
-      postReq({ tenantId: 'makadi-bay', payload: validPayload }),
+  it('rejects non-object bodies and non-string required fields', async () => {
+    const nullBody = await POST({
+      json: async () => null,
+      headers: { get: () => null },
+    } as never);
+    const numericTitle = await POST(
+      request({ payload: { ...validPayload, title: 42 } }),
     );
 
-    expect(res.status).toBe(201);
-    expect(blogFindOne).toHaveBeenCalledWith({ slug: validPayload.slug, tenantId: 'makadi-bay' });
-    expect(blogCreate).toHaveBeenCalledWith(expect.objectContaining({ tenantId: 'makadi-bay' }));
-  });
-
-  it('409s when the slug exists under the same tenant', async () => {
-    blogFindOne.mockResolvedValue({ _id: 'dup', slug: validPayload.slug });
-
-    const res = await POST(postReq({ tenantId: 'makadi-bay', payload: validPayload }));
-
-    expect(res.status).toBe(409);
+    expect(nullBody.status).toBe(400);
+    expect(numericTitle.status).toBe(400);
+    expect(mockDbConnect).not.toHaveBeenCalled();
     expect(blogCreate).not.toHaveBeenCalled();
   });
 
-  it('drops unsupported-locale translations and reports them', async () => {
-    blogFindOne.mockResolvedValue(null);
-    blogCreate.mockResolvedValue({ _id: 'id3', slug: validPayload.slug });
+  it.each([
+    [{ payload: validPayload }, false],
+    [{ tenantId: 'makadi-bay', payload: validPayload }, true],
+  ] as const)('rejects missing or non-flagship tenant before database work', async (body, injectTenant) => {
+    const response = await POST(request(body, DEFAULT_HEADERS, injectTenant));
+    expect(response.status).toBe(422);
+    expect(receiverIndexesReady).not.toHaveBeenCalled();
+    expect(blogFindOne).not.toHaveBeenCalled();
+    expect(blogCreate).not.toHaveBeenCalled();
+  });
 
-    const res = await POST(
-      postReq({
+  it.each([
+    { ...validPayload, status: undefined },
+    { ...validPayload, status: 'draft' },
+    { ...validPayload, status: 'publshed' },
+  ])('rejects a payload that is not explicitly published', async (payload) => {
+    const response = await POST(request({ payload }));
+    expect(response.status).toBe(400);
+    expect(blogCreate).not.toHaveBeenCalled();
+  });
+
+  it('requires an exact UUID idempotency key before database access', async () => {
+    const missing = await POST(request({ payload: validPayload }, {}));
+    const malformed = await POST(
+      request({ payload: validPayload }, { 'Idempotency-Key': 'not-a-uuid' }),
+    );
+
+    expect(missing.status).toBe(400);
+    expect(malformed.status).toBe(400);
+    expect(receiverIndexesReady).not.toHaveBeenCalled();
+    expect(blogCreate).not.toHaveBeenCalled();
+  });
+
+  it('fails closed when live receiver indexes are incomplete', async () => {
+    receiverIndexesReady.mockResolvedValue(false);
+    const response = await POST(request({ payload: validPayload }));
+
+    expect(response.status).toBe(503);
+    expect(receiverIndexesReady).toHaveBeenCalledWith('blog', {});
+    expect(mockReceiptStore.current!.receipts).toHaveLength(0);
+    expect(blogCreate).not.toHaveBeenCalled();
+  });
+
+  it('returns a retryable failure when the database connection is unavailable', async () => {
+    mockDbConnect.mockRejectedValueOnce(new Error('database unavailable'));
+
+    const response = await POST(request({ payload: validPayload }));
+
+    expect(response.status).toBe(503);
+    expect(receiverIndexesReady).not.toHaveBeenCalled();
+    expect(mockReceiptStore.current!.receipts).toHaveLength(0);
+    expect(blogCreate).not.toHaveBeenCalled();
+  });
+
+  it('creates one canonical default-site post with receipt provenance', async () => {
+    blogFindOne.mockResolvedValue(null);
+    blogCreate.mockResolvedValue({ _id: 'blog-1', slug: validPayload.slug });
+
+    const response = await POST(request({ payload: validPayload }));
+
+    expect(response.status).toBe(201);
+    expect(blogFindOne).toHaveBeenCalledWith({
+      slug: validPayload.slug,
+      ...DEFAULT_TENANT_FILTER,
+    });
+    expect(blogCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: 'published',
+        tenantId: 'default',
+        contentEnginePublishReceiptId: expect.any(String),
+      }),
+    );
+  });
+
+  it('filters unsupported translations and builds the locale-correct live URL', async () => {
+    blogFindOne.mockResolvedValue(null);
+    blogCreate.mockResolvedValue({ _id: 'blog-de', slug: validPayload.slug });
+
+    const response = await POST(
+      request({
         payload: validPayload,
+        defaultLocale: 'de',
         translations: { de: { title: 'Titel' }, it: { title: 'Titolo' } },
       }),
     );
 
-    expect(res.status).toBe(201);
-    expect(blogCreate).toHaveBeenCalledWith(
-      expect.objectContaining({ translations: { de: { title: 'Titel' } } }),
-    );
-    expect(await res.json()).toEqual(expect.objectContaining({ droppedLocales: ['it'] }));
-  });
-
-  it('lets a second tenant publish a slug the default site already uses', async () => {
-    // The dedupe query is tenant-scoped, so the default-site post is invisible
-    // to the tenant publish and the create still goes through.
-    blogFindOne.mockResolvedValue(null);
-    blogCreate.mockResolvedValue({ _id: 'tenant-copy', slug: validPayload.slug });
-
-    const res = await POST(postReq({ tenantId: 'makadi-bay', payload: validPayload }));
-
-    expect(res.status).toBe(201);
-    expect(blogFindOne).toHaveBeenCalledWith({ slug: validPayload.slug, tenantId: 'makadi-bay' });
-    expect(blogFindOne).not.toHaveBeenCalledWith(
-      expect.objectContaining({ $or: expect.anything() }),
-    );
-  });
-
-  it('rejects a defaultLocale this site does not serve', async () => {
-    const res = await POST(
-      postReq({ payload: validPayload, defaultLocale: 'it' }),
-    );
-
-    expect(res.status).toBe(400);
-    expect((await res.json()) as { error: string }).toEqual(
-      expect.objectContaining({ error: expect.stringContaining('not served by this site') }),
-    );
-    expect(blogCreate).not.toHaveBeenCalled();
-  });
-
-  it('files a non-default base payload under its own language bucket', async () => {
-    blogFindOne.mockResolvedValue(null);
-    blogCreate.mockResolvedValue({ _id: 'id-de', slug: validPayload.slug });
-
-    const res = await POST(postReq({ payload: validPayload, defaultLocale: 'de' }));
-
-    expect(res.status).toBe(201);
+    expect(response.status).toBe(201);
     expect(blogCreate).toHaveBeenCalledWith(
       expect.objectContaining({
         translations: expect.objectContaining({
-          de: expect.objectContaining({ title: validPayload.title, content: validPayload.content }),
+          de: expect.objectContaining({ title: 'Titel' }),
         }),
+      }),
+    );
+    expect(await response.json()).toEqual(
+      expect.objectContaining({
+        droppedLocales: ['it'],
+        liveUrl: `https://www.egypt-excursionsonline.com/de/blog/${validPayload.slug}`,
       }),
     );
   });
 
-  it('does not mirror the base payload when it is already in the site default', async () => {
-    blogFindOne.mockResolvedValue(null);
-    blogCreate.mockResolvedValue({ _id: 'id-en', slug: validPayload.slug });
-
-    await POST(postReq({ payload: validPayload, defaultLocale: 'en' }));
-
-    expect(blogCreate).toHaveBeenCalledWith(
-      expect.objectContaining({ translations: {} }),
-    );
-  });
-});
-
-describe('POST /api/admin/content/blog — Idempotency-Key', () => {
-  const headers = { 'Idempotency-Key': '9f7d2c8a-1234-4c5d-8e9f-000000000001' };
-
-  it('creates exactly one post when the engine replays the same key', async () => {
+  it('returns the original result without a second write when a key is replayed', async () => {
     blogFindOne.mockResolvedValue(null);
     blogCreate.mockResolvedValue({ _id: 'blog-1', slug: validPayload.slug });
 
-    const first = await POST(postReq({ payload: validPayload }, headers));
-    const second = await POST(postReq({ payload: validPayload }, headers));
+    const first = await POST(request({ payload: validPayload }));
+    const replay = await POST(request({ payload: validPayload }));
 
     expect(first.status).toBe(201);
-    expect(second.status).toBe(201);
-    expect(await second.json()).toEqual(await first.json());
-    // The decisive assertion: the retry did NOT publish a second post.
+    expect(replay.status).toBe(201);
+    expect(await replay.json()).toEqual(await first.json());
     expect(blogCreate).toHaveBeenCalledTimes(1);
   });
 
-  it('keys replays per tenant so one tenant cannot read another tenant\'s result', async () => {
-    blogFindOne.mockResolvedValue(null);
-    blogCreate
-      .mockResolvedValueOnce({ _id: 'default-post', slug: validPayload.slug })
-      .mockResolvedValueOnce({ _id: 'tenant-post', slug: validPayload.slug });
-
-    const defaultRes = await POST(postReq({ payload: validPayload }, headers));
-    const tenantRes = await POST(
-      postReq({ tenantId: 'makadi-bay', payload: validPayload }, headers),
-    );
-
-    expect((await defaultRes.json()) as { id: string }).toEqual(
-      expect.objectContaining({ id: 'default-post' }),
-    );
-    expect((await tenantRes.json()) as { id: string }).toEqual(
-      expect.objectContaining({ id: 'tenant-post' }),
-    );
-    expect(blogCreate).toHaveBeenCalledTimes(2);
-  });
-
-  it('409s when the same key arrives bound to a different post', async () => {
+  it('returns 409 when the same key is rebound to different content', async () => {
     blogFindOne.mockResolvedValue(null);
     blogCreate.mockResolvedValue({ _id: 'blog-1', slug: validPayload.slug });
 
-    await POST(postReq({ payload: validPayload }, headers));
-    const res = await POST(
-      postReq({ payload: { ...validPayload, slug: 'a-different-slug' } }, headers),
+    await POST(request({ payload: validPayload }));
+    const response = await POST(
+      request({ payload: { ...validPayload, slug: 'different-slug' } }),
     );
 
-    expect(res.status).toBe(409);
+    expect(response.status).toBe(409);
     expect(blogCreate).toHaveBeenCalledTimes(1);
   });
 
-  it('adopts the existing post when a crashed attempt is retried', async () => {
-    // First attempt writes the post, then dies before marking the receipt
-    // processed — the receipt is left `pending` with a lapsed claim.
-    blogCreate.mockResolvedValue({ _id: 'blog-1', slug: validPayload.slug });
-    blogFindOne.mockResolvedValue(null);
-    await POST(postReq({ payload: validPayload }, headers));
-
-    mockReceiptStore.current!.receipts.forEach((receipt) => {
-      receipt.state = 'pending';
-      receipt.claimToken = 'dead-attempt';
+  it('recovers only content carrying the exact stale receipt provenance', async () => {
+    mockReceiptStore.current!.loseNextCompletion();
+    blogFindOne.mockResolvedValueOnce(null);
+    let committed: Record<string, unknown> | undefined;
+    blogCreate.mockImplementation(async (doc: Record<string, unknown>) => {
+      committed = doc;
+      return { _id: 'blog-1', slug: validPayload.slug };
     });
+
+    const interrupted = await POST(request({ payload: validPayload }));
+    expect(interrupted.status).toBe(503);
     mockReceiptStore.current!.expireClaims();
 
+    const existing = {
+      _id: 'blog-1',
+      slug: validPayload.slug,
+      contentEnginePublishReceiptId: committed?.contentEnginePublishReceiptId,
+    };
+    blogFindOne
+      .mockResolvedValueOnce(existing)
+      .mockResolvedValueOnce(existing);
     blogCreate.mockClear();
-    blogFindOne.mockResolvedValue({ _id: 'blog-1', slug: validPayload.slug });
 
-    const retry = await POST(postReq({ payload: validPayload }, headers));
+    const recovered = await POST(request({ payload: validPayload }));
 
-    expect(retry.status).toBe(201);
-    expect((await retry.json()) as { id: string }).toEqual(
-      expect.objectContaining({ id: 'blog-1' }),
+    expect(recovered.status).toBe(201);
+    expect(blogFindOne).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        contentEnginePublishReceiptId: committed?.contentEnginePublishReceiptId,
+      }),
     );
-    // No duplicate, and no misleading 409 for work the engine never repeated.
     expect(blogCreate).not.toHaveBeenCalled();
   });
 
-  it('still 409s a genuine duplicate slug when the key is new', async () => {
-    blogFindOne.mockResolvedValue({ _id: 'existing', slug: validPayload.slug });
+  it('never adopts unrelated content that occupies the slug after a stale claim', async () => {
+    mockReceiptStore.current!.loseNextCompletion();
+    blogFindOne.mockResolvedValueOnce(null);
+    blogCreate.mockResolvedValue({ _id: 'blog-1', slug: validPayload.slug });
+    await POST(request({ payload: validPayload }));
+    mockReceiptStore.current!.expireClaims();
 
-    const res = await POST(postReq({ payload: validPayload }, headers));
+    blogFindOne
+      .mockResolvedValueOnce({ _id: 'manual-post', slug: validPayload.slug })
+      .mockResolvedValueOnce(null);
+    blogCreate.mockClear();
 
-    expect(res.status).toBe(409);
+    const response = await POST(request({ payload: validPayload }));
+
+    expect(response.status).toBe(409);
     expect(blogCreate).not.toHaveBeenCalled();
-    // The claim is released so a corrected retry is not blocked by the receipt.
     expect(mockReceiptStore.current!.receipts).toHaveLength(0);
   });
 
-  it('releases the claim when the insert fails so the engine can retry', async () => {
+  it('releases the claim after an insert failure but retains it after response loss', async () => {
     blogFindOne.mockResolvedValue(null);
-    blogCreate.mockRejectedValue(new Error('insert exploded'));
-
-    const res = await POST(postReq({ payload: validPayload }, headers));
-
-    expect(res.status).toBe(500);
+    blogCreate.mockRejectedValueOnce(new Error('insert failed'));
+    const insertFailure = await POST(request({ payload: validPayload }));
+    expect(insertFailure.status).toBe(503);
     expect(mockReceiptStore.current!.receipts).toHaveLength(0);
-  });
 
-  it('rejects a malformed Idempotency-Key', async () => {
-    const res = await POST(
-      postReq({ payload: validPayload }, { 'Idempotency-Key': 'x'.repeat(201) }),
-    );
-
-    expect(res.status).toBe(400);
-    expect(blogCreate).not.toHaveBeenCalled();
-  });
-
-  it('still publishes when no Idempotency-Key is sent', async () => {
-    blogFindOne.mockResolvedValue(null);
-    blogCreate.mockResolvedValue({ _id: 'blog-nokey', slug: validPayload.slug });
-
-    const res = await POST(postReq({ payload: validPayload }));
-
-    expect(res.status).toBe(201);
-    expect(mockReceiptStore.current!.receipts).toHaveLength(0);
+    mockReceiptStore.current = createReceiptStore();
+    mockReceiptStore.current!.loseNextCompletion();
+    blogCreate.mockResolvedValueOnce({ _id: 'blog-1', slug: validPayload.slug });
+    const responseLoss = await POST(request({ payload: validPayload }));
+    expect(responseLoss.status).toBe(503);
+    expect(mockReceiptStore.current!.receipts).toHaveLength(1);
+    expect(mockReceiptStore.current!.receipts[0]?.state).toBe('pending');
   });
 });
 
 describe('PUT /api/admin/content/blog', () => {
-  it('looks up the post within the payload tenant only', async () => {
-    blogFindOne.mockResolvedValue(null);
+  it('rejects a non-object body before tenant or database work', async () => {
+    const response = await PUT({
+      json: async () => [],
+      headers: { get: () => null },
+    } as never);
 
-    const res = await PUT(postReq({ tenantId: 'el-gouna', payload: validPayload }));
-
-    expect(res.status).toBe(404);
-    expect(blogFindOne).toHaveBeenCalledWith({ slug: validPayload.slug, tenantId: 'el-gouna' });
+    expect(response.status).toBe(400);
+    expect(mockDbConnect).not.toHaveBeenCalled();
   });
 
-  it('filters translations on update and reports dropped locales', async () => {
+  it('updates only an explicitly published default-site post', async () => {
     const existing = {
       tags: [],
       save: jest.fn().mockResolvedValue(undefined),
-      _id: 'id4',
+      _id: 'blog-1',
       slug: validPayload.slug,
     } as Record<string, unknown> & { save: jest.Mock };
     blogFindOne.mockResolvedValue(existing);
 
-    const res = await PUT(
-      postReq({
+    const response = await PUT(
+      request({
         payload: validPayload,
         translations: { ar: { title: 'عنوان' }, ru: { title: 'Заголовок' } },
       }),
     );
 
-    expect(res.status).toBe(200);
+    expect(response.status).toBe(200);
+    expect(blogFindOne).toHaveBeenCalledWith({
+      slug: validPayload.slug,
+      ...DEFAULT_TENANT_FILTER,
+    });
     expect(existing.translations).toEqual({ ar: { title: 'عنوان' } });
-    expect(await res.json()).toEqual(expect.objectContaining({ droppedLocales: ['ru'] }));
+    expect(await response.json()).toEqual(expect.objectContaining({ droppedLocales: ['ru'] }));
+  });
+
+  it('remains disabled until the exact receiver indexes are present', async () => {
+    receiverIndexesReady.mockResolvedValue(false);
+
+    const response = await PUT(request({ payload: validPayload }));
+
+    expect(response.status).toBe(503);
+    expect(blogFindOne).not.toHaveBeenCalled();
   });
 });
 
 describe('GET /api/admin/content/blog/[slug]', () => {
-  function getReq(tenantId?: string) {
-    const searchParams = new Map(tenantId ? [['tenantId', tenantId]] : []);
-    return { nextUrl: { searchParams } } as never;
-  }
-
-  it('defaults to the default-site namespace when no tenant param is given', async () => {
-    const lean = jest.fn().mockResolvedValue(null);
-    blogFindOne.mockReturnValue({ lean });
-
-    const res = await GET(getReq(), { params: Promise.resolve({ slug: 'some-slug' }) });
-
-    expect(res.status).toBe(404);
-    expect(blogFindOne).toHaveBeenCalledWith({ slug: 'some-slug', ...DEFAULT_TENANT_FILTER });
+  it('requires the exact default tenant query parameter', async () => {
+    const response = await GET(lookupRequest(), {
+      params: Promise.resolve({ slug: 'some-slug' }),
+    });
+    expect(response.status).toBe(422);
+    expect(blogFindOne).not.toHaveBeenCalled();
   });
 
-  it('scopes the lookup to the requested tenant', async () => {
+  it('reads only the default-site namespace', async () => {
     const lean = jest.fn().mockResolvedValue({
-      _id: 'id5',
+      _id: 'blog-1',
       slug: 'some-slug',
-      title: 'T',
+      title: 'Title',
       status: 'published',
-      tenantId: 'makadi-bay',
       updatedAt: new Date(0),
     });
     blogFindOne.mockReturnValue({ lean });
 
-    const res = await GET(getReq('makadi-bay'), { params: Promise.resolve({ slug: 'some-slug' }) });
+    const response = await GET(lookupRequest('default'), {
+      params: Promise.resolve({ slug: 'some-slug' }),
+    });
 
-    expect(res.status).toBe(200);
-    expect(blogFindOne).toHaveBeenCalledWith({ slug: 'some-slug', tenantId: 'makadi-bay' });
-    expect(await res.json()).toEqual(expect.objectContaining({ tenantId: 'makadi-bay' }));
+    expect(response.status).toBe(200);
+    expect(blogFindOne).toHaveBeenCalledWith({
+      slug: 'some-slug',
+      ...DEFAULT_TENANT_FILTER,
+    });
+    expect(await response.json()).toEqual(
+      expect.objectContaining({ tenantId: null, status: 'published' }),
+    );
+  });
+
+  it('returns a retryable response when the lookup database is unavailable', async () => {
+    mockDbConnect.mockRejectedValueOnce(new Error('database unavailable'));
+
+    const response = await GET(lookupRequest('default'), {
+      params: Promise.resolve({ slug: 'some-slug' }),
+    });
+
+    expect(response.status).toBe(503);
+    expect(blogFindOne).not.toHaveBeenCalled();
   });
 });

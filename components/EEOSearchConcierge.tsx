@@ -51,7 +51,8 @@ const copy: Record<string, { label: string; kicker: string; placeholder: string 
 // the code panel there (client-reported on the network offer pages, 13 Aug).
 // Tour pages are the destination this feature exists to drive traffic to and
 // own their own booking call to action, so the launcher stops at their door
-// (client-reported, 19 Aug).
+// (client-reported, 19 Aug). Tool pages already provide a full-screen planning
+// interaction; the fixed launcher covers their footer on phone viewports.
 const HIDDEN_ROUTES = [
   '/admin',
   '/checkout',
@@ -63,6 +64,7 @@ const HIDDEN_ROUTES = [
   '/reset-password',
   '/offer',
   '/tour',
+  '/tools',
 ];
 
 // A tour also renders at the site root when its slug resolves there, so the
