@@ -8,6 +8,8 @@
  *   pnpm dev              # Starts on port 3000 (or next available)
  *   pnpm dev -- -p 3005   # Starts on port 3005 (or next available)
  *   PORT=4000 pnpm dev    # Starts on port 4000 (or next available)
+ *   pnpm dev --webpack    # Falls back to webpack when Turbopack's dev
+ *                         # runtime crashes on a page (see below)
  */
 
 import { spawn } from 'child_process';
@@ -59,8 +61,23 @@ async function startDevServer() {
       console.warn(`   Consider closing some applications to free up ports.\n`);
     }
 
+    // Turbopack is the default because it is much faster, but its dev runtime
+    // can die with "Maximum call stack size exceeded" in visitAsyncNode on some
+    // pages of this app (tour detail, next@16.2.x) — the server exits and the
+    // page never renders, while `next build` compiles the same route cleanly.
+    // Webpack serves those pages fine, so keep an escape hatch rather than
+    // leaving the only local option a crashing one:
+    //   pnpm dev --webpack      or      NEXT_BUNDLER=webpack pnpm dev
+    const bundler = process.argv.slice(2).includes('--webpack')
+      || process.env.NEXT_BUNDLER === 'webpack'
+      ? '--webpack'
+      : '--turbopack';
+    if (bundler === '--webpack') {
+      console.log('ℹ️  Using webpack for this dev session.\n');
+    }
+
     // Start the Next.js dev server with the available port
-    const devProcess = spawn('next', ['dev', '--turbopack', '-p', port.toString()], {
+    const devProcess = spawn('next', ['dev', bundler, '-p', port.toString()], {
       stdio: 'inherit',
       shell: true,
       env: {
