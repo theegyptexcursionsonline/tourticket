@@ -23,6 +23,7 @@ import { DEFAULT_TENANT_FILTER } from "@/lib/tenant/defaultTenantFilter";
 import type { Category as CategoryData, Destination as DestinationData } from '@/types';
 import GoogleTagManager from './GoogleTagManager';
 import EEOSearchConcierge from '@/components/EEOSearchConcierge';
+import EEOVoiceConcierge from '@/components/EEOVoiceConcierge';
 import { StorefrontThemeProvider } from '@/contexts/StorefrontThemeContext';
 import { STOREFRONT_THEME_BOOTSTRAP } from '@/lib/storefrontTheme';
 import { filterVisibleTaxonomyEntries } from '@/lib/utils/taxonomy';
@@ -234,6 +235,7 @@ export default async function LocaleLayout({
                     <WishlistSidebar />
                     <AppToaster direction={dir} />
                     <EEOSearchConcierge />
+                    <EEOVoiceConcierge />
                   </NavDataProvider>
                 </WishlistProvider>
               </CartProvider>
