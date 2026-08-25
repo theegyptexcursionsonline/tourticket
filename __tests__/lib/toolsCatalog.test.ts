@@ -1,9 +1,13 @@
 import { locales } from '@/i18n/config';
 import {
+  AUTHORITY_PUBLIC_ORIGIN,
   OFFICIAL_TOOLS,
   STOREFRONT_TOOL_BRAND,
+  absoluteCustomerToolUrl,
   absoluteToolUrl,
+  customerToolHref,
   getOfficialTool,
+  isNativeStorefrontTool,
   localizedStorefrontPath,
   localizedToolPath,
 } from '@/lib/tools/catalog';
@@ -56,5 +60,22 @@ describe('Authority storefront tool catalog', () => {
     expect(localizedToolPath('de', 'visa-checker')).toBe('/de/tools/visa-checker');
     expect(localizedToolPath('unknown', 'visa-checker')).toBe('/tools/visa-checker');
     expect(localizedStorefrontPath('fr', '///tools///')).toBe('/fr/tools');
+  });
+
+  it('routes only the two established tools natively and every other official tool to the branded live host', () => {
+    for (const tool of OFFICIAL_TOOLS) {
+      const href = customerToolHref('de', tool);
+      const absoluteUrl = absoluteCustomerToolUrl('de', tool);
+
+      if (tool.id === 'trip-cost-calculator' || tool.id === 'visa-checker') {
+        expect(isNativeStorefrontTool(tool.id)).toBe(true);
+        expect(href).toBe(`/de/tools/${tool.id}`);
+        expect(absoluteUrl).toBe(`${STOREFRONT_TOOL_BRAND.origin}${href}`);
+      } else {
+        expect(isNativeStorefrontTool(tool.id)).toBe(false);
+        expect(href).toBe(`${AUTHORITY_PUBLIC_ORIGIN}${tool.embedPath}`);
+        expect(absoluteUrl).toBe(href);
+      }
+    }
   });
 });

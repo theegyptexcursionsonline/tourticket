@@ -1,8 +1,14 @@
 import { cleanup, render, screen } from '@testing-library/react';
 
-import ToolsIndexPage, { metadata as catalogMetadata } from '@/app/[locale]/tools/page';
+import ToolsIndexPage, { generateMetadata as generateCatalogMetadata } from '@/app/[locale]/tools/page';
 import ToolPage, { generateMetadata as generateToolMetadata } from '@/app/[locale]/tools/[tool]/page';
-import { OFFICIAL_TOOLS, STOREFRONT_TOOL_BRAND, type OfficialToolId } from '@/lib/tools/catalog';
+import {
+  AUTHORITY_PUBLIC_ORIGIN,
+  OFFICIAL_TOOLS,
+  STOREFRONT_TOOL_BRAND,
+  customerToolHref,
+  type OfficialToolId,
+} from '@/lib/tools/catalog';
 
 const mockGetAuthorityToolState = jest.fn();
 
@@ -36,14 +42,37 @@ describe('localized Authority tools storefront pages', () => {
     delete process.env.AUTHORITY_PUBLISHER_TOKEN;
   });
 
-  it('keeps the two established public tools while Authority activation is staged', () => {
-    const { container } = render(<ToolsIndexPage />);
+  it('discovers all ten official tools without routing customers into unconfigured local embeds', async () => {
+    const { container } = render(
+      await ToolsIndexPage({ params: Promise.resolve({ locale: 'de' }) }),
+    );
 
-    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Free travel tools');
-    expect(container.querySelector('a[href="/tools/trip-cost-calculator"]')).toBeInTheDocument();
-    expect(container.querySelector('a[href="/tools/visa-checker"]')).toBeInTheDocument();
-    expect(container.querySelector('a[href="/tools/packing-list"]')).not.toBeInTheDocument();
-    expect(container.querySelectorAll('main a')).toHaveLength(2);
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Free tools for a better Egypt trip');
+    expect(screen.getByText('10 planning tools')).toBeInTheDocument();
+    expect(screen.getAllByRole('listitem')).toHaveLength(10);
+
+    for (const tool of OFFICIAL_TOOLS) {
+      const href = customerToolHref('de', tool);
+      const link = container.querySelector(`a[href="${href}"]`);
+      expect(link).toBeInTheDocument();
+      expect(link).toHaveTextContent(tool.name);
+      expect(link).toHaveAttribute('href', customerToolHref('de', tool));
+    }
+
+    expect(container.querySelector('a[href="/de/tools/packing-list"]')).not.toBeInTheDocument();
+    expect(container.querySelector(`a[href^="${AUTHORITY_PUBLIC_ORIGIN}"]`)).toBeInTheDocument();
+
+    const jsonLd = container.querySelector('script[type="application/ld+json"]')?.textContent || '';
+    const schema = JSON.parse(jsonLd);
+    expect(schema).toMatchObject({ '@type': 'ItemList', numberOfItems: 10 });
+    expect(schema.itemListElement).toHaveLength(10);
+    expect(
+      schema.itemListElement.find(
+        (item: { name: string }) => item.name === 'Egypt Packing List Generator',
+      ),
+    ).toMatchObject({
+      url: `${AUTHORITY_PUBLIC_ORIGIN}/embed/packing-list.html`,
+    });
   });
 
   it('renders the staged per-tool component from the official catalog and never honors forged host or brand values', async () => {
@@ -99,11 +128,12 @@ describe('localized Authority tools storefront pages', () => {
   });
 
   it('generates canonical and hreflang metadata for default and prefixed locale routes', async () => {
+    const catalogEn = await generateCatalogMetadata({ params: Promise.resolve({ locale: 'en' }) });
     const visaDe = await generateToolMetadata({
       params: Promise.resolve({ locale: 'de', tool: 'visa-checker' }),
     });
 
-    expect(catalogMetadata.alternates?.canonical).toBe('/tools');
+    expect(catalogEn.alternates?.canonical).toBe(`${STOREFRONT_TOOL_BRAND.origin}/tools`);
     expect(visaDe.alternates?.canonical).toBe(
       `${STOREFRONT_TOOL_BRAND.origin}/de/tools/visa-checker`,
     );

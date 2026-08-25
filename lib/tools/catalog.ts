@@ -8,6 +8,9 @@ export const STOREFRONT_TOOL_BRAND = {
   accent: '#E05D1A',
 } as const;
 
+/** Public, branded Authority host. This is customer navigation, never the private API host. */
+export const AUTHORITY_PUBLIC_ORIGIN = 'https://tools.egypt-excursionsonline.com' as const;
+
 export const OFFICIAL_TOOLS = [
   {
     id: 'trip-cost-calculator',
@@ -95,6 +98,11 @@ export type OfficialTool = (typeof OFFICIAL_TOOLS)[number];
 export type OfficialToolId = OfficialTool['id'];
 export type ToolIconName = OfficialTool['icon'];
 
+const NATIVE_STOREFRONT_TOOL_IDS = new Set<OfficialToolId>([
+  'trip-cost-calculator',
+  'visa-checker',
+]);
+
 const TOOL_BY_ID = new Map<OfficialToolId, OfficialTool>(
   OFFICIAL_TOOLS.map((tool) => [tool.id, tool]),
 );
@@ -121,4 +129,26 @@ export function localizedToolPath(locale: string, tool?: OfficialToolId): string
 
 export function absoluteToolUrl(locale: string, tool?: OfficialToolId): string {
   return `${STOREFRONT_TOOL_BRAND.origin}${localizedToolPath(locale, tool)}`;
+}
+
+export function isNativeStorefrontTool(tool: OfficialToolId): boolean {
+  return NATIVE_STOREFRONT_TOOL_IDS.has(tool);
+}
+
+/**
+ * Route customers only to a surface that is already available.
+ *
+ * The two established tools remain native. The other official tools open on
+ * the branded Authority host until their server-verified local embed routes
+ * are explicitly configured and activated.
+ */
+export function customerToolHref(locale: string, tool: OfficialTool): string {
+  return isNativeStorefrontTool(tool.id)
+    ? localizedToolPath(locale, tool.id)
+    : `${AUTHORITY_PUBLIC_ORIGIN}${tool.embedPath}`;
+}
+
+export function absoluteCustomerToolUrl(locale: string, tool: OfficialTool): string {
+  const href = customerToolHref(locale, tool);
+  return href.startsWith('/') ? `${STOREFRONT_TOOL_BRAND.origin}${href}` : href;
 }

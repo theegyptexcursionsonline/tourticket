@@ -1,68 +1,99 @@
-import React from 'react';
-import { Metadata } from 'next';
+import type { Metadata } from 'next';
 import Link from 'next/link';
-import { Calculator, StampIcon, ArrowRight } from 'lucide-react';
+import { ArrowRight, ArrowUpRight, BadgeCheck } from 'lucide-react';
 
-import { ToolsHeader, ToolsFooter } from '@/components/tools/ToolsChrome';
-import { getSeoAlternates } from '@/lib/seo';
+import ToolIcon from '@/components/tools/ToolIcon';
+import { ToolsFooter, ToolsHeader } from '@/components/tools/ToolsChrome';
+import { ToolsCatalogStructuredData } from '@/components/tools/ToolsStructuredData';
+import { metadataAlternates } from '@/lib/i18n/seoAlternates';
+import {
+  AUTHORITY_PUBLIC_ORIGIN,
+  OFFICIAL_TOOLS,
+  STOREFRONT_TOOL_BRAND,
+  customerToolHref,
+} from '@/lib/tools/catalog';
 
-export const dynamic = 'force-dynamic';
+interface ToolsIndexPageProps {
+  params: Promise<{ locale: string }>;
+}
 
-const ACCENT = '#E05D1A';
+export async function generateMetadata({ params }: ToolsIndexPageProps): Promise<Metadata> {
+  const { locale } = await params;
+  return {
+    title: 'Free Egypt Travel Tools | Egypt Excursions Online',
+    description:
+      'Ten free planning tools for Egypt trips, including budget, entry, timing, transfers, diving, packing and itinerary guidance.',
+    alternates: metadataAlternates(locale, '/tools'),
+  };
+}
 
-export const metadata: Metadata = {
-  title: 'Free Travel Tools | Egypt Excursions Online',
-  description: 'Free planning tools for your Egypt trip from Egypt Excursions Online — trip cost calculator, visa checker and more.',
-  alternates: getSeoAlternates('/tools'),
-};
+export default async function ToolsIndexPage({ params }: ToolsIndexPageProps) {
+  const { locale } = await params;
+  const { name, logoUrl, accent } = STOREFRONT_TOOL_BRAND;
 
-const TOOLS = [
-  {
-    href: '/tools/trip-cost-calculator',
-    Icon: Calculator,
-    title: 'Egypt Trip Cost Calculator',
-    desc: 'Estimate your full budget — hotels, food, transport, tours and visa.',
-  },
-  {
-    href: '/tools/visa-checker',
-    Icon: StampIcon,
-    title: 'Egypt Visa Checker',
-    desc: 'Do you need a visa? Entry requirements by nationality — cost, stay and steps.',
-  },
-];
-
-export default function ToolsIndexPage() {
   return (
-    <div className="bg-white text-slate-800 min-h-screen flex flex-col">
-      <ToolsHeader name="Egypt Excursions Online" logoUrl="/EEO-mark.png" accent={ACCENT} />
-      <main className="container mx-auto px-4 py-12 flex-grow">
-        <div className="max-w-4xl mx-auto">
-          <h1 className="text-4xl font-extrabold text-slate-900 mb-2">Free travel tools</h1>
-          <p className="text-lg text-slate-600 mb-10">Plan your Egypt trip with quick, free tools.</p>
+    <div className="flex min-h-screen flex-col bg-slate-50 text-slate-800">
+      <ToolsCatalogStructuredData locale={locale} />
+      <ToolsHeader name={name} logoUrl={logoUrl} accent={accent} locale={locale} />
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {TOOLS.map(({ href, Icon, title, desc }) => (
-              <Link
-                key={href}
-                href={href}
-                className="group flex items-center justify-between border border-slate-200 rounded-2xl p-6 hover:shadow-lg transition-shadow"
-              >
-                <div className="flex items-center gap-4">
-                  <span className="rounded-xl p-3 shrink-0" style={{ backgroundColor: `${ACCENT}14`, color: ACCENT }}>
-                    <Icon className="w-6 h-6" />
-                  </span>
-                  <span>
-                    <span className="block text-lg font-bold text-slate-900">{title}</span>
-                    <span className="block text-sm text-slate-500">{desc}</span>
-                  </span>
-                </div>
-                <ArrowRight className="w-5 h-5 text-slate-400 group-hover:translate-x-1 transition-transform shrink-0" />
-              </Link>
-            ))}
+      <main className="flex-grow">
+        <section aria-labelledby="tools-title" className="border-b border-slate-200 bg-white">
+          <div className="container mx-auto max-w-6xl px-4 py-12 sm:py-16">
+            <div className="max-w-3xl">
+              <div className="inline-flex items-center gap-2 rounded-full bg-orange-50 px-3 py-1.5 text-xs font-bold uppercase tracking-[0.14em] text-orange-700">
+                <BadgeCheck aria-hidden="true" className="h-4 w-4" />
+                10 planning tools
+              </div>
+              <h1 id="tools-title" className="mt-5 text-4xl font-extrabold tracking-tight text-slate-950 sm:text-5xl">
+                Free tools for a better Egypt trip
+              </h1>
+              <p className="mt-4 max-w-2xl text-base leading-7 text-slate-600 sm:text-lg">
+                Plan costs, entry, transport, timing and day-by-day details with one maintained collection from {name}.
+              </p>
+            </div>
           </div>
-        </div>
+        </section>
+
+        <section aria-label="Egypt travel planning tools" className="container mx-auto max-w-6xl px-4 py-10 sm:py-12">
+          <div role="list" className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            {OFFICIAL_TOOLS.map((tool) => {
+              const href = customerToolHref(locale, tool);
+              const authorityHosted = href.startsWith(AUTHORITY_PUBLIC_ORIGIN);
+              const DirectionIcon = authorityHosted ? ArrowUpRight : ArrowRight;
+
+              return (
+                <article role="listitem" key={tool.id} className="min-w-0">
+                  <Link
+                    href={href}
+                    aria-label={`Open ${tool.name}`}
+                    data-tool-id={tool.id}
+                    data-tool-surface={authorityHosted ? 'branded-authority' : 'native'}
+                    className="group flex h-full min-w-0 items-start gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-orange-200 hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-600 focus-visible:ring-offset-2 sm:p-6"
+                  >
+                    <span
+                      className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl"
+                      style={{ backgroundColor: `${accent}14`, color: accent }}
+                    >
+                      <ToolIcon name={tool.icon} />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="text-xs font-bold uppercase tracking-[0.12em] text-slate-400">{tool.category}</span>
+                      <span className="mt-1 block text-lg font-bold leading-6 text-slate-950">{tool.name}</span>
+                      <span className="mt-2 block text-sm leading-6 text-slate-600">{tool.description}</span>
+                    </span>
+                    <DirectionIcon
+                      aria-hidden="true"
+                      className="mt-3 h-5 w-5 shrink-0 text-slate-400 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-focus-visible:translate-x-0.5 group-focus-visible:-translate-y-0.5"
+                    />
+                  </Link>
+                </article>
+              );
+            })}
+          </div>
+        </section>
       </main>
-      <ToolsFooter name="Egypt Excursions Online" accent={ACCENT} />
+
+      <ToolsFooter name={name} accent={accent} locale={locale} />
     </div>
   );
 }

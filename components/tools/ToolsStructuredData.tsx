@@ -2,7 +2,9 @@ import React from 'react';
 
 import { serializeJsonLd } from '@/lib/security/serializeJsonLd';
 import {
+  OFFICIAL_TOOLS,
   STOREFRONT_TOOL_BRAND,
+  absoluteCustomerToolUrl,
   absoluteToolUrl,
   type OfficialTool,
 } from '@/lib/tools/catalog';
@@ -12,6 +14,25 @@ function JsonLd({ value }: { value: Record<string, unknown> }) {
     <script
       type="application/ld+json"
       dangerouslySetInnerHTML={{ __html: serializeJsonLd(value) }}
+    />
+  );
+}
+
+export function ToolsCatalogStructuredData({ locale }: { locale: string }) {
+  return (
+    <JsonLd
+      value={{
+        '@context': 'https://schema.org',
+        '@type': 'ItemList',
+        name: 'Free Egypt travel planning tools',
+        numberOfItems: OFFICIAL_TOOLS.length,
+        itemListElement: OFFICIAL_TOOLS.map((tool, index) => ({
+          '@type': 'ListItem',
+          position: index + 1,
+          name: tool.name,
+          url: absoluteCustomerToolUrl(locale, tool),
+        })),
+      }}
     />
   );
 }
