@@ -113,6 +113,9 @@ describe('public integrity route regressions', () => {
     expect(config).toContain('https://*.stripe.com');
     expect(config).toContain('https://*.intercom.io');
     expect(config).toContain("script-src-attr 'none'");
+    // The voice assistant's launcher and frame load from its own origin; a
+    // CSP edit that drops it silently kills the assistants page.
+    expect(config).toContain('voiceWidgetOrigin');
     expect(config).toContain('https://search.foxestechnology.com');
   });
 
