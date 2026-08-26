@@ -61,7 +61,7 @@ export default function AssistantsClient() {
   }, [bookingOrgId]);
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-16">
+    <div data-testid="assistants-page" className="mx-auto max-w-3xl px-4 pt-16 pb-40 sm:pb-16">
       <h1 className="text-3xl font-bold text-slate-900">Talk to us, your way</h1>
       <p className="mt-3 text-slate-600">
         Ask about tours, transfers and travel plans by voice, or search and book
