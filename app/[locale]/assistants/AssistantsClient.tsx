@@ -32,7 +32,7 @@ export default function AssistantsClient() {
       script.onload = () => setVoiceLoaded(true);
       document.body.appendChild(script);
     } else {
-      setVoiceLoaded(true);
+      queueMicrotask(() => setVoiceLoaded(true));
     }
 
     if (BOOKING_ORG_ID && !document.getElementById(BOOKING_SCRIPT_ID)) {
