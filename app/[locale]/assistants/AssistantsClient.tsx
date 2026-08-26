@@ -29,7 +29,8 @@ export default function AssistantsClient() {
       script.src = `${VOICE_ORIGIN}/widget.js`;
       script.async = true;
       script.dataset.foxesWidgetId = VOICE_WIDGET_ID;
-      script.dataset.foxesPosition = 'bottom-right';
+      // Booking owns the bottom-right action on this dual-assistant page.
+      script.dataset.foxesPosition = 'bottom-left';
       script.onload = () => setVoiceLoaded(true);
       document.body.appendChild(script);
     } else {

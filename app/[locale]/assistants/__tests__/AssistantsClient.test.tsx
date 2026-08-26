@@ -19,6 +19,7 @@ describe('AssistantsClient', () => {
     expect(script).toBeInTheDocument();
     expect(script.src).toContain('voice.foxestechnology.com/widget.js');
     expect(script.getAttribute('data-foxes-widget-id')).toBe('694c1a7a27cc23227da2ccdb');
+    expect(script.getAttribute('data-foxes-position')).toBe('bottom-left');
   });
 
   it('renders no booking section at all while the organization is unconfigured', () => {
