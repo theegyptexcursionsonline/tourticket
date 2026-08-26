@@ -8,7 +8,7 @@ const VOICE_SCRIPT_ID = 'eeo-assistants-voice-script';
 const VOICE_FRAME_ID = 'foxes-voice-widget-frame';
 
 const BOOKING_ORIGIN = process.env.NEXT_PUBLIC_FOXES_BOOKING_ORIGIN || 'https://booking.foxestechnology.com';
-const BOOKING_WIDGET_RELEASE = process.env.NEXT_PUBLIC_FOXES_BOOKING_WIDGET_RELEASE || '0931bb5';
+const BOOKING_WIDGET_RELEASE = process.env.NEXT_PUBLIC_FOXES_BOOKING_WIDGET_RELEASE || '4aa6581';
 const BOOKING_SCRIPT_ID = 'eeo-assistants-booking-script';
 
 /**
