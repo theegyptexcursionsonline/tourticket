@@ -27,6 +27,22 @@ describe('AssistantsClient', () => {
     expect(screen.queryByText('Book directly')).toBeNull();
   });
 
+  it('cache-busts the configured booking release and keeps the public API contract', () => {
+    process.env.NEXT_PUBLIC_FOXES_BOOKING_ORG_ID = 'qa-booking-org';
+    render(<AssistantsClient />);
+
+    const script = document.getElementById(BOOKING_SCRIPT_ID) as HTMLScriptElement;
+    expect(script).toBeInTheDocument();
+    expect(script.src).toBe(
+      'https://booking.foxestechnology.com/widget/foxes-booking-v2.js?v=0931bb5',
+    );
+    expect(script.getAttribute('data-org-id')).toBe('qa-booking-org');
+    expect(script.getAttribute('data-api-url')).toBe(
+      'https://foxes-api-production.up.railway.app/api/v1',
+    );
+    expect(screen.getByText('Book directly')).toBeInTheDocument();
+  });
+
   it('cleans both widgets up on unmount', () => {
     const { unmount } = render(<AssistantsClient />);
     expect(document.getElementById(VOICE_SCRIPT_ID)).not.toBeNull();

@@ -7,8 +7,8 @@ const VOICE_WIDGET_ID = process.env.NEXT_PUBLIC_FOXES_VOICE_WIDGET_ID || '694c1a
 const VOICE_SCRIPT_ID = 'eeo-assistants-voice-script';
 const VOICE_FRAME_ID = 'foxes-voice-widget-frame';
 
-const BOOKING_ORG_ID = process.env.NEXT_PUBLIC_FOXES_BOOKING_ORG_ID || '';
 const BOOKING_ORIGIN = process.env.NEXT_PUBLIC_FOXES_BOOKING_ORIGIN || 'https://booking.foxestechnology.com';
+const BOOKING_WIDGET_RELEASE = process.env.NEXT_PUBLIC_FOXES_BOOKING_WIDGET_RELEASE || '0931bb5';
 const BOOKING_SCRIPT_ID = 'eeo-assistants-booking-script';
 
 /**
@@ -18,6 +18,7 @@ const BOOKING_SCRIPT_ID = 'eeo-assistants-booking-script';
  * configured, so an unconfigured assistant never shows a dead control.
  */
 export default function AssistantsClient() {
+  const bookingOrgId = process.env.NEXT_PUBLIC_FOXES_BOOKING_ORG_ID || '';
   const [voiceLoaded, setVoiceLoaded] = useState(false);
   const [bookingLoaded, setBookingLoaded] = useState(false);
 
@@ -35,13 +36,13 @@ export default function AssistantsClient() {
       queueMicrotask(() => setVoiceLoaded(true));
     }
 
-    if (BOOKING_ORG_ID && !document.getElementById(BOOKING_SCRIPT_ID)) {
+    if (bookingOrgId && !document.getElementById(BOOKING_SCRIPT_ID)) {
       const script = document.createElement('script');
       script.id = BOOKING_SCRIPT_ID;
-      script.src = `${BOOKING_ORIGIN}/widget/foxes-booking-v2.js`;
+      script.src = `${BOOKING_ORIGIN}/widget/foxes-booking-v2.js?v=${encodeURIComponent(BOOKING_WIDGET_RELEASE)}`;
       script.async = true;
       script.setAttribute('data-foxes-widget', '');
-      script.setAttribute('data-org-id', BOOKING_ORG_ID);
+      script.setAttribute('data-org-id', bookingOrgId);
       script.setAttribute(
         'data-api-url',
         process.env.NEXT_PUBLIC_FOXES_BOOKING_API ||
@@ -56,7 +57,7 @@ export default function AssistantsClient() {
       document.getElementById(VOICE_FRAME_ID)?.remove();
       document.getElementById(BOOKING_SCRIPT_ID)?.remove();
     };
-  }, []);
+  }, [bookingOrgId]);
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-16">
@@ -77,7 +78,7 @@ export default function AssistantsClient() {
         </p>
       </section>
 
-      {BOOKING_ORG_ID ? (
+      {bookingOrgId ? (
         <section className="mt-6 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
           <h2 className="text-xl font-semibold text-slate-900">Book directly</h2>
           <p className="mt-2 text-slate-600">
