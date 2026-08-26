@@ -42,7 +42,11 @@ export default function AssistantsClient() {
       script.async = true;
       script.setAttribute('data-foxes-widget', '');
       script.setAttribute('data-org-id', BOOKING_ORG_ID);
-      script.setAttribute('data-api-url', process.env.NEXT_PUBLIC_FOXES_BOOKING_API || 'https://foxes-api-production.up.railway.app');
+      script.setAttribute(
+        'data-api-url',
+        process.env.NEXT_PUBLIC_FOXES_BOOKING_API ||
+          'https://foxes-api-production.up.railway.app/api/v1',
+      );
       script.onload = () => setBookingLoaded(true);
       document.body.appendChild(script);
     }

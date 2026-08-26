@@ -125,6 +125,13 @@ describe('public integrity route regressions', () => {
     expect(config).toContain('https://search.foxestechnology.com');
   });
 
+  it('uses the versioned Booking API contract on the assistants page', () => {
+    const assistants = source('app/[locale]/assistants/AssistantsClient.tsx');
+    expect(assistants).toContain(
+      'https://foxes-api-production.up.railway.app/api/v1',
+    );
+  });
+
   it('keeps main-admin metrics tenant-scoped and lets booking operators read tour labels', () => {
     const dashboard = source('app/api/admin/dashboard/route.ts');
     const tourOptions = source('app/api/admin/tours/options/route.ts');
