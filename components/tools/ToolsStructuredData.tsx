@@ -4,7 +4,6 @@ import { serializeJsonLd } from '@/lib/security/serializeJsonLd';
 import {
   OFFICIAL_TOOLS,
   STOREFRONT_TOOL_BRAND,
-  absoluteCustomerToolUrl,
   absoluteToolUrl,
   type OfficialTool,
 } from '@/lib/tools/catalog';
@@ -30,7 +29,7 @@ export function ToolsCatalogStructuredData({ locale }: { locale: string }) {
           '@type': 'ListItem',
           position: index + 1,
           name: tool.name,
-          url: absoluteCustomerToolUrl(locale, tool),
+          url: absoluteToolUrl(locale, tool.id),
         })),
       }}
     />

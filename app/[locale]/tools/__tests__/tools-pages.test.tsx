@@ -6,6 +6,7 @@ import {
   AUTHORITY_PUBLIC_ORIGIN,
   OFFICIAL_TOOLS,
   STOREFRONT_TOOL_BRAND,
+  absoluteToolUrl,
   customerToolHref,
   type OfficialToolId,
 } from '@/lib/tools/catalog';
@@ -67,12 +68,13 @@ describe('localized Authority tools storefront pages', () => {
     expect(schema).toMatchObject({ '@type': 'ItemList', numberOfItems: 10 });
     expect(schema.itemListElement).toHaveLength(10);
     expect(
-      schema.itemListElement.find(
-        (item: { name: string }) => item.name === 'Egypt Packing List Generator',
+      schema.itemListElement.map((item: { url: string }) => item.url),
+    ).toEqual(OFFICIAL_TOOLS.map((tool) => absoluteToolUrl('de', tool.id)));
+    expect(
+      schema.itemListElement.every(
+        (item: { url: string }) => !/\/embed\/[a-z-]+\.html(?:[?#]|$)/.test(item.url),
       ),
-    ).toMatchObject({
-      url: `${AUTHORITY_PUBLIC_ORIGIN}/embed/packing-list.html`,
-    });
+    ).toBe(true);
   });
 
   it('renders the staged per-tool component from the official catalog and never honors forged host or brand values', async () => {
