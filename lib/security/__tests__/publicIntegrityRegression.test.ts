@@ -116,6 +116,12 @@ describe('public integrity route regressions', () => {
     // The voice assistant's launcher and frame load from its own origin; a
     // CSP edit that drops it silently kills the assistants page.
     expect(config).toContain('voiceWidgetOrigin');
+    // The booking launcher and catalogue API are separate exact origins.
+    // Omitting either leaves the product-owned booking section stuck loading.
+    expect(config).toContain('bookingWidgetOrigin');
+    expect(config).toContain('bookingApiOrigin');
+    expect(config).toContain('https://booking.foxestechnology.com');
+    expect(config).toContain('https://foxes-api-production.up.railway.app');
     expect(config).toContain('https://search.foxestechnology.com');
   });
 
