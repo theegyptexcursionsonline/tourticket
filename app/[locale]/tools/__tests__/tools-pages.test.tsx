@@ -43,14 +43,14 @@ describe('localized Authority tools storefront pages', () => {
     delete process.env.AUTHORITY_PUBLISHER_TOKEN;
   });
 
-  it('discovers all ten official tools without routing customers into unconfigured local embeds', async () => {
+  it('discovers all eleven official tools without routing customers into unconfigured local embeds', async () => {
     const { container } = render(
       await ToolsIndexPage({ params: Promise.resolve({ locale: 'de' }) }),
     );
 
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Free tools for a better Egypt trip');
-    expect(screen.getByText('10 planning tools')).toBeInTheDocument();
-    expect(screen.getAllByRole('listitem')).toHaveLength(10);
+    expect(screen.getByText('11 planning tools')).toBeInTheDocument();
+    expect(screen.getAllByRole('listitem')).toHaveLength(11);
 
     for (const tool of OFFICIAL_TOOLS) {
       const href = customerToolHref('de', tool);
@@ -65,8 +65,8 @@ describe('localized Authority tools storefront pages', () => {
 
     const jsonLd = container.querySelector('script[type="application/ld+json"]')?.textContent || '';
     const schema = JSON.parse(jsonLd);
-    expect(schema).toMatchObject({ '@type': 'ItemList', numberOfItems: 10 });
-    expect(schema.itemListElement).toHaveLength(10);
+    expect(schema).toMatchObject({ '@type': 'ItemList', numberOfItems: 11 });
+    expect(schema.itemListElement).toHaveLength(11);
     expect(
       schema.itemListElement.map((item: { url: string }) => item.url),
     ).toEqual(OFFICIAL_TOOLS.map((tool) => absoluteToolUrl('de', tool.id)));

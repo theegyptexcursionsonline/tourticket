@@ -83,7 +83,7 @@ describe('server-only Authority tool configuration', () => {
       expect(JSON.stringify(state)).not.toContain(PUBLISHER_TOKEN);
     }
 
-    expect(fetchMock).toHaveBeenCalledTimes(10);
+    expect(fetchMock).toHaveBeenCalledTimes(11);
   });
 
   it('fails closed before network access when endpoint or token is missing or malformed', async () => {

@@ -69,6 +69,14 @@ export const OFFICIAL_TOOLS = [
     icon: 'route',
   },
   {
+    id: 'day-trip-planner',
+    name: 'Egypt Day Trip Planner',
+    category: 'Planning',
+    description: 'Build an hour-by-hour one-day plan with every stop on a live map.',
+    embedPath: '/embed/day-trip-planner.html',
+    icon: 'map',
+  },
+  {
     id: 'nile-cruise-comparison',
     name: 'Nile Cruise Comparison',
     category: 'Nile',
