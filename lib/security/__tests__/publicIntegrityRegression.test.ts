@@ -116,6 +116,9 @@ describe('public integrity route regressions', () => {
     // The voice assistant's launcher and frame load from its own origin; a
     // CSP edit that drops it silently kills the assistants page.
     expect(config).toContain('voiceWidgetOrigin');
+  // The voice widget iframe needs top-level microphone delegation; a hard
+  // microphone=() deny silently kills every call on the embedding pages.
+  expect(config).toContain('microphone=(self "${voiceWidgetOrigin}")');
     // The booking launcher and catalogue API are separate exact origins.
     // Omitting either leaves the product-owned booking section stuck loading.
     expect(config).toContain('bookingWidgetOrigin');
