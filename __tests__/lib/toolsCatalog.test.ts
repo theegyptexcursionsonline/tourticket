@@ -21,17 +21,21 @@ const EXPECTED_TOOL_IDS = [
   'currency-tipping-guide',
   'itinerary-planner',
   'day-trip-planner',
+  'photo-planner',
+  'marine-life-calendar',
+  'customs-checker',
+  'crowd-calendar',
   'nile-cruise-comparison',
   'packing-list',
   'tour-comparison',
 ];
 
 describe('Authority storefront tool catalog', () => {
-  it('contains exactly the eleven official Authority tools with unique ids and embed pages', () => {
-    expect(OFFICIAL_TOOLS).toHaveLength(11);
+  it('contains exactly the fifteen official Authority tools with unique ids and embed pages', () => {
+    expect(OFFICIAL_TOOLS).toHaveLength(15);
     expect(OFFICIAL_TOOLS.map((tool) => tool.id)).toEqual(EXPECTED_TOOL_IDS);
-    expect(new Set(OFFICIAL_TOOLS.map((tool) => tool.id)).size).toBe(11);
-    expect(new Set(OFFICIAL_TOOLS.map((tool) => tool.embedPath)).size).toBe(11);
+    expect(new Set(OFFICIAL_TOOLS.map((tool) => tool.id)).size).toBe(15);
+    expect(new Set(OFFICIAL_TOOLS.map((tool) => tool.embedPath)).size).toBe(15);
     expect(OFFICIAL_TOOLS.every((tool) => /^\/embed\/[a-z-]+\.html$/.test(tool.embedPath))).toBe(true);
   });
 

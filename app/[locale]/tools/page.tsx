@@ -22,7 +22,7 @@ export async function generateMetadata({ params }: ToolsIndexPageProps): Promise
   return {
     title: 'Free Egypt Travel Tools | Egypt Excursions Online',
     description:
-      'Eleven free planning tools for Egypt trips, including budget, entry, timing, transfers, diving, packing, itinerary and day-trip guidance.',
+      'Fifteen free planning tools for Egypt trips — budget, entry, customs, timing, crowds, transfers, diving, marine life, photography, packing and day-by-day itineraries.',
     alternates: metadataAlternates(locale, '/tools'),
   };
 }
@@ -42,7 +42,7 @@ export default async function ToolsIndexPage({ params }: ToolsIndexPageProps) {
             <div className="max-w-3xl">
               <div className="inline-flex items-center gap-2 rounded-full bg-orange-50 px-3 py-1.5 text-xs font-bold uppercase tracking-[0.14em] text-orange-700">
                 <BadgeCheck aria-hidden="true" className="h-4 w-4" />
-                11 planning tools
+                15 planning tools
               </div>
               <h1 id="tools-title" className="mt-5 text-4xl font-extrabold tracking-tight text-slate-950 sm:text-5xl">
                 Free tools for a better Egypt trip
