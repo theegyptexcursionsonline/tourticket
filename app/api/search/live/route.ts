@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import mongoose, { type FilterQuery } from 'mongoose';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 import { rankLiveSearchResults } from '@/lib/search/liveSearchRanking';
+import { PUBLIC_CONTENT_FILTER } from '@/lib/content/publicContentFilter';
 
 // Helper function for flexible live search
 function createLiveSearchConditions(searchQuery: string) {
@@ -39,7 +40,7 @@ export async function GET(req: NextRequest) {
         // Only show tours from the default tenant (exclude German/other tenant tours)
         if (!searchQuery) {
             // Return tours based on filters when no search query
-            const query: FilterQuery<ITour> = { isPublished: true, ...DEFAULT_TENANT_FILTER };
+            const query: FilterQuery<ITour> = { ...DEFAULT_TENANT_FILTER, ...PUBLIC_CONTENT_FILTER };
 
             const categories = searchParams.get('categories');
             if (categories) {
@@ -106,11 +107,11 @@ export async function GET(req: NextRequest) {
         // conditions used to overwrite the keyword clause, returning unrelated
         // records and allowing stale cross-tenant Algolia results to dominate.
         const tours = await Tour.find({
-            isPublished: true,
+            ...PUBLIC_CONTENT_FILTER,
             $and: [searchConditions, DEFAULT_TENANT_FILTER],
         })
-            .select('title slug image rating reviews reviewCount destination location tags duration price discountPrice tenantId')
-            .populate('destination', 'name')
+            .select('title slug urlType parentPage image rating reviews reviewCount destination location tags duration price discountPrice tenantId')
+            .populate('destination', 'name slug')
             .sort({ rating: -1, bookings: -1 }) // Prioritize high-rated popular tours
             .limit(30)
             .lean();

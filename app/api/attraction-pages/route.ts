@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
 import AttractionPage from '@/lib/models/AttractionPage';
 import Category from '@/lib/models/Category';
+import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
+import { PUBLIC_CONTENT_FILTER } from '@/lib/content/publicContentFilter';
 
 export async function GET() {
   try {
@@ -9,7 +11,7 @@ export async function GET() {
     
     console.log('Fetching published attraction pages...');
     
-    const pages = await AttractionPage.find({ isPublished: true })
+    const pages = await AttractionPage.find({ ...DEFAULT_TENANT_FILTER, ...PUBLIC_CONTENT_FILTER })
       .sort({ featured: -1, createdAt: -1 })
       .lean();
 
@@ -21,7 +23,11 @@ export async function GET() {
         let categoryId: unknown = page.categoryId;
         if (page.categoryId) {
           try {
-            const category = await Category.findById(page.categoryId)
+            const category = await Category.findOne({
+              _id: page.categoryId,
+              ...DEFAULT_TENANT_FILTER,
+              ...PUBLIC_CONTENT_FILTER,
+            })
               .select('name slug')
               .lean();
             categoryId = category;

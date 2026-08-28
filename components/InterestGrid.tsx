@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from "react";
-import Link from "next/link";
+import { Link } from '@/i18n/routing';
 import {
   ArrowRight,
   Package,
@@ -38,7 +38,7 @@ import {
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Navigation, Pagination, Grid } from 'swiper/modules';
 import type { Swiper as SwiperType } from 'swiper';
-import { attractionPagePath } from '@/lib/content/contentUrl';
+import { attractionPagePath, contentPath } from '@/lib/content/contentUrl';
 
 import 'swiper/css';
 import 'swiper/css/navigation';
@@ -52,6 +52,8 @@ interface Interest {
   slug: string;
   products: number;
   featured?: boolean;
+  urlType?: string;
+  parentPage?: { slug?: string } | null;
 }
 
 interface CategoryPage {
@@ -132,10 +134,10 @@ const InterestCard = ({
     }
     
     if (interest.type === 'attraction') {
-      return `/attraction/${interest.slug}`;
+      return attractionPagePath(interest.slug, 'attraction', interest.urlType, undefined, interest.parentPage?.slug);
     }
     
-    return `/interests/${interest.slug}`;
+    return contentPath('category', interest.slug, interest.urlType, undefined, interest.parentPage?.slug);
   };
 
   const linkUrl = getLink();

@@ -11,20 +11,29 @@ import { localizeEntityFields } from '@/lib/i18n/contentLocalization';
 import { selectLocalizedTaxonomyEntries } from '@/lib/i18n/localizedCollections';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 import { filterVisibleTaxonomyEntries } from '@/lib/utils/taxonomy';
+import { metadataAlternates } from '@/lib/i18n/seoAlternates';
 
 // Enable ISR with 60 second revalidation for instant page loads
 export const revalidate = 1800; // 30 min — storefront content; edge serves stale-while-revalidate so clicks stay instant
 
 // Generate metadata for SEO
-export const metadata: Metadata = {
-  title: 'All Categories & Interests | Egypt Excursions Online',
-  description: 'Explore all tour categories and interests in Egypt. Discover adventure tours, cultural experiences, boat tours, desert experiences, and more.',
-  openGraph: {
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  return {
     title: 'All Categories & Interests | Egypt Excursions Online',
-    description: 'Explore all tour categories and interests in Egypt.',
-    type: 'website',
-  },
-};
+    description: 'Explore all tour categories and interests in Egypt. Discover adventure tours, cultural experiences, boat tours, desert experiences, and more.',
+    openGraph: {
+      title: 'All Categories & Interests | Egypt Excursions Online',
+      description: 'Explore all tour categories and interests in Egypt.',
+      type: 'website',
+    },
+    alternates: metadataAlternates(locale, '/interests'),
+  };
+}
 
 interface CategoryWithCount extends ICategory {
   tourCount: number;

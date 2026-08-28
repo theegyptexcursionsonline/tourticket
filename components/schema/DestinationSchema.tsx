@@ -1,18 +1,16 @@
 // Place + TouristDestination schema for destination detail pages
 import React from 'react';
 import { serializeJsonLd } from '@/lib/security/serializeJsonLd';
-import { contentPath } from '@/lib/content/contentUrl';
-
-const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://egypt-excursionsonline.com';
+import { contentPath, localizedTourContentPath } from '@/lib/content/contentUrl';
+import { localizedAbsoluteUrl, SEO_BASE_URL } from '@/lib/i18n/seoAlternates';
 
 interface Tour {
   title: string;
   slug: string;
   image?: string;
-  discountPrice?: number;
-  originalPrice?: number;
-  rating?: number;
-  reviewCount?: number;
+  urlType?: string;
+  destination?: { slug?: string } | string;
+  parentPage?: { slug?: string } | null;
 }
 
 interface Props {
@@ -24,10 +22,25 @@ interface Props {
   tours?: Tour[];
   urlType?: string;
   parentPage?: { slug?: string } | null;
+  breadcrumbs?: { name: string; url: string }[];
+  locale?: string;
 }
 
-export default function DestinationSchema({ name, slug, description, image, country, tours = [], urlType, parentPage }: Props) {
-  const destUrl = `${BASE_URL}${contentPath('destination', slug, urlType, null, parentPage?.slug)}`;
+export default function DestinationSchema({ name, slug, description, image, tours = [], urlType, parentPage, breadcrumbs, locale = 'en' }: Props) {
+  const destUrl = localizedAbsoluteUrl(locale, contentPath('destination', slug, urlType, null, parentPage?.slug));
+  const seenUrls = new Set<string>();
+  const visibleTours = tours
+    .filter((tour) => tour.title.trim().length > 0 && tour.slug.trim().length > 0)
+    .filter((tour) => {
+      const tourUrl = `${SEO_BASE_URL}${localizedTourContentPath(tour, locale)}`;
+      if (seenUrls.has(tourUrl)) return false;
+      seenUrls.add(tourUrl);
+      return true;
+    })
+    .slice(0, 20);
+  const visibleBreadcrumbs = (breadcrumbs || []).filter(
+    (crumb) => crumb.name.trim().length > 0 && crumb.url.trim().length > 0,
+  );
 
   const ld = {
     '@context': 'https://schema.org',
@@ -35,52 +48,37 @@ export default function DestinationSchema({ name, slug, description, image, coun
       {
         '@type': ['TouristDestination', 'Place'],
         name,
-        description: description || `Discover tours and excursions in ${name}, ${country || 'Egypt'}`,
+        ...(description ? { description } : {}),
         url: destUrl,
-        image: image || `${BASE_URL}/og-image.jpg`,
-        address: {
-          '@type': 'PostalAddress',
-          addressLocality: name,
-          addressCountry: country || 'EG',
-        },
-        touristType: ['Sightseeing', 'Adventure', 'Cultural'],
-        speakable: {
-          '@type': 'SpeakableSpecification',
-          cssSelector: ['h1', '.destination-description', '.destination-highlights'],
-        },
-        containsPlace: tours.slice(0, 10).map((t) => ({
-          '@type': 'TouristAttraction',
-          name: t.title,
-          url: `${BASE_URL}${contentPath('tour', t.slug, (t as { urlType?: string }).urlType)}`,
-          image: t.image,
-        })),
+        ...(image ? { image } : {}),
       },
       // tours as ItemList for Things To Do
-      ...(tours.length > 0
+      ...(visibleTours.length > 0
         ? [
             {
               '@type': 'ItemList',
-              name: `Tours in ${name}`,
-              numberOfItems: tours.length,
-              itemListElement: tours.slice(0, 20).map((t, i) => ({
+              numberOfItems: visibleTours.length,
+              itemListElement: visibleTours.map((t, i) => ({
                 '@type': 'ListItem',
                 position: i + 1,
-                url: `${BASE_URL}${contentPath('tour', t.slug, (t as { urlType?: string }).urlType)}`,
+                url: `${SEO_BASE_URL}${localizedTourContentPath(t, locale)}`,
                 name: t.title,
-                image: t.image,
+                ...(t.image ? { image: t.image } : {}),
               })),
             },
           ]
         : []),
-      // Breadcrumb
-      {
-        '@type': 'BreadcrumbList',
-        itemListElement: [
-          { '@type': 'ListItem', position: 1, name: 'Home', item: BASE_URL },
-          { '@type': 'ListItem', position: 2, name: 'Destinations', item: `${BASE_URL}/destinations` },
-          { '@type': 'ListItem', position: 3, name, item: destUrl },
-        ],
-      },
+      ...(visibleBreadcrumbs.length > 0
+        ? [{
+            '@type': 'BreadcrumbList',
+            itemListElement: visibleBreadcrumbs.map((crumb, index) => ({
+              '@type': 'ListItem',
+              position: index + 1,
+              name: crumb.name,
+              item: localizedAbsoluteUrl(locale, crumb.url),
+            })),
+          }]
+        : []),
     ],
   };
 

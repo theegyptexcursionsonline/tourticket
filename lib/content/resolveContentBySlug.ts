@@ -9,10 +9,7 @@ import Destination from '@/lib/models/Destination';
 import Category from '@/lib/models/Category';
 import AttractionPage from '@/lib/models/AttractionPage';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
-// A trashed record must not resolve at all: the fallbacks below deliberately
-// render/redirect to unpublished matches (drafts), and trash would ride that
-// path straight back onto the live site (client report 2026-08-21).
-import { NOT_ARCHIVED_FILTER } from '@/lib/content/publicContentFilter';
+import { PUBLIC_CONTENT_FILTER } from '@/lib/content/publicContentFilter';
 import {
   ContentType,
   UrlType,
@@ -62,19 +59,19 @@ export async function resolveContentMatches(slug: string): Promise<ContentMatch[
   await dbConnect();
 
   const [tour, destination, category, attractionPage] = await Promise.all([
-    Tour.findOne({ slug, ...DEFAULT_TENANT_FILTER, ...NOT_ARCHIVED_FILTER })
+    Tour.findOne({ slug, ...DEFAULT_TENANT_FILTER, ...PUBLIC_CONTENT_FILTER })
       .select('slug urlType isPublished destination parentPage breadcrumbLabel')
       .populate('destination', 'slug')
       .lean(),
-    Destination.findOne({ slug, ...DEFAULT_TENANT_FILTER, ...NOT_ARCHIVED_FILTER }).select('slug urlType isPublished parentPage breadcrumbLabel').lean(),
-    Category.findOne({ slug, ...DEFAULT_TENANT_FILTER, ...NOT_ARCHIVED_FILTER })
+    Destination.findOne({ slug, ...DEFAULT_TENANT_FILTER, ...PUBLIC_CONTENT_FILTER }).select('slug urlType isPublished parentPage breadcrumbLabel').lean(),
+    Category.findOne({ slug, ...DEFAULT_TENANT_FILTER, ...PUBLIC_CONTENT_FILTER })
       .select('slug urlType isPublished cityDestination parentPage breadcrumbLabel')
       .populate('cityDestination', 'slug')
       .lean(),
     // Both attraction pages and catalogue pages participate in urlType routing.
     // A catalogue page's default shape is /category/{slug}, so its canonical
     // segment is derived from pageType, not the shared content-type default.
-    AttractionPage.findOne({ slug, ...DEFAULT_TENANT_FILTER, ...NOT_ARCHIVED_FILTER })
+    AttractionPage.findOne({ slug, ...DEFAULT_TENANT_FILTER, ...PUBLIC_CONTENT_FILTER })
       .select('slug urlType isPublished pageType cityDestination parentPage breadcrumbLabel')
       .populate('cityDestination', 'slug')
       .lean(),
@@ -150,12 +147,11 @@ export async function decideForSegment(
   const matches = await resolveContentMatches(slug);
   if (matches.length === 0) return { action: 'notFound' };
 
-  const exact = matches.find((m) => m.segment === expectedSegment && m.isPublished)
-    || matches.find((m) => m.segment === expectedSegment);
+  const exact = matches.find((m) => m.segment === expectedSegment);
   if (exact) return { action: 'render', match: exact };
 
   // Slug exists but under a different URL type → send to its canonical path.
-  const canonical = matches.find((m) => m.isPublished) || matches[0];
+  const canonical = matches[0];
   return {
     action: 'redirect',
     to: canonicalPathFor(canonical, locale),
@@ -177,12 +173,12 @@ export async function decideForCityPath(
   if (matches.length === 0) return { action: 'notFound' };
 
   const exact = matches.find(
-    (m) => (m.parentSlug === citySlug || (m.urlType === 'city' && m.citySlug === citySlug)) && m.isPublished
-  ) || matches.find((m) => m.parentSlug === citySlug || (m.urlType === 'city' && m.citySlug === citySlug));
+    (m) => m.parentSlug === citySlug || (m.urlType === 'city' && m.citySlug === citySlug)
+  );
   if (exact) return { action: 'render', match: exact };
 
   // Real slug, wrong shape or wrong city → its canonical path, never a 404.
-  const canonical = matches.find((m) => m.isPublished) || matches[0];
+  const canonical = matches[0];
   return {
     action: 'redirect',
     to: canonicalPathFor(canonical, locale),

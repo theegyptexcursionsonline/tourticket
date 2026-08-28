@@ -3,6 +3,10 @@ import UserSidebar from '@/components/user/UserSidebar';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import ProtectedRoute from '@/components/ProtectedRoute';
+import type { Metadata } from 'next';
+import { PRIVATE_ROUTE_METADATA } from '@/lib/seo/privateRouteMetadata';
+
+export const metadata: Metadata = PRIVATE_ROUTE_METADATA;
 
 export default function UserLayout({
   children,

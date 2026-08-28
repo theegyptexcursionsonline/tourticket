@@ -10,6 +10,7 @@ import { useSettings } from '@/hooks/useSettings';
 import { Link } from '@/i18n/routing';
 import { useLocale, useTranslations } from 'next-intl';
 import { isRTL } from '@/i18n/config';
+import { tourContentPath } from '@/lib/content/contentUrl';
 
 const BookingSidebar = dynamic(() => import('@/components/BookingSidebar'), { ssr: false });
 
@@ -101,7 +102,7 @@ const TourCard = ({ tour, onAddToCartClick }: { tour: Tour; onAddToCartClick: (t
 
   return (
     <Link
-      href={`/${tour.slug || '#'}`}
+      href={tour.slug ? tourContentPath(tour) : '#'}
       data-testid="featured-tour-card"
       className="block w-[260px] sm:w-[280px] md:w-[320px] lg:w-[340px] bg-white rounded-2xl overflow-hidden border border-gray-200 transform transition-all duration-300 hover:-translate-y-1 group focus:outline-none"
       style={{ boxShadow: 'none' }}

@@ -1,78 +1,83 @@
-// WebSite + WebPage + SiteNavigationElement + BreadcrumbList schema
+// WebSite + WebPage + SiteNavigationElement schema. Breadcrumbs are emitted
+// only when the caller also renders that exact breadcrumb trail visibly.
 import React from 'react';
 import { serializeJsonLd } from '@/lib/security/serializeJsonLd';
-
-const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://egypt-excursionsonline.com';
+import { locales } from '@/i18n/config';
+import { localizedAbsoluteUrl, SEO_BASE_URL } from '@/lib/i18n/seoAlternates';
 
 interface Props {
   pageName?: string;
   pageDescription?: string;
   pageUrl?: string;
   breadcrumbs?: { name: string; url: string }[];
+  locale?: string;
 }
 
 export default function WebSiteSchema({
-  pageName = 'Egypt Excursions Online - Tours & Day Trips in Egypt',
-  pageDescription = 'Book the best tours, day trips, and excursions across Egypt. Explore Hurghada, Cairo, Luxor, Sharm El Sheikh and more.',
-  pageUrl = BASE_URL,
+  pageName = 'Egypt Excursions Online - Tours, Activities & Experiences',
+  pageDescription,
+  pageUrl = '/',
   breadcrumbs,
+  locale = 'en',
 }: Props) {
-  const breadcrumbItems = breadcrumbs || [{ name: 'Home', url: BASE_URL }];
+  const absolutePageUrl = localizedAbsoluteUrl(locale, pageUrl);
+  const localizedSearchUrl = localizedAbsoluteUrl(locale, '/search');
+  const breadcrumbItems = (breadcrumbs || []).filter(
+    (item) => item.name.trim().length > 0 && item.url.trim().length > 0,
+  );
 
   const ld = {
     '@context': 'https://schema.org',
     '@graph': [
       {
         '@type': 'WebSite',
-        '@id': `${BASE_URL}/#website`,
-        url: BASE_URL,
+        '@id': `${SEO_BASE_URL}/#website`,
+        url: SEO_BASE_URL,
         name: 'Egypt Excursions Online',
         description: 'Tours, day trips, and excursions across Egypt',
-        publisher: { '@id': `${BASE_URL}/#organization` },
+        publisher: { '@id': `${SEO_BASE_URL}/#organization` },
+        inLanguage: locales,
         potentialAction: {
           '@type': 'SearchAction',
           target: {
             '@type': 'EntryPoint',
-            urlTemplate: `${BASE_URL}/tours?q={search_term_string}`,
+            urlTemplate: `${localizedSearchUrl}?q={search_term_string}`,
           },
           'query-input': 'required name=search_term_string',
         },
-        inLanguage: ['en', 'ar', 'de', 'it', 'es', 'fr', 'ru', 'pl', 'nl'],
       },
       {
         '@type': 'WebPage',
-        '@id': `${pageUrl}/#webpage`,
-        url: pageUrl,
+        '@id': `${absolutePageUrl}/#webpage`,
+        url: absolutePageUrl,
         name: pageName,
-        description: pageDescription,
-        isPartOf: { '@id': `${BASE_URL}/#website` },
-        about: { '@id': `${BASE_URL}/#organization` },
-        inLanguage: 'en',
-        speakable: {
-          '@type': 'SpeakableSpecification',
-          cssSelector: ['h1', 'h2', '.tour-description', '.about-section', 'article'],
-        },
+        ...(pageDescription ? { description: pageDescription } : {}),
+        isPartOf: { '@id': `${SEO_BASE_URL}/#website` },
+        about: { '@id': `${SEO_BASE_URL}/#organization` },
+        inLanguage: locale,
       },
       {
         '@type': 'SiteNavigationElement',
-        name: 'Main Navigation',
-        url: BASE_URL,
+        name: 'Site navigation',
+        url: SEO_BASE_URL,
         hasPart: [
-          { '@type': 'SiteNavigationElement', name: 'Tours', url: `${BASE_URL}/tours` },
-          { '@type': 'SiteNavigationElement', name: 'Destinations', url: `${BASE_URL}/destinations` },
-          { '@type': 'SiteNavigationElement', name: 'Day Trips', url: `${BASE_URL}/day-trips` },
-          { '@type': 'SiteNavigationElement', name: 'Contact', url: `${BASE_URL}/contact` },
+          { '@type': 'SiteNavigationElement', name: 'Tours', url: localizedAbsoluteUrl(locale, '/tours') },
+          { '@type': 'SiteNavigationElement', name: 'Destinations', url: localizedAbsoluteUrl(locale, '/destinations') },
+          { '@type': 'SiteNavigationElement', name: 'Blog', url: localizedAbsoluteUrl(locale, '/blog') },
+          { '@type': 'SiteNavigationElement', name: 'Mobile App', url: localizedAbsoluteUrl(locale, '/mobile-app') },
         ],
       },
-      {
-        '@type': 'BreadcrumbList',
-        itemListElement: breadcrumbItems.map((item, index) => ({
-          '@type': 'ListItem',
-          position: index + 1,
-          name: item.name,
-          item: item.url,
-        })),
-      },
+      ...(breadcrumbItems.length > 0
+        ? [{
+            '@type': 'BreadcrumbList',
+            itemListElement: breadcrumbItems.map((item, index) => ({
+              '@type': 'ListItem',
+              position: index + 1,
+              name: item.name,
+              item: localizedAbsoluteUrl(locale, item.url),
+            })),
+          }]
+        : []),
     ],
   };
 

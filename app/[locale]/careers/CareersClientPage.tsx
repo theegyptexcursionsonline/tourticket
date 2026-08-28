@@ -23,9 +23,9 @@ function DarkHero() {
         />
       </div>
       <div className="relative z-10">
-        <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight">
+        <p className="text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight">
           Your Best Travel Buddy
-        </h1>
+        </p>
         <p className="mt-4 text-lg sm:text-xl max-w-2xl mx-auto opacity-80">
           Discover hidden gems and unforgettable experiences with our expert guidance.
         </p>

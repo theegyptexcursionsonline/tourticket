@@ -16,10 +16,12 @@ import {
   selectLocalizedTours,
 } from '@/lib/i18n/localizedCollections';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
-import { NOT_ARCHIVED_FILTER, PUBLIC_CONTENT_FILTER } from '@/lib/content/publicContentFilter';
+import { PUBLIC_CONTENT_FILTER } from '@/lib/content/publicContentFilter';
 import { destinationStructuredFields } from '@/lib/i18n/translationFields';
-import { metadataAlternates } from '@/lib/i18n/seoAlternates';
+import { explicitContentLocales, metadataAlternates } from '@/lib/i18n/seoAlternates';
 import { localizeHtmlLinks } from '@/lib/i18n/localizeHtmlLinks';
+import { buildContentBreadcrumbs } from '@/lib/content/breadcrumbs';
+import { contentPath, localizedContentPath } from '@/lib/content/contentUrl';
 import type { Category, Destination, Review, Tour } from '@/types';
 
 export async function getDestinationMetadata(slug: string, locale: string, canonicalPath: string): Promise<Metadata | null> {
@@ -27,7 +29,7 @@ export async function getDestinationMetadata(slug: string, locale: string, canon
   const destinationMatches = await DestinationModel.find({
     slug,
     ...DEFAULT_TENANT_FILTER,
-    ...NOT_ARCHIVED_FILTER,
+    ...PUBLIC_CONTENT_FILTER,
   })
     .select('name description image country metaTitle metaDescription translations')
     .lean();
@@ -64,7 +66,11 @@ export async function getDestinationMetadata(slug: string, locale: string, canon
   return {
     title,
     description,
-    alternates: metadataAlternates(locale, canonicalPath),
+    alternates: metadataAlternates(
+      locale,
+      canonicalPath,
+      explicitContentLocales(destinationCandidate, ['name', 'description']),
+    ),
     openGraph: {
       title: namePart,
       description,
@@ -81,7 +87,7 @@ async function getPageData(slug: string, locale: string) {
   const destinationMatches = await DestinationModel.find({
     slug,
     ...DEFAULT_TENANT_FILTER,
-    ...NOT_ARCHIVED_FILTER,
+    ...PUBLIC_CONTENT_FILTER,
   }).lean();
   if (destinationMatches.length === 0) {
     return {
@@ -132,13 +138,16 @@ async function getPageData(slug: string, locale: string) {
   const destinationIds = serializedDestinationMatches.map((destination) => String(destination._id));
   const baseDestinationTours = await TourModel.find({
     destination: { $in: destinationIds },
-    isPublished: true,
     ...DEFAULT_TENANT_FILTER,
-  }).populate('destination').populate('category').lean();
+    ...PUBLIC_CONTENT_FILTER,
+  })
+    .populate({ path: 'destination', match: { ...DEFAULT_TENANT_FILTER, ...PUBLIC_CONTENT_FILTER } })
+    .populate({ path: 'category', match: { ...DEFAULT_TENANT_FILTER, ...PUBLIC_CONTENT_FILTER } })
+    .lean();
 
   const allCategories = await CategoryModel.find({
     ...DEFAULT_TENANT_FILTER,
-    ...NOT_ARCHIVED_FILTER,
+    ...PUBLIC_CONTENT_FILTER,
   }).lean();
 
   const serializedBaseTours = JSON.parse(JSON.stringify(baseDestinationTours)) as Record<string, unknown>[];
@@ -151,9 +160,13 @@ async function getPageData(slug: string, locale: string) {
   if (locale.startsWith('de') && candidateSlugs.length > 0) {
     const localizedTourMatches = await TourModel.find({
       destination: { $in: destinationIds },
-      isPublished: true,
+      ...DEFAULT_TENANT_FILTER,
+      ...PUBLIC_CONTENT_FILTER,
       slug: { $in: candidateSlugs },
-    }).populate('destination').populate('category').lean();
+    })
+      .populate({ path: 'destination', match: { ...DEFAULT_TENANT_FILTER, ...PUBLIC_CONTENT_FILTER } })
+      .populate({ path: 'category', match: { ...DEFAULT_TENANT_FILTER, ...PUBLIC_CONTENT_FILTER } })
+      .lean();
 
     serializedTourCandidates = JSON.parse(JSON.stringify(localizedTourMatches)) as Record<string, unknown>[];
   }
@@ -194,8 +207,8 @@ async function getPageData(slug: string, locale: string) {
     relatedDestinationsRaw.map(async (dest) => {
       const tourCount = await TourModel.countDocuments({
         destination: dest._id,
-        isPublished: true,
         ...DEFAULT_TENANT_FILTER,
+        ...PUBLIC_CONTENT_FILTER,
       });
       return {
         ...dest,
@@ -341,9 +354,49 @@ export async function renderDestinationDetail(slug: string, locale: string): Pro
 
   if (!destination) return null;
 
+  const destinationPath = contentPath(
+    'destination',
+    slug,
+    destination.urlType,
+    null,
+    destination.parentPage?.slug,
+  );
+  const schemaBreadcrumbs = buildContentBreadcrumbs({
+    currentTitle: String(destination.name || ''),
+    breadcrumbLabel: destination.breadcrumbLabel,
+    parentPage: destination.parentPage,
+    rootLabel: 'Destinations',
+    rootHref: '/destinations',
+  }).map((crumb) => ({ name: crumb.label, url: crumb.href || destinationPath }));
+  const contextualLinks = destinationTours.flatMap((tour) => {
+    const categories = Array.isArray(tour.category) ? tour.category : [tour.category];
+    return categories.flatMap((category) => {
+      if (!category || typeof category !== 'object') return [];
+      const record = category as unknown as {
+        name?: string;
+        slug?: string;
+        urlType?: string;
+        parentPage?: { slug?: string } | null;
+      };
+      if (!record.name || !record.slug) return [];
+      return [{
+        label: record.name,
+        href: localizedContentPath(
+          'category',
+          record.slug,
+          record.urlType,
+          locale,
+          null,
+          record.parentPage?.slug,
+        ),
+      }];
+    });
+  });
+
   return (
     <>
       <DestinationSchema
+        locale={locale}
         name={destination.name as string}
         slug={slug}
         description={destination.description as string}
@@ -351,7 +404,15 @@ export async function renderDestinationDetail(slug: string, locale: string): Pro
         country={destination.country as string}
         urlType={destination.urlType}
         parentPage={destination.parentPage}
-        tours={destinationTours.map((tour) => ({ title: tour.title, slug: tour.slug, image: tour.image, discountPrice: tour.discountPrice, originalPrice: tour.originalPrice, rating: tour.rating, reviewCount: tour.reviewCount }))}
+        breadcrumbs={schemaBreadcrumbs}
+        tours={destinationTours.map((tour) => ({
+          title: tour.title,
+          slug: tour.slug,
+          urlType: tour.urlType,
+          destination: tour.destination,
+          parentPage: tour.parentPage,
+          image: tour.image,
+        }))}
       />
       <DestinationPageClient
         destination={destination}
@@ -359,6 +420,7 @@ export async function renderDestinationDetail(slug: string, locale: string): Pro
         allCategories={allCategories}
         reviews={reviews}
         relatedDestinations={relatedDestinations}
+        contextualLinks={contextualLinks}
       />
     </>
   );

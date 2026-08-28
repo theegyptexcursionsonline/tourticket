@@ -11,7 +11,9 @@ import { safeMarkdownRehypePlugins, safeMarkdownUrlTransform } from '@/lib/markd
 import { liteClient as algoliasearch } from 'algoliasearch/lite';
 import type { SearchResponse } from 'algoliasearch';
 import Image from 'next/image';
+import { useLocale } from 'next-intl';
 import { isPresent, isRecord, isSearchHit, type ChatPart, type SearchHit } from './componentTypes';
+import { localizedTourContentPath } from '@/lib/content/contentUrl';
 
 const ALGOLIA_APP_ID = process.env.NEXT_PUBLIC_ALGOLIA_APP_ID || 'WMDNV9WSOI';
 const ALGOLIA_API_KEY = process.env.NEXT_PUBLIC_ALGOLIA_SEARCH_API_KEY || 'f485b4906072cedbd2f51a46e5ac2637';
@@ -21,6 +23,7 @@ const INDEX_TOURS = process.env.NEXT_PUBLIC_ALGOLIA_INDEX_NAME || 'foxes_technol
 const searchClient = algoliasearch(ALGOLIA_APP_ID, ALGOLIA_API_KEY);
 
 export default function AIAgentModal() {
+  const locale = useLocale();
   const [isOpen, setIsOpen] = useState(false);
   const [detectedTours, setDetectedTours] = useState<SearchHit[]>([]);
 
@@ -169,7 +172,7 @@ export default function AIAgentModal() {
   /** ---------- TOUR CARD COMPONENT ---------- **/
   const TourCard = ({ tour }: { tour: SearchHit }) => (
     <motion.a
-      href={`/${tour.slug}`}
+      href={localizedTourContentPath(tour, locale)}
       target="_blank"
       rel="noopener noreferrer"
       className="group block flex-shrink-0 w-[280px] bg-white rounded-xl overflow-hidden border shadow-sm hover:shadow-lg transition-all duration-300"

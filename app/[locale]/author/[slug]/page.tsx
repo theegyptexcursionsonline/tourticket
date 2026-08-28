@@ -8,7 +8,6 @@ import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import CollectionSchema from '@/components/schema/CollectionSchema';
-import { getSeoAlternates } from '@/lib/seo';
 import { getAuthorRouteSlug, matchesAuthorSlug } from '@/lib/blogAuthors';
 import { Calendar, Clock, Eye, Heart, Sparkles, Tag, User } from 'lucide-react';
 
@@ -152,7 +151,7 @@ export async function generateMetadata({
     return {
       title: `${data.author.name} | Egypt Excursions Online`,
       description: data.author.bio,
-      alternates: getSeoAlternates(`/author/${data.author.slug}`),
+      robots: { index: false, follow: true },
       openGraph: {
         title: `${data.author.name} | Egypt Excursions Online`,
         description: data.author.bio,
@@ -171,6 +170,7 @@ export async function generateMetadata({
     return {
       title: 'Author | Egypt Excursions Online',
       description: 'Explore travel articles and destination guides from Egypt Excursions Online.',
+      robots: { index: false, follow: true },
     };
   }
 }
@@ -180,7 +180,7 @@ export default async function AuthorPage({
 }: {
   params: Promise<Params>;
 }) {
-  const { slug } = await params;
+  const { slug, locale } = await params;
   const data = await getAuthorPosts(slug);
 
   if (!data) {
@@ -192,7 +192,8 @@ export default async function AuthorPage({
   return (
     <>
       <CollectionSchema
-        name={`${author.name} Articles`}
+        locale={locale}
+        name={`Latest Articles by ${author.name}`}
         description={author.bio}
         url={`/author/${author.slug}`}
         items={posts.map((post) => ({

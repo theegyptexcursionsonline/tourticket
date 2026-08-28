@@ -1,17 +1,16 @@
 import { Metadata } from 'next';
-import { notFound } from 'next/navigation';
-import Header from '@/components/Header';
-import Footer from '@/components/Footer';
-import InterestLandingPage from '@/components/InterestLandingPage';
-import CollectionSchema from '@/components/schema/CollectionSchema';
+import { notFound, permanentRedirect } from 'next/navigation';
 import dbConnect from '@/lib/dbConnect';
 import Category from '@/lib/models/Category';
 import type { Category as CategoryData, Review, Tour } from '@/types';
-import { contentPath } from '@/lib/content/contentUrl';
+import { contentPath, localizedContentPath } from '@/lib/content/contentUrl';
+import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
+import { PUBLIC_CONTENT_FILTER } from '@/lib/content/publicContentFilter';
+import { explicitContentLocales, metadataAlternates } from '@/lib/i18n/seoAlternates';
 
 // Types
 interface InterestPageProps {
-  params: Promise<{ slug: string }>;
+  params: Promise<{ locale: string; slug: string }>;
 }
 
 interface InterestData {
@@ -43,7 +42,11 @@ async function getInterestData(slug: string): Promise<InterestData | null> {
     
     // The API uses /api/interests/${slug} which returns data from Category or AttractionPage
     // Let's fetch directly from database instead
-    const category = await Category.findOne({ slug }).lean();
+    const category = await Category.findOne({
+      slug,
+      ...DEFAULT_TENANT_FILTER,
+      ...PUBLIC_CONTENT_FILTER,
+    }).lean();
     
     if (category) {
       // Return category-based interest data
@@ -104,7 +107,7 @@ export async function generateMetadata(
 
   return {
     title: `${interest.name} Tours in Egypt | Egypt Excursions Online`,
-    description: `Discover the best ${interest.name.toLowerCase()} tours and experiences in Egypt. ${interest.totalTours} amazing tours available.`,
+    description: interest.description || `Explore ${interest.name} tours and experiences in Egypt.`,
     keywords: [interest.name, 'tours', 'Egypt', 'travel'].join(', '),
     openGraph: {
       title: `${interest.name} Tours in Egypt`,
@@ -112,9 +115,17 @@ export async function generateMetadata(
       images: [interest.heroImage],
       type: 'website',
     },
-    alternates: {
-      canonical: `/interests/${resolvedParams.slug}`,
-    },
+    alternates: metadataAlternates(
+      resolvedParams.locale,
+      contentPath(
+        'category',
+        interest.slug,
+        interest.category?.urlType,
+        undefined,
+        interest.category?.parentPage?.slug,
+      ),
+      explicitContentLocales(interest.category || {}, ['name', 'description']),
+    ),
   };
 }
 
@@ -127,17 +138,14 @@ export default async function Page(props: InterestPageProps) {
     notFound();
   }
 
-  return (
-    <>
-      <CollectionSchema
-        name={interest.name}
-        description={interest.description}
-        url={`/interests/${params.slug}`}
-        items={interest.tours.map((tour) => ({ name: tour.title, url: contentPath('tour', tour.slug, (tour as { urlType?: string }).urlType), image: tour.image }))}
-      />
-      <Header startSolid />
-      <InterestLandingPage interest={interest} />
-      <Footer />
-    </>
+  permanentRedirect(
+    localizedContentPath(
+      'category',
+      interest.slug,
+      interest.category?.urlType,
+      params.locale,
+      undefined,
+      interest.category?.parentPage?.slug,
+    ),
   );
 }

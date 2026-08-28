@@ -29,8 +29,7 @@ import { useWishlist } from '@/contexts/WishlistContext';
 import { useNavData } from '@/contexts/NavDataContext';
 import { useLocale } from 'next-intl';
 import type { SearchHit } from './componentTypes';
-import { tourSearchHref } from '@/lib/search/tourSearchHref';
-import { contentPath } from '@/lib/content/contentUrl';
+import { contentPath, localizedTourContentPath } from '@/lib/content/contentUrl';
 
 type AuthUser = NonNullable<ReturnType<typeof useAuth>['user']>;
 
@@ -203,7 +202,7 @@ function TourHits({ hits, onHitClick, limit = 5 }: { hits: SearchHit[]; onHitCli
       {limitedHits.map((hit) => (
         <a
           key={hit.objectID || hit._id}
-          href={tourSearchHref(String(hit.slug || hit.objectID || hit._id || ''), locale)}
+          href={localizedTourContentPath({ ...hit, slug: hit.slug || hit.objectID || hit._id }, locale)}
           onClick={onHitClick}
           className="block px-5 py-3.5 hover:bg-gradient-to-r hover:from-blue-50/50 hover:to-transparent transition-all duration-200 border-b border-gray-100/50 last:border-0 group"
         >
@@ -446,6 +445,7 @@ MobileInlineSearch.displayName = 'MobileInlineSearch';
 
 // Old SearchModal component removed - now using MobileInlineSearch
 export const SearchModalLegacy: FC<{ onClose: () => void; onSearch: (term: string) => void }> = ({ onClose, onSearch }) => {
+  const locale = useLocale();
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState<Tour[]>([]);
   const [loading, setLoading] = useState(false);
@@ -575,7 +575,7 @@ export const SearchModalLegacy: FC<{ onClose: () => void; onSearch: (term: strin
             <h3 className="text-slate-500 font-bold text-base tracking-wider uppercase mb-4">Tours</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {searchResults.map((tour) => (
-                <a key={tour._id} href={contentPath('tour', tour.slug, (tour as { urlType?: string }).urlType)} className="group block bg-white rounded-lg shadow-md overflow-hidden transition-shadow hover:shadow-xl">
+                <a key={tour._id} href={localizedTourContentPath(tour, locale)} className="group block bg-white rounded-lg shadow-md overflow-hidden transition-shadow hover:shadow-xl">
                   <div className="aspect-w-16 aspect-h-9 w-full overflow-hidden relative">
                     <Image src={tour.image} alt={tour.title} fill sizes="(max-width: 768px) 50vw, 33vw" className="object-cover transition-transform duration-300 group-hover:scale-110" />
                   </div>

@@ -12,7 +12,7 @@ import remarkGfm from 'remark-gfm';
 import { safeMarkdownRehypePlugins, safeMarkdownUrlTransform } from '@/lib/markdown/safeMarkdown';
 import { IDestination } from '@/lib/models/Destination';
 import { useLocale } from 'next-intl';
-import { contentPath } from '@/lib/content/contentUrl';
+import { contentPath, tourContentPath } from '@/lib/content/contentUrl';
 
 // Algolia Configuration for AI
 const ALGOLIA_APP_ID = process.env.NEXT_PUBLIC_ALGOLIA_APP_ID || 'WMDNV9WSOI';
@@ -112,6 +112,9 @@ const DESTINATIONS_COPY: Record<'en' | 'ar', DestinationsCopy> = {
 
 interface ChatTour {
   slug: string;
+  urlType?: string;
+  destination?: { slug?: string } | string;
+  parentPage?: { slug?: string } | null;
   title: string;
   image?: string;
   duration?: string;
@@ -131,7 +134,7 @@ const isChatTour = (value: unknown): value is ChatTour =>
 const TourCard = ({ tour }: { tour: ChatTour }) => (
   <motion.div whileHover={{ y: -4 }}>
     <Link
-      href={`/${tour.slug}`}
+      href={tourContentPath(tour)}
       className="group block flex-shrink-0 w-[240px] bg-white rounded-xl overflow-hidden border shadow-sm hover:shadow-lg transition-all duration-300"
     >
     {tour.image && (

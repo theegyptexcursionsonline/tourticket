@@ -43,7 +43,7 @@ describe('localized Authority tools storefront pages', () => {
     delete process.env.AUTHORITY_PUBLISHER_TOKEN;
   });
 
-  it('discovers all fifteen official tools without routing customers into unconfigured local embeds', async () => {
+  it('keeps the English-only tools catalogue on its canonical customer URLs', async () => {
     const { container } = render(
       await ToolsIndexPage({ params: Promise.resolve({ locale: 'de' }) }),
     );
@@ -53,11 +53,11 @@ describe('localized Authority tools storefront pages', () => {
     expect(screen.getAllByRole('listitem')).toHaveLength(15);
 
     for (const tool of OFFICIAL_TOOLS) {
-      const href = customerToolHref('de', tool);
+      const href = customerToolHref('en', tool);
       const link = container.querySelector(`a[href="${href}"]`);
       expect(link).toBeInTheDocument();
       expect(link).toHaveTextContent(tool.name);
-      expect(link).toHaveAttribute('href', customerToolHref('de', tool));
+      expect(link).toHaveAttribute('href', customerToolHref('en', tool));
     }
 
     expect(container.querySelector('a[href="/de/tools/packing-list"]')).not.toBeInTheDocument();
@@ -69,7 +69,7 @@ describe('localized Authority tools storefront pages', () => {
     expect(schema.itemListElement).toHaveLength(15);
     expect(
       schema.itemListElement.map((item: { url: string }) => item.url),
-    ).toEqual(OFFICIAL_TOOLS.map((tool) => absoluteToolUrl('de', tool.id)));
+    ).toEqual(OFFICIAL_TOOLS.map((tool) => absoluteToolUrl('en', tool.id)));
     expect(
       schema.itemListElement.every(
         (item: { url: string }) => !/\/embed\/[a-z-]+\.html(?:[?#]|$)/.test(item.url),
@@ -104,20 +104,12 @@ describe('localized Authority tools storefront pages', () => {
     }
   });
 
-  it('renders truthful structured data only after Authority verification succeeds', async () => {
+  it('suppresses structured data on noindex dynamic tool routes', async () => {
     mockGetAuthorityToolState.mockResolvedValueOnce(readyState('packing-list'));
     const ready = render(
       await ToolPage({ params: Promise.resolve({ locale: 'en', tool: 'packing-list' }) }),
     );
-    const jsonLd = ready.container.querySelector('script[type="application/ld+json"]')?.textContent || '';
-    const schema = JSON.parse(jsonLd);
-    expect(schema['@graph'][0]).toMatchObject({
-      '@type': 'WebApplication',
-      name: 'Egypt Packing List Generator',
-      isAccessibleForFree: true,
-    });
-    expect(schema['@graph'][0].offers).toEqual({ '@type': 'Offer', price: '0', priceCurrency: 'USD' });
-    expect(jsonLd).not.toMatch(/aggregateRating|ratingValue|reviewCount/i);
+    expect(ready.container.querySelector('script[type="application/ld+json"]')).toBeNull();
     ready.unmount();
 
     mockGetAuthorityToolState.mockResolvedValueOnce({ ok: false, reason: 'not-configured' });
@@ -129,22 +121,14 @@ describe('localized Authority tools storefront pages', () => {
     expect(unavailable.container.querySelector('script[type="application/ld+json"]')).toBeNull();
   });
 
-  it('generates canonical and hreflang metadata for default and prefixed locale routes', async () => {
+  it('keeps the English-only catalog canonical and noindexes dynamic tool routes', async () => {
     const catalogEn = await generateCatalogMetadata({ params: Promise.resolve({ locale: 'en' }) });
     const visaDe = await generateToolMetadata({
       params: Promise.resolve({ locale: 'de', tool: 'visa-checker' }),
     });
 
     expect(catalogEn.alternates?.canonical).toBe(`${STOREFRONT_TOOL_BRAND.origin}/tools`);
-    expect(visaDe.alternates?.canonical).toBe(
-      `${STOREFRONT_TOOL_BRAND.origin}/de/tools/visa-checker`,
-    );
-    expect(visaDe.alternates?.languages).toMatchObject({
-      en: `${STOREFRONT_TOOL_BRAND.origin}/tools/visa-checker`,
-      ar: `${STOREFRONT_TOOL_BRAND.origin}/ar/tools/visa-checker`,
-      de: `${STOREFRONT_TOOL_BRAND.origin}/de/tools/visa-checker`,
-      'x-default': `${STOREFRONT_TOOL_BRAND.origin}/tools/visa-checker`,
-    });
+    expect(visaDe.alternates).toBeUndefined();
     expect(visaDe.robots).toEqual({ index: false, follow: false });
   });
 });

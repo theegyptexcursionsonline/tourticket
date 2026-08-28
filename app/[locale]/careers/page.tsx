@@ -4,7 +4,7 @@ import { Metadata } from "next";
 import CareersClientPage from "./CareersClientPage";
 import OrganizationSchema from "@/components/schema/OrganizationSchema";
 import WebSiteSchema from "@/components/schema/WebSiteSchema";
-import { getSeoAlternates } from '@/lib/seo';
+import { englishOnlyMetadataAlternates } from '@/lib/i18n/seoAlternates';
 import dbConnect from "@/lib/dbConnect";
 import Job from "@/lib/models/Job";
 import { Job as JobType } from "@/types";
@@ -13,7 +13,7 @@ import { Job as JobType } from "@/types";
 export const revalidate = 1800; // 30 min — storefront content; edge serves stale-while-revalidate so clicks stay instant
 
 // Generate metadata for SEO
-export const metadata: Metadata = {
+const PAGE_METADATA: Metadata = {
   title: 'Careers - Join Our Team | Egypt Excursions Online',
   description: 'Explore exciting career opportunities at Egypt Excursions Online. Join our team and help create unforgettable travel experiences.',
   openGraph: {
@@ -21,8 +21,13 @@ export const metadata: Metadata = {
     description: 'Explore exciting career opportunities at Egypt Excursions Online.',
     type: 'website',
   },
-  alternates: getSeoAlternates('/careers'),
 };
+
+
+export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
+  await params;
+  return { ...PAGE_METADATA, alternates: englishOnlyMetadataAlternates('/careers') };
+}
 
 async function getJobs(): Promise<JobType[]> {
     // Skip database fetch during build if MONGODB_URI is not set
@@ -46,7 +51,12 @@ export default async function CareersPage() {
     return (
         <>
             <OrganizationSchema />
-            <WebSiteSchema pageName="Careers" />
+            <WebSiteSchema
+                locale="en"
+                pageName="Join Our Team"
+                pageDescription="Are you passionate about travel and creating unforgettable experiences? We're a team of dedicated experts committed to providing the best of Egypt to the world."
+                pageUrl="/careers"
+            />
             <CareersClientPage jobOpenings={jobOpenings} />
         </>
     );

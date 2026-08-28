@@ -18,9 +18,12 @@ import {
 } from '@/lib/i18n/localizedCollections';
 import { getStopSaleDatesForTour } from '@/lib/stopSaleFetcher';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
-import { metadataAlternates } from '@/lib/i18n/seoAlternates';
+import { PUBLIC_CONTENT_FILTER } from '@/lib/content/publicContentFilter';
+import { explicitContentLocales, metadataAlternates } from '@/lib/i18n/seoAlternates';
 import { localizeHtmlLinks } from '@/lib/i18n/localizeHtmlLinks';
 import type { Review as ReviewData } from '@/types';
+import ContextualDiscoveryLinks from '@/components/seo/ContextualDiscoveryLinks';
+import { localizedContentPath } from '@/lib/content/contentUrl';
 
 const localizeTourFields = (tour: ITour, locale: string) =>
   localizeTour(tour as unknown as Record<string, unknown>, locale) as unknown as ITour;
@@ -38,9 +41,17 @@ export async function getTourBySlug(slug: string, locale: string): Promise<{ tou
   try {
     await dbConnect();
 
-    const baseTour = await Tour.findOne({ slug, isPublished: true, ...DEFAULT_TENANT_FILTER })
-      .populate('destination', 'name slug')
-      .populate('category', 'name slug')
+    const baseTour = await Tour.findOne({ slug, ...DEFAULT_TENANT_FILTER, ...PUBLIC_CONTENT_FILTER })
+      .populate({
+        path: 'destination',
+        select: 'name slug urlType parentPage translations',
+        match: { ...DEFAULT_TENANT_FILTER, ...PUBLIC_CONTENT_FILTER },
+      })
+      .populate({
+        path: 'category',
+        select: 'name slug urlType parentPage translations',
+        match: { ...DEFAULT_TENANT_FILTER, ...PUBLIC_CONTENT_FILTER },
+      })
       .lean();
 
     if (!baseTour && !locale.startsWith('de')) {
@@ -50,9 +61,21 @@ export async function getTourBySlug(slug: string, locale: string): Promise<{ tou
     let selectedTour = JSON.parse(JSON.stringify(baseTour || null)) as Record<string, unknown> | null;
 
     if (locale.startsWith('de')) {
-      const localizedTourMatches = await Tour.find({ slug, isPublished: true })
-        .populate('destination', 'name slug translations')
-        .populate('category', 'name slug translations')
+      const localizedTourMatches = await Tour.find({
+        slug,
+        ...DEFAULT_TENANT_FILTER,
+        ...PUBLIC_CONTENT_FILTER,
+      })
+        .populate({
+          path: 'destination',
+          select: 'name slug urlType parentPage translations',
+          match: { ...DEFAULT_TENANT_FILTER, ...PUBLIC_CONTENT_FILTER },
+        })
+        .populate({
+          path: 'category',
+          select: 'name slug urlType parentPage translations',
+          match: { ...DEFAULT_TENANT_FILTER, ...PUBLIC_CONTENT_FILTER },
+        })
         .lean();
 
       selectedTour = selectLocalizedTourCandidate(
@@ -103,7 +126,7 @@ async function getRelatedTours(
   const baseRelatedTours = await Tour.find({
     category: { $in: categoryIdArray },
     _id: { $ne: currentTourId },
-    isPublished: true,
+    ...PUBLIC_CONTENT_FILTER,
     ...DEFAULT_TENANT_FILTER,
   })
     .populate('destination', 'name')
@@ -123,7 +146,8 @@ async function getRelatedTours(
     const localizedRelatedTours = await Tour.find({
       category: { $in: categoryIdArray },
       _id: { $ne: currentTourId },
-      isPublished: true,
+      ...DEFAULT_TENANT_FILTER,
+      ...PUBLIC_CONTENT_FILTER,
       slug: { $in: candidateSlugs },
     })
       .populate('destination', 'name slug translations')
@@ -155,7 +179,11 @@ export async function getTourMetadata(slug: string, locale: string, canonicalPat
     title: localizedTour.metaTitle || `${localizedTour.title} | ${destination?.name || 'Travel'} Tours`,
     description: localizedTour.metaDescription || localizedTour.description,
     keywords: localizedTour.keywords || [localizedTour.title, destination?.name].filter((keyword): keyword is string => Boolean(keyword)),
-    alternates: metadataAlternates(locale, canonicalPath),
+    alternates: metadataAlternates(
+      locale,
+      canonicalPath,
+      explicitContentLocales(result.tour, ['title', 'description']),
+    ),
     openGraph: {
       title: localizedTour.title,
       description: localizedTour.description,
@@ -206,6 +234,48 @@ export async function renderTourDetail(slug: string, locale: string): Promise<Re
     localizedTour.description = localizeHtmlLinks(localizedTour.description, locale);
   }
 
+  const destinationRecord = localizedTour.destination && typeof localizedTour.destination === 'object'
+    ? localizedTour.destination as unknown as { name?: string; slug?: string; urlType?: string; parentPage?: { slug?: string } | null }
+    : null;
+  const categoryRecords = (Array.isArray(localizedTour.category)
+    ? localizedTour.category
+    : [localizedTour.category])
+    .filter(Boolean)
+    .filter((category) => typeof category === 'object') as unknown as Array<{
+      name?: string;
+      slug?: string;
+      urlType?: string;
+      parentPage?: { slug?: string } | null;
+    }>;
+  const contextualLinks = [
+    ...(destinationRecord?.slug && destinationRecord.name
+      ? [{
+          label: destinationRecord.name,
+          href: localizedContentPath(
+            'destination',
+            destinationRecord.slug,
+            destinationRecord.urlType,
+            locale,
+            null,
+            destinationRecord.parentPage?.slug,
+          ),
+        }]
+      : []),
+    ...categoryRecords
+      .filter((category) => category.slug && category.name)
+      .map((category) => ({
+        label: String(category.name),
+        href: localizedContentPath(
+          'category',
+          String(category.slug),
+          category.urlType,
+          locale,
+          null,
+          category.parentPage?.slug,
+        ),
+      })),
+  ];
+
   const localizedRelatedTours = relatedTours.map((relatedTour) => {
     const localizedRelated = localizeTourFields(relatedTour, locale);
 
@@ -243,6 +313,7 @@ export async function renderTourDetail(slug: string, locale: string): Promise<Re
           initialStopSaleDates={initialStopSaleDates}
         />
       </div>
+      <ContextualDiscoveryLinks locale={locale} links={contextualLinks} />
       <Footer />
     </>
   );

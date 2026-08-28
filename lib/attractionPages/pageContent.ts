@@ -9,9 +9,10 @@ import Tour from '@/lib/models/Tour';
 import Category from '@/lib/models/Category';
 import Destination from '@/lib/models/Destination';
 import { escapeRegex } from '@/lib/utils/escapeRegex';
-import { contentPath } from '@/lib/content/contentUrl';
+import { attractionPagePath, contentPath } from '@/lib/content/contentUrl';
 import { localizeEntityFields } from '@/lib/i18n/contentLocalization';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
+import { PUBLIC_CONTENT_FILTER } from '@/lib/content/publicContentFilter';
 
 export const ATTRACTION_PAGE_LOCALIZED_FIELDS = [
   'title',
@@ -170,16 +171,22 @@ export async function resolveLinkedPageCards(page: {
   const [pages, categories] = await Promise.all([
     pageIds.length
       ? AttractionPage.find({
-          $and: [DEFAULT_TENANT_FILTER, { _id: { $in: pageIds }, isPublished: true }],
+          ...DEFAULT_TENANT_FILTER,
+          ...PUBLIC_CONTENT_FILTER,
+          _id: { $in: pageIds },
         })
-          .select('title slug description heroImage pageType urlType translations')
+          .select('title slug description heroImage pageType urlType cityDestination parentPage translations')
+          .populate('cityDestination', 'slug')
           .lean()
       : [],
     categoryIds.length
       ? Category.find({
-          $and: [DEFAULT_TENANT_FILTER, { _id: { $in: categoryIds }, isPublished: { $ne: false } }],
+          ...DEFAULT_TENANT_FILTER,
+          ...PUBLIC_CONTENT_FILTER,
+          _id: { $in: categoryIds },
         })
-          .select('name slug description heroImage urlType translations')
+          .select('name slug description heroImage urlType cityDestination parentPage translations')
+          .populate('cityDestination', 'slug')
           .lean()
       : [],
   ]);
@@ -193,10 +200,13 @@ export async function resolveLinkedPageCards(page: {
       title: String(localized.title || ''),
       description: localized.description ? String(localized.description) : undefined,
       image: doc.heroImage ? String(doc.heroImage) : undefined,
-      href:
-        doc.pageType === 'category'
-          ? `/category/${String(doc.slug)}`
-          : contentPath('page', String(doc.slug), doc.urlType as string | undefined),
+      href: attractionPagePath(
+        String(doc.slug),
+        doc.pageType as string | undefined,
+        doc.urlType as string | undefined,
+        (doc.cityDestination as { slug?: string } | undefined)?.slug,
+        (doc.parentPage as { slug?: string } | undefined)?.slug,
+      ),
       kind: 'page',
     });
   }
@@ -208,7 +218,13 @@ export async function resolveLinkedPageCards(page: {
       title: String(localized.name || ''),
       description: localized.description ? String(localized.description) : undefined,
       image: doc.heroImage ? String(doc.heroImage) : undefined,
-      href: contentPath('category', String(doc.slug), doc.urlType as string | undefined),
+      href: contentPath(
+        'category',
+        String(doc.slug),
+        doc.urlType as string | undefined,
+        (doc.cityDestination as { slug?: string } | undefined)?.slug,
+        (doc.parentPage as { slug?: string } | undefined)?.slug,
+      ),
       kind: 'category',
     });
   }
@@ -220,4 +236,3 @@ export async function resolveLinkedPageCards(page: {
 
   return cards;
 }
-

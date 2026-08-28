@@ -59,7 +59,7 @@ import remarkGfm from 'remark-gfm';
 import { safeMarkdownRehypePlugins, safeMarkdownUrlTransform } from '@/lib/markdown/safeMarkdown';
 import { useLocale, useTranslations } from 'next-intl';
 import { isRTL } from '@/i18n/config';
-import { contentPath } from '@/lib/content/contentUrl';
+import { contentPath, localizedTourContentPath } from '@/lib/content/contentUrl';
 import { filterVisibleTaxonomyEntries } from '@/lib/utils/taxonomy';
 import { filterSearchHitsByTenant } from '@/lib/tenantSearchHitFilter';
 import { isPresent, isRecord, isSearchHit, type ChatPart, type SearchHit } from './componentTypes';
@@ -211,6 +211,7 @@ function CustomSearchBox({ searchQuery }: { searchQuery: string }) {
 // Tour Hits Component with card layout
 function TourHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limit?: number }) {
   const t = useTranslations('interestGrid');
+  const locale = useLocale();
   const { hits: rawHits } = useHits();
   const hits = filterVisibleTaxonomyEntries(
     filterSearchHitsByTenant(rawHits as unknown as SearchHit[], 'default'),
@@ -242,6 +243,9 @@ function TourHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limit?: 
     isFeatured: hit.isFeatured,
     discountPrice: hit.discountPrice,
     originalPrice: hit.price,
+    urlType: hit.urlType,
+    destination: hit.destination,
+    parentPage: hit.parentPage,
   }));
 
   return (
@@ -285,7 +289,7 @@ function TourHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limit?: 
             {tours.map((tour, idx) => (
               <a
                 key={limitedHits[idx].objectID}
-                href={`/${tour.slug}`}
+                href={localizedTourContentPath(tour, locale)}
                 onClick={onHitClick}
                 target="_blank"
                 rel="noopener noreferrer"
@@ -479,6 +483,7 @@ function CategoryHits({ onHitClick, limit = 3 }: { onHitClick?: () => void; limi
 
 export default function InterestGridServer({ categories }: InterestGridServerProps) {
   const t = useTranslations('interestGrid');
+  const locale = useLocale();
   const [searchTerm, setSearchTerm] = useState('');
   const [swiperRef, setSwiperRef] = useState<SwiperType | null>(null);
   const [isExpanded, setIsExpanded] = useState(false);
@@ -757,7 +762,7 @@ export default function InterestGridServer({ categories }: InterestGridServerPro
               {detectedToursByMessage[messageId].map((tour, idx) => (
                 <a
                   key={idx}
-                  href={`/${tour.slug}`}
+                  href={localizedTourContentPath(tour, locale)}
                   onClick={handleCloseDropdown}
                   target="_blank"
                   rel="noopener noreferrer"
@@ -833,7 +838,7 @@ export default function InterestGridServer({ categories }: InterestGridServerPro
         </div>
       ) : null
     ).filter(Boolean);
-  }, [renderToolOutput, detectedToursByMessage, t]);
+  }, [renderToolOutput, detectedToursByMessage, locale, t]);
 
   // Convert categories to interests format
   const interests: Interest[] = categories.map(cat => ({

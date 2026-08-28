@@ -2,6 +2,7 @@ import {
   segmentFor,
   contentPath,
   localizedContentPath,
+  localizedRoutePath,
   normalizeUrlType,
   pageDefaultSegment,
   attractionPagePath,
@@ -61,6 +62,14 @@ describe('contentUrl helper', () => {
     it('non-default locale gets a prefix', () => {
       expect(localizedContentPath('tour', 'x', 'tour', 'de')).toBe('/de/tour/x');
       expect(localizedContentPath('destination', 'cairo', 'direct', 'fr')).toBe('/fr/cairo');
+    });
+  });
+
+  describe('localizedRoutePath', () => {
+    it('prefixes only non-default locales on canonical internal routes', () => {
+      expect(localizedRoutePath('/blog/cairo-guide', 'en')).toBe('/blog/cairo-guide');
+      expect(localizedRoutePath('/blog/cairo-guide', 'fr')).toBe('/fr/blog/cairo-guide');
+      expect(localizedRoutePath('blog/cairo-guide', 'de')).toBe('/de/blog/cairo-guide');
     });
   });
 

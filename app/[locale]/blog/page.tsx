@@ -3,37 +3,35 @@ import { Metadata } from 'next';
 import dbConnect from '@/lib/dbConnect';
 import Blog from '@/lib/models/Blog';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
-import { NOT_ARCHIVED_FILTER, PUBLIC_CONTENT_FILTER } from '@/lib/content/publicContentFilter';
+import { PUBLIC_CONTENT_FILTER } from '@/lib/content/publicContentFilter';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import BlogClientPage from './BlogClientPage';
 import CollectionSchema from '@/components/schema/CollectionSchema';
 import { IBlog } from '@/lib/models/Blog';
+import { metadataAlternates } from '@/lib/i18n/seoAlternates';
 
 // Enable ISR with 60 second revalidation for instant page loads
 export const revalidate = 1800; // 30 min — storefront content; edge serves stale-while-revalidate so clicks stay instant
 
 // Generate metadata for SEO
-export const metadata: Metadata = {
-  title: 'Travel Blog - Tips, Guides & Stories | Egypt Excursions Online',
-  description: 'Discover travel tips, destination guides, and inspiring stories from Egypt. Expert advice for planning your perfect Egyptian adventure.',
-  openGraph: {
-    title: 'Travel Blog | Egypt Excursions Online',
-    description: 'Discover travel tips, destination guides, and inspiring stories from Egypt.',
-    type: 'website',
-  },
-  alternates: {
-    canonical: '/blog',
-    languages: {
-      'en': '/blog',
-      'ar': '/ar/blog',
-      'es': '/es/blog',
-      'fr': '/fr/blog',
-      'de': '/de/blog',
-      'x-default': '/blog',
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  return {
+    title: 'Travel Blog - Tips, Guides & Stories | Egypt Excursions Online',
+    description: 'Discover travel tips, destination guides, and inspiring stories from Egypt. Expert advice for planning your perfect Egyptian adventure.',
+    openGraph: {
+      title: 'Travel Blog | Egypt Excursions Online',
+      description: 'Discover travel tips, destination guides, and inspiring stories from Egypt.',
+      type: 'website',
     },
-  },
-};
+    alternates: metadataAlternates(locale, '/blog'),
+  };
+}
 
 const categories = [
   { value: 'travel-tips', label: 'Travel Tips' },
@@ -69,15 +67,15 @@ async function getBlogsWithCategoryCounts(): Promise<{
     // Get all published blogs
     const blogs = await Blog.find({ status: 'published', ...DEFAULT_TENANT_FILTER })
       .sort({ publishedAt: -1 })
-      .populate({ path: 'relatedDestinations', select: 'name slug', match: NOT_ARCHIVED_FILTER })
-      .populate({ path: 'relatedTours', select: 'title slug', match: PUBLIC_CONTENT_FILTER });
+      .populate({ path: 'relatedDestinations', select: 'name slug urlType parentPage', match: PUBLIC_CONTENT_FILTER })
+      .populate({ path: 'relatedTours', select: 'title slug urlType parentPage', match: PUBLIC_CONTENT_FILTER });
 
     // Get featured posts
     const featuredPosts = await Blog.find({ status: 'published', featured: true, ...DEFAULT_TENANT_FILTER })
       .sort({ publishedAt: -1 })
       .limit(3)
-      .populate({ path: 'relatedDestinations', select: 'name slug', match: NOT_ARCHIVED_FILTER })
-      .populate({ path: 'relatedTours', select: 'title slug', match: PUBLIC_CONTENT_FILTER });
+      .populate({ path: 'relatedDestinations', select: 'name slug urlType parentPage', match: PUBLIC_CONTENT_FILTER })
+      .populate({ path: 'relatedTours', select: 'title slug urlType parentPage', match: PUBLIC_CONTENT_FILTER });
 
     // Get category counts
     const categoryCounts = await Promise.all(
@@ -102,14 +100,20 @@ async function getBlogsWithCategoryCounts(): Promise<{
   }
 }
 
-export default async function BlogIndexPage() {
+export default async function BlogIndexPage({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
   const { blogs, categoryCounts, featuredPosts } = await getBlogsWithCategoryCounts();
 
   return (
     <>
       <CollectionSchema
-        name="Travel Blog"
-        description="Discover travel tips, destination guides, and inspiring stories from Egypt"
+        locale={locale}
+        name="Travel Stories & Insights"
+        description="Discover amazing destinations, travel tips, and cultural experiences from around the world"
         url="/blog"
         items={blogs.map((blog) => ({ name: blog.title, url: `/blog/${blog.slug}`, image: blog.featuredImage }))}
       />

@@ -13,6 +13,7 @@ import {
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import type { Category, Destination, Review, Tour } from '@/types';
+import { contentPath, tourContentPath } from '@/lib/content/contentUrl';
 
 type LandingTour = Omit<Tour, 'destination'> & { destination?: Destination };
 
@@ -463,7 +464,7 @@ const TourCard = ({ tour, index }: { tour: LandingTour; index: number }) => (
     animate={{ opacity: 1, y: 0 }}
     transition={{ delay: index * 0.1 }}
   >
-    <Link href={`/${tour.slug}`} className="group block">
+    <Link href={tourContentPath(tour)} className="group block">
       <div className="bg-white rounded-2xl shadow-lg overflow-hidden transition-all duration-300 hover:shadow-2xl hover:-translate-y-2">
         <div className="relative h-48">
           <Image
@@ -526,7 +527,7 @@ const TourListItem = ({ tour, index }: { tour: LandingTour; index: number }) => 
     animate={{ opacity: 1, x: 0 }}
     transition={{ delay: index * 0.05 }}
   >
-    <Link href={`/${tour.slug}`} className="group">
+    <Link href={tourContentPath(tour)} className="group">
       <div className="bg-white rounded-xl p-6 shadow-md hover:shadow-lg transition-all duration-200 flex items-center gap-6">
         <div className="relative w-24 h-24 rounded-lg overflow-hidden flex-shrink-0">
           <Image
@@ -575,7 +576,7 @@ const TourLargeCard = ({ tour, index }: { tour: LandingTour; index: number }) =>
     animate={{ opacity: 1, y: 0 }}
     transition={{ delay: index * 0.1 }}
   >
-    <Link href={`/${tour.slug}`} className="group block">
+    <Link href={tourContentPath(tour)} className="group block">
       <div className="bg-white rounded-2xl shadow-lg overflow-hidden transition-all duration-300 hover:shadow-2xl">
         <div className="relative h-64">
           <Image
@@ -631,7 +632,7 @@ const DestinationCard = ({ destination, index }: { destination: Destination; ind
     animate={{ opacity: 1, y: 0 }}
     transition={{ delay: index * 0.1 }}
   >
-    <Link href={`/${destination.slug}`} className="group block">
+    <Link href={contentPath('destination', destination.slug, destination.urlType, null, destination.parentPage?.slug)} className="group block">
       <div className="bg-white rounded-2xl shadow-lg overflow-hidden transition-all duration-300 hover:shadow-2xl hover:-translate-y-2">
         <div className="relative h-48">
           <Image
@@ -670,7 +671,7 @@ const DestinationListItem = ({ destination, index }: { destination: Destination;
     animate={{ opacity: 1, x: 0 }}
     transition={{ delay: index * 0.05 }}
   >
-    <Link href={`/${destination.slug}`} className="group">
+    <Link href={contentPath('destination', destination.slug, destination.urlType, null, destination.parentPage?.slug)} className="group">
       <div className="bg-white rounded-xl p-6 shadow-md hover:shadow-lg transition-all duration-200 flex items-center gap-6">
         <div className="relative w-20 h-20 rounded-lg overflow-hidden flex-shrink-0">
           <Image
@@ -706,7 +707,7 @@ const DestinationLargeCard = ({ destination, index }: { destination: Destination
     animate={{ opacity: 1, y: 0 }}
     transition={{ delay: index * 0.1 }}
   >
-    <Link href={`/${destination.slug}`} className="group block">
+    <Link href={contentPath('destination', destination.slug, destination.urlType, null, destination.parentPage?.slug)} className="group block">
       <div className="bg-white rounded-2xl shadow-lg overflow-hidden transition-all duration-300 hover:shadow-2xl">
         <div className="relative h-64">
           <Image
@@ -747,7 +748,7 @@ const CategoryCard = ({ category, index }: { category: Category; index: number }
     animate={{ opacity: 1, scale: 1 }}
     transition={{ delay: index * 0.1 }}
   >
-    <Link href={`/${category.slug}`} className="group block">
+    <Link href={contentPath('category', category.slug, category.urlType, null, category.parentPage?.slug)} className="group block">
       <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-2xl p-8 shadow-lg transition-all duration-300 hover:shadow-2xl hover:-translate-y-2 border border-indigo-100">
         <div className="text-center">
           <div className="text-4xl mb-4">{category.icon || '📋'}</div>

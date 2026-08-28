@@ -9,7 +9,7 @@ import type { Destination } from '@/types';
 import { useSettings } from '@/hooks/useSettings';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLocale } from 'next-intl';
-import { contentPath } from '@/lib/content/contentUrl';
+import { tourContentPath } from '@/lib/content/contentUrl';
 
 type TourWithDetails = Omit<ITour, 'destination'> & {
   destination?: Destination;
@@ -141,7 +141,7 @@ const TourCard = ({ tour, copy, rtl }: { tour: TourWithDetails; copy: ToursPageC
       transition={{ duration: 0.3 }}
       whileHover={{ y: -8 }}
     >
-      <Link href={contentPath('tour', tour.slug, (tour as { urlType?: string }).urlType)} className="group block bg-white rounded-2xl transition-all duration-300 overflow-hidden border border-slate-100">
+      <Link href={tourContentPath(tour)} className="group block bg-white rounded-2xl transition-all duration-300 overflow-hidden border border-slate-100">
         <div className="relative h-56 overflow-hidden">
           <Image
             src={tour.image || '/images/placeholder.png'}

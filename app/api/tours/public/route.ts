@@ -2,16 +2,17 @@
 import dbConnect from '@/lib/dbConnect';
 import Tour from '@/lib/models/Tour';
 import { NextResponse } from 'next/server';
+import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
+import { PUBLIC_CONTENT_FILTER } from '@/lib/content/publicContentFilter';
 
 export async function GET() {
   await dbConnect();
   try {
     // Only return public tour data
     // Only show tours from the default tenant (exclude German/other tenant tours)
-    const defaultTenantFilter = { $or: [{ tenantId: 'default' }, { tenantId: { $exists: false } }, { tenantId: null }] };
     const tours = await Tour.find(
       {
-        isPublished: true,
+        ...PUBLIC_CONTENT_FILTER,
         $and: [
           {
             $or: [
@@ -19,7 +20,7 @@ export async function GET() {
               { isActive: { $exists: false } },
             ],
           },
-          defaultTenantFilter,
+          DEFAULT_TENANT_FILTER,
         ],
       },
       { 

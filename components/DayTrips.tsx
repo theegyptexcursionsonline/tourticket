@@ -13,6 +13,7 @@ import toast from 'react-hot-toast';
 import { useLocale, useTranslations } from 'next-intl';
 import { isRTL } from '@/i18n/config';
 import { getErrorMessage, isRecord } from './componentTypes';
+import { tourContentPath } from '@/lib/content/contentUrl';
 
 const normalizeDayTrips = (value: unknown, untitledTour: string): Tour[] => {
   if (!Array.isArray(value)) return [];
@@ -102,7 +103,7 @@ const DayTripCard = ({
 
   return (
     <Link
-      href={`/${trip.slug}`}
+      href={tourContentPath(trip)}
       className="flex-shrink-0 w-[200px] xs:w-[220px] sm:w-[260px] md:w-[270px] bg-white rounded-xl shadow-lg overflow-hidden snap-start group transform transition-all duration-300 hover:shadow-2xl hover:-translate-y-2"
     >
       <div className="relative h-32 sm:h-36 md:h-40">

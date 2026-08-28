@@ -13,6 +13,7 @@ import { selectLocalizedTaxonomyEntries } from '@/lib/i18n/localizedCollections'
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 import { contentPath } from '@/lib/content/contentUrl';
 import { filterVisibleTaxonomyEntries } from '@/lib/utils/taxonomy';
+import { metadataAlternates } from '@/lib/i18n/seoAlternates';
 
 // Enable ISR with 60 second revalidation for instant page loads
 export const revalidate = 1800; // 30 min — storefront content; edge serves stale-while-revalidate so clicks stay instant
@@ -50,17 +51,7 @@ export async function generateMetadata({
       description: meta.description,
       type: 'website',
     },
-    alternates: {
-      canonical: '/destinations',
-      languages: {
-        'en': '/destinations',
-        'ar': '/ar/destinations',
-        'es': '/es/destinations',
-        'fr': '/fr/destinations',
-        'de': '/de/destinations',
-        'x-default': '/destinations',
-      },
-    },
+    alternates: metadataAlternates(locale, '/destinations'),
   };
 };
 
@@ -146,12 +137,22 @@ export default async function DestinationsIndexPage({
 }) {
   const { locale } = await params;
   const destinations = await getDestinationsWithTourCounts(locale);
+  const schemaCopy = locale.startsWith('ar')
+    ? {
+        name: 'استكشف وجهاتنا',
+        description: 'من العجائب التاريخية إلى المعالم الحديثة، اعثر على مغامرتك القادمة في واحدة من الوجهات المختارة بعناية.',
+      }
+    : {
+        name: 'Explore Our Destinations',
+        description: 'From ancient wonders to modern marvels, find your next adventure in one of our handpicked locations.',
+      };
 
   return (
     <>
       <CollectionSchema
-        name="All Destinations"
-        description="Explore amazing destinations across Egypt"
+        locale={locale}
+        name={schemaCopy.name}
+        description={schemaCopy.description}
         url="/destinations"
         items={destinations.map((destination) => ({
           name: destination.name,

@@ -1,6 +1,6 @@
 import React from "react";
 import { Metadata } from "next";
-import { getSeoAlternates } from '@/lib/seo';
+import { englishOnlyMetadataAlternates } from '@/lib/i18n/seoAlternates';
 import {
   Award, DollarSign, Smartphone, CalendarCheck,
   Heart, Users, Compass
@@ -18,7 +18,7 @@ import WebSiteSchema from '@/components/schema/WebSiteSchema';
 export const revalidate = 1800; // 30 min — storefront content; edge serves stale-while-revalidate so clicks stay instant
 
 // Generate metadata for SEO
-export const metadata: Metadata = {
+const PAGE_METADATA: Metadata = {
   title: 'About Us - Your Best Travel Buddy | Egypt Excursions Online',
   description: 'Learn about Egypt Excursions Online, your trusted partner for extraordinary travel experiences with 15 years of expertise in tourism.',
   openGraph: {
@@ -27,8 +27,12 @@ export const metadata: Metadata = {
     type: 'website',
     images: ['https://egypt-excursionsonline.com/about.png'],
   },
-  alternates: getSeoAlternates('/about'),
 };
+
+export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
+  await params;
+  return { ...PAGE_METADATA, alternates: englishOnlyMetadataAlternates('/about') };
+}
 
 // =================================================================
 // --- DARK HERO SECTION COMPONENT ---
@@ -48,9 +52,9 @@ function DarkHero() {
       </div>
 
       <div className="relative z-10">
-        <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight">
+        <p className="text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight">
           Your Best Travel Buddy
-        </h1>
+        </p>
         <p className="mt-4 text-lg sm:text-xl max-w-2xl mx-auto opacity-80">
           Discover hidden gems and unforgettable experiences with our expert guidance.
         </p>
@@ -67,10 +71,10 @@ export default function AboutUsPage() {
     <div className="bg-white text-slate-800 min-h-screen flex flex-col">
       <OrganizationSchema />
       <WebSiteSchema
-        pageName="About Us - Your Best Travel Buddy | Egypt Excursions Online"
-        pageDescription="Learn about Egypt Excursions Online, your trusted partner for extraordinary travel experiences with 15 years of expertise in tourism."
+        locale="en"
+        pageName="About Egypt Excursions Online"
+        pageDescription="Your trusted partner for extraordinary travel experiences, with 15 years of expertise in tourism."
         pageUrl="/about"
-        breadcrumbs={[{ name: 'Home', url: '/' }, { name: 'About Us', url: '/about' }]}
       />
       {/* Add the DarkHero section at the top of the page */}
       <DarkHero />

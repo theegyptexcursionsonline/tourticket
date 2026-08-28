@@ -7,13 +7,13 @@ import { ToolsHeader, ToolsFooter } from '@/components/tools/ToolsChrome';
 import TripCostCalculator from '@/components/tools/TripCostCalculator';
 import EmbedCode from '@/components/tools/EmbedCode';
 import { getTripCostConfig } from '@/lib/toolsApi';
-import { getSeoAlternates } from '@/lib/seo';
+import { englishOnlyMetadataAlternates } from '@/lib/i18n/seoAlternates';
 
 export const dynamic = 'force-dynamic';
 
 const ACCENT = '#E05D1A';
 
-export const metadata: Metadata = {
+const PAGE_METADATA: Metadata = {
   title: 'Egypt Trip Cost Calculator — Free Embeddable Widget | Egypt Excursions Online',
   description:
     'Estimate a full Egypt trip budget in seconds — and embed the calculator on your own website or blog with one line of code, free.',
@@ -23,8 +23,15 @@ export const metadata: Metadata = {
     type: 'website',
     siteName: 'Egypt Excursions Online',
   },
-  alternates: getSeoAlternates('/tools/trip-cost-calculator'),
 };
+
+export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
+  await params;
+  return {
+    ...PAGE_METADATA,
+    alternates: englishOnlyMetadataAlternates('/tools/trip-cost-calculator'),
+  };
+}
 
 export default async function TripCostCalculatorPage() {
   const h = await headers();

@@ -16,6 +16,7 @@ import RelatedInterests from './RelatedInterests';
 import PopularInterestsGrid from './PopularInterestsGrid';
 import { useLocale } from 'next-intl';
 import { isRTL } from '@/i18n/config';
+import { tourContentPath } from '@/lib/content/contentUrl';
 
 interface InterestData {
   name: string;
@@ -53,7 +54,7 @@ const TourCard = ({ tour, index }: { tour: Tour; index: number }) => {
       transition={{ delay: index * 0.1 }}
     >
       <Link
-        href={`/${tour.slug}`}
+        href={tourContentPath(tour)}
         className="group bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl transition-all duration-300 block border border-gray-200"
       >
         <div className="relative h-48 overflow-hidden">

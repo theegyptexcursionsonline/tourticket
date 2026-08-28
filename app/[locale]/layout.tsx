@@ -37,7 +37,7 @@ const almarai = Almarai({
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://egypt-excursionsonline.com';
 
-export const metadata: Metadata = {
+const ROOT_METADATA: Metadata = {
   title: "Egypt Excursions Online - Unforgettable Experiences",
   description:
     "Discover and book unforgettable tours, day trips, and excursions across Egypt. Explore Hurghada, Cairo, Luxor, Sharm El Sheikh and more with Egypt Excursions Online.",
@@ -46,38 +46,21 @@ export const metadata: Metadata = {
     siteName: 'Egypt Excursions Online',
     title: 'Egypt Excursions Online - Tours & Day Trips in Egypt',
     description: 'Book the best tours, day trips, and excursions across Egypt. Explore Hurghada, Cairo, Luxor, Sharm El Sheikh and more.',
-    images: [`${BASE_URL}/og-image.jpg`],
+    images: [`${BASE_URL}/hero3.jpg`],
     locale: 'en',
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Egypt Excursions Online - Tours & Day Trips in Egypt',
     description: 'Book the best tours, day trips, and excursions across Egypt.',
-    images: [`${BASE_URL}/og-image.jpg`],
-  },
-  robots: {
-    index: true,
-    follow: true,
-    googleBot: {
-      index: true,
-      follow: true,
-      'max-video-preview': -1,
-      'max-image-preview': 'large',
-      'max-snippet': -1,
-    },
-  },
-  alternates: {
-    canonical: '/',
-    languages: {
-      'en': `${BASE_URL}/`,
-      'ar': `${BASE_URL}/ar`,
-      'es': `${BASE_URL}/es`,
-      'fr': `${BASE_URL}/fr`,
-      'de': `${BASE_URL}/de`,
-      'x-default': `${BASE_URL}/`,
-    },
+    images: [`${BASE_URL}/hero3.jpg`],
   },
 };
+
+// This layout wraps public and private routes. Keep route-specific canonical
+// and hreflang metadata out of it so login/checkout/user pages cannot inherit
+// the homepage URL. The actual homepage owns its alternates in page.tsx.
+export const metadata: Metadata = ROOT_METADATA;
 
 export function generateStaticParams() {
   return routing.locales.map((locale) => ({ locale }));

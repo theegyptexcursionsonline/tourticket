@@ -13,7 +13,7 @@ export interface SearchHit {
   description?: string;
   excerpt?: string;
   location?: string;
-  destination?: string | { name?: string };
+  destination?: string | { name?: string; slug?: string };
   category?: string | { name?: string };
   duration?: string;
   rating?: number;

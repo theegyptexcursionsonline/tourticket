@@ -4,6 +4,8 @@ import Tour, { type ITour } from '@/lib/models/Tour';
 import mongoose, { type FilterQuery } from 'mongoose';
 import Fuse from 'fuse.js';
 import { durationValuesMatchingBuckets, parseDurationBuckets } from '@/lib/tours/durationFilter';
+import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
+import { PUBLIC_CONTENT_FILTER } from '@/lib/content/publicContentFilter';
 
 // Fuse.js configuration for fuzzy search fallback
 const fuseOptions = {
@@ -29,7 +31,7 @@ async function performTextSearch(searchQuery: string, additionalFilters: FilterQ
         .select({ score: { $meta: "textScore" } })
         .sort({ score: { $meta: "textScore" }, rating: -1 })
         .populate('category', 'name')
-        .populate('destination', 'name')
+        .populate('destination', 'name slug')
         .limit(50)
         .lean();
 
@@ -58,7 +60,7 @@ async function performTextSearch(searchQuery: string, additionalFilters: FilterQ
             ]
         })
         .populate('category', 'name')
-        .populate('destination', 'name')
+        .populate('destination', 'name slug')
         .sort({ rating: -1, bookings: -1 })
         .limit(50)
         .lean();
@@ -73,7 +75,7 @@ async function performTextSearch(searchQuery: string, additionalFilters: FilterQ
         
         const allTours = await Tour.find(additionalFilters)
             .populate('category', 'name')
-            .populate('destination', 'name')
+            .populate('destination', 'name slug')
             .lean();
 
         if (allTours.length === 0) {
@@ -100,10 +102,9 @@ export async function GET(request: Request) {
 
         // Build additional filters - ALWAYS filter for published tours only
         // Exclude German/other tenant tours — only show default tenant content
-        const defaultTenantFilter = { $or: [{ tenantId: 'default' }, { tenantId: { $exists: false } }, { tenantId: null }] };
         const additionalFilters: FilterQuery<ITour> = {
-            isPublished: true,
-            ...defaultTenantFilter
+            ...DEFAULT_TENANT_FILTER,
+            ...PUBLIC_CONTENT_FILTER,
         };
 
         // Categories Filter
@@ -158,8 +159,8 @@ export async function GET(request: Request) {
             const buckets = parseDurationBuckets(durations);
             if (buckets.length > 0) {
                 const knownDurations = await Tour.distinct('duration', {
-                    isPublished: true,
-                    ...defaultTenantFilter,
+                    ...DEFAULT_TENANT_FILTER,
+                    ...PUBLIC_CONTENT_FILTER,
                 });
                 const matching = durationValuesMatchingBuckets(knownDurations, buckets);
                 // No stored duration fits the request — say so with an empty
@@ -200,7 +201,7 @@ export async function GET(request: Request) {
 
             tours = await Tour.find(additionalFilters)
                 .populate('category', 'name')
-                .populate('destination', 'name')
+                .populate('destination', 'name slug')
                 .sort(sortOption)
                 .limit(100) // Show up to 100 tours (increased from 50)
                 .lean();

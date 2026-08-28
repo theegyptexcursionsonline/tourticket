@@ -12,6 +12,8 @@ import { filterVisibleTaxonomyEntries } from '@/lib/utils/taxonomy';
 import { localizeEntityFields } from '@/lib/i18n/contentLocalization';
 import { selectLocalizedTaxonomyEntries } from '@/lib/i18n/localizedCollections';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
+import { PUBLIC_CONTENT_FILTER } from '@/lib/content/publicContentFilter';
+import { PRIVATE_ROUTE_METADATA } from '@/lib/seo/privateRouteMetadata';
 
 // Enable ISR with 60 second revalidation for instant page loads
 export const revalidate = 1800; // 30 min — storefront content; edge serves stale-while-revalidate so clicks stay instant
@@ -26,6 +28,7 @@ export async function generateMetadata({ params }: SearchPageProps): Promise<Met
   const t = await getTranslations({ locale, namespace: 'searchPage.meta' });
 
   return {
+    ...PRIVATE_ROUTE_METADATA,
     title: t('title'),
     description: t('description'),
     openGraph: {
@@ -33,6 +36,8 @@ export async function generateMetadata({ params }: SearchPageProps): Promise<Met
       description: t('openGraphDescription'),
       type: 'website',
     },
+    // Search-result combinations are unbounded and should not compete with
+    // catalogue landing pages in the index.
   };
 }
 
@@ -45,7 +50,7 @@ async function getFilters(locale: string) {
 
     try {
         await dbConnect();
-        const tours = await Tour.find({ isPublished: true, ...DEFAULT_TENANT_FILTER })
+        const tours = await Tour.find({ ...DEFAULT_TENANT_FILTER, ...PUBLIC_CONTENT_FILTER })
             .select('category destination')
             .lean();
 
@@ -72,15 +77,16 @@ async function getFilters(locale: string) {
         const [categories, destinations] = await Promise.all([
             categoryIds.length
                 ? Category.find({
-                    isPublished: true,
+                    ...DEFAULT_TENANT_FILTER,
+                    ...PUBLIC_CONTENT_FILTER,
                     _id: { $in: categoryIds }
                 }).sort({ order: 1, name: 1 }).lean()
                 : [],
             destinationIds.length
                 ? Destination.find({
-                    isPublished: true,
                     _id: { $in: destinationIds },
-                    ...DEFAULT_TENANT_FILTER
+                    ...DEFAULT_TENANT_FILTER,
+                    ...PUBLIC_CONTENT_FILTER,
                 }).sort({ featured: -1, name: 1 }).lean()
                 : []
         ]);

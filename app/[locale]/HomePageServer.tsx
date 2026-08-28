@@ -10,10 +10,8 @@ import SpecialOffer from '@/lib/models/SpecialOffer';
 import Header from '@/components/Header';
 import HeroSectionStable from '@/components/HeroSectionStable';
 import HomeDeferredSections from '@/components/HomeDeferredSections';
-import ReviewsStructuredData from '@/components/ReviewsStructuredData';
 import OrganizationSchema from '@/components/schema/OrganizationSchema';
 import WebSiteSchema from '@/components/schema/WebSiteSchema';
-import FAQSchema from '@/components/schema/FAQSchema';
 import ToursListSchema from '@/components/schema/ToursListSchema';
 
 // Import client-side versions that accept props
@@ -81,8 +79,8 @@ async function getHomePageData(locale: string) {
 
       // Featured tours (exclude German tenant tours)
       Tour.find({ isPublished: true, isFeatured: true, archivedAt: null, ...DEFAULT_TENANT_FILTER })
-        .populate('destination', 'name')
-        .select('title slug image discountPrice originalPrice pricingSummary duration rating reviewCount bookings translations')
+        .populate('destination', 'name slug')
+        .select('title slug urlType parentPage image discountPrice originalPrice pricingSummary duration rating reviewCount bookings translations')
         .sort({ updatedAt: -1, createdAt: -1 })
         .limit(8)
         .lean(),
@@ -122,7 +120,8 @@ async function getHomePageData(locale: string) {
 
       // Day trips (all published tours, limited to 12, exclude German tenant tours)
       Tour.find({ isPublished: true, archivedAt: null, ...DEFAULT_TENANT_FILTER })
-        .select('title slug image discountPrice originalPrice pricingSummary duration rating reviewCount bookings tags translations')
+        .populate('destination', 'name slug')
+        .select('title slug urlType parentPage destination image discountPrice originalPrice pricingSummary duration rating reviewCount bookings tags translations')
         .sort({ updatedAt: -1, createdAt: -1 })
         .limit(12)
         .lean(),
@@ -435,32 +434,18 @@ export default async function HomePageServer() {
   return (
     <>
       <OrganizationSchema />
-      <WebSiteSchema />
-      <ReviewsStructuredData />
-      <FAQSchema
-        items={[
-          { question: 'Can I reschedule or cancel my tickets?', answer: 'Self-service cancellation closes 24 hours before departure. Refunds are 100% at 7+ days, 50% at 3–7 days, and 0% under 3 days.' },
-          { question: 'How long are open tickets valid?', answer: 'Open tickets, which do not require a specific date and time slot, are typically valid for one year from the date of purchase.' },
-          { question: 'What languages do the tour guides speak?', answer: 'Our live guided tours are most commonly offered in English and the local language. Many tours also offer audio guides in multiple languages, including Spanish, French, German, Italian, and more.' },
-          { question: 'Is my booking confirmed instantly?', answer: 'Yes, most of our bookings are confirmed instantly after a successful payment. You will receive a booking confirmation email with your tickets and all necessary information right away.' },
-          { question: 'Do I need to print my ticket?', answer: 'No. All our tickets are mobile-friendly. You can simply show the e-ticket on your smartphone or tablet to the tour guide or at the entrance.' },
-          { question: 'What happens if my tour is canceled by the operator?', answer: 'In the rare event that a tour is canceled by the operator due to unforeseen circumstances, we will notify you immediately and provide a full refund or help you find a suitable alternative.' },
-          { question: 'Are there any hidden fees?', answer: 'The price you see on the product page is the final price. There are no hidden fees or extra charges at checkout.' },
-        ]}
-      />
+      <WebSiteSchema locale={locale} />
       <ToursListSchema
+        locale={locale}
         tours={tours.map((tour) => ({
           title: tour.title,
           slug: tour.slug,
+          urlType: tour.urlType,
+          destination: tour.destination,
+          parentPage: tour.parentPage,
           image: tour.image,
-          discountPrice: tour.pricingSummary?.fromPrice ?? tour.discountPrice,
-          originalPrice: tour.originalPrice,
-          rating: tour.rating,
-          reviewCount: tour.reviewCount,
-          duration: tour.duration,
         }))}
-        listName="Featured Tours & Excursions in Egypt"
-        listDescription="Discover the most popular tours, day trips, and activities across Egypt"
+        listName="Featured Tours"
       />
       <main>
       <Header

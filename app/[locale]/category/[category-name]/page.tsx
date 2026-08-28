@@ -3,6 +3,7 @@ import { notFound, permanentRedirect } from 'next/navigation';
 import dbConnect from '@/lib/dbConnect';
 import AttractionPageModel from '@/lib/models/AttractionPage';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
+import { PUBLIC_CONTENT_FILTER } from '@/lib/content/publicContentFilter';
 import { attractionPagePath, normalizeUrlType } from '@/lib/content/contentUrl';
 import { defaultLocale } from '@/i18n/config';
 import {
@@ -23,6 +24,7 @@ async function canonicalRedirectTarget(slug: string, locale: string): Promise<st
     slug,
     pageType: 'category',
     ...DEFAULT_TENANT_FILTER,
+    ...PUBLIC_CONTENT_FILTER,
   }).select('slug urlType cityDestination').populate('cityDestination', 'slug').lean() as {
     urlType?: string;
     cityDestination?: { slug?: string } | null;

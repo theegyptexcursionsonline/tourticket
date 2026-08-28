@@ -38,6 +38,7 @@ import {
 } from 'lucide-react';
 import { useLocale } from 'next-intl';
 import { isRTL } from '@/i18n/config';
+import { attractionPagePath, contentPath } from '@/lib/content/contentUrl';
 
 interface Interest {
   _id: string;
@@ -47,6 +48,8 @@ interface Interest {
   products: number;
   featured?: boolean;
   image?: string;
+  urlType?: string;
+  parentPage?: { slug?: string } | null;
 }
 
 interface PopularInterestsGridProps {
@@ -142,8 +145,9 @@ const getIconForInterest = (name: string) => {
 const InterestCard = ({ interest }: { interest: Interest }) => {
   const locale = useLocale();
   const rtl = isRTL(locale);
-  const linkUrl =
-    interest.type === 'attraction' ? `/attraction/${interest.slug}` : `/interests/${interest.slug}`;
+  const linkUrl = interest.type === 'attraction'
+    ? attractionPagePath(interest.slug, 'attraction', interest.urlType, undefined, interest.parentPage?.slug)
+    : contentPath('category', interest.slug, interest.urlType, undefined, interest.parentPage?.slug);
   const imageUrl = interest.image || getInterestImage(interest.name);
   const { Icon, gradient } = getIconForInterest(interest.name);
   const labelAttraction = rtl ? 'معلم' : 'Attraction';

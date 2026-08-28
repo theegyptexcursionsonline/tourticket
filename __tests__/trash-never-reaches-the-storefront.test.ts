@@ -28,23 +28,24 @@ describe('storefront destination reads exclude trashed records', () => {
   it('the category list is tenant-scoped and trash-filtered instead of find({})', () => {
     expect(detail).not.toMatch(/CategoryModel\.find\(\{\}\)/);
     const categories = detail.slice(detail.indexOf('CategoryModel.find('), detail.indexOf('CategoryModel.find(') + 220);
-    expect(categories).toContain('NOT_ARCHIVED_FILTER');
+    expect(categories).toContain('PUBLIC_CONTENT_FILTER');
   });
 });
 
 describe('slug resolution cannot render or redirect to trash', () => {
   const resolver = read('lib/content/resolveContentBySlug.ts');
 
-  it('every content lookup excludes archived records at the source', () => {
+  it('every content lookup requires published, non-archived records at the source', () => {
     const lookups = resolver.match(/(Tour|Destination|Category|AttractionPage)\.findOne\(\{[^)]*?\}\)/g) || [];
     expect(lookups.length).toBe(4);
     for (const lookup of lookups) {
-      expect(lookup).toContain('NOT_ARCHIVED_FILTER');
+      expect(lookup).toContain('PUBLIC_CONTENT_FILTER');
     }
   });
 
-  it('keeps the unpublished fallback for drafts (only trash is excluded)', () => {
-    expect(resolver).toContain('matches.find((m) => m.segment === expectedSegment)');
+  it('does not fall back to an unpublished match for render or redirect decisions', () => {
+    expect(resolver).not.toMatch(/\|\|\s*matches\.find/);
+    expect(resolver).not.toMatch(/matches\.find\(\(m\) => m\.isPublished\)\s*\|\|/);
   });
 });
 
@@ -52,15 +53,15 @@ describe('blog links and sitemap do not surface trash', () => {
   it('blog populates filter the joined side', () => {
     for (const file of ['app/[locale]/blog/[slug]/page.tsx', 'app/[locale]/blog/page.tsx']) {
       const source = read(file);
-      expect(source).toMatch(/relatedDestinations[\s\S]{0,120}NOT_ARCHIVED_FILTER/);
+      expect(source).toMatch(/relatedDestinations[\s\S]{0,160}PUBLIC_CONTENT_FILTER/);
       expect(source).toMatch(/relatedTours[\s\S]{0,140}PUBLIC_CONTENT_FILTER/);
     }
   });
 
-  it('the sitemap destination query carries the archived belt', () => {
+  it('the sitemap destination query requires published and non-archived content', () => {
     const sitemap = read('app/sitemap.ts');
-    const destinations = sitemap.slice(sitemap.indexOf('const Destination = mongoose.models.Destination'));
-    expect(destinations.slice(0, 400)).toContain('NOT_ARCHIVED_FILTER');
+    const destinations = sitemap.slice(sitemap.indexOf("const Destination = requiredModel('Destination')"));
+    expect(destinations).toContain('PUBLIC_CONTENT_FILTER');
   });
 });
 

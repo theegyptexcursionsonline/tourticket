@@ -53,7 +53,8 @@ import {
 import { isRecord, isSearchHit, type ChatPart, type SearchHit } from '@/components/componentTypes';
 import 'instantsearch.css/themes/satellite.css';
 import ThemeToggle from '@/components/ThemeToggle';
-import { contentPath } from '@/lib/content/contentUrl';
+import { useLocale } from 'next-intl';
+import { contentPath, localizedTourContentPath } from '@/lib/content/contentUrl';
 
 // =================================================================
 // --- ALGOLIA CONFIGURATION ---
@@ -137,11 +138,12 @@ function CustomSearchBox({ searchQuery }: { searchQuery: string }) {
 }
 
 function TourHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limit?: number }) {
+  const locale = useLocale();
   const { hits } = useHits();
   const tenantHits = filterTourSearchHitsByTenant(
     hits as unknown as SearchHit[],
     DEFAULT_SEARCH_TENANT,
-    'en'
+    locale
   );
   const limitedHits = tenantHits.slice(0, limit);
 
@@ -165,7 +167,7 @@ function TourHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limit?: 
       {limitedHits.map((hit, index) => (
         <motion.a
           key={hit.objectID}
-          href={`/${hit.slug || hit.objectID}`}
+          href={localizedTourContentPath(hit, locale)}
           onClick={onHitClick}
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -408,9 +410,11 @@ function BlogHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limit?: 
 }
 
 // Tour Card Component for AI Chat
-const TourCard = ({ tour }: { tour: SearchHit }) => (
+const TourCard = ({ tour }: { tour: SearchHit }) => {
+  const locale = useLocale();
+  return (
   <motion.a
-    href={`/${tour.slug}`}
+    href={localizedTourContentPath(tour, locale)}
     target="_blank"
     rel="noopener noreferrer"
     className="group block flex-shrink-0 w-[240px] bg-white rounded-xl overflow-hidden border shadow-sm hover:shadow-lg transition-all duration-300"
@@ -458,7 +462,8 @@ const TourCard = ({ tour }: { tour: SearchHit }) => (
       )}
     </div>
   </motion.a>
-);
+  );
+};
 
 // Tour Slider Component for AI Chat
 const TourSlider = ({ tours }: { tours: SearchHit[] }) => {

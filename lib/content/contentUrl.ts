@@ -123,6 +123,34 @@ export function contentPath(
   return seg ? `/${seg}/${slug}` : `/${slug}`;
 }
 
+type TourPathSource = {
+  slug?: string | null;
+  objectID?: string | null;
+  urlType?: string | null;
+  destination?: { slug?: string | null } | string | null;
+  parentPage?: { slug?: string | null } | null;
+};
+
+/** Canonical locale-less href for a tour record used by next-intl Link. */
+export function tourContentPath(tour: TourPathSource): string {
+  const slug = tour.slug || tour.objectID;
+  if (!slug) return '/tours';
+  const citySlug = typeof tour.destination === 'object' ? tour.destination?.slug : undefined;
+  return contentPath('tour', slug, tour.urlType, citySlug, tour.parentPage?.slug);
+}
+
+/** Canonical public tour href including the active locale for plain anchors. */
+export function localizedTourContentPath(tour: TourPathSource, locale: string): string {
+  const path = tourContentPath(tour);
+  return localizedRoutePath(path, locale);
+}
+
+/** Add the active locale to an already-canonical locale-less public route. */
+export function localizedRoutePath(path: string, locale: string): string {
+  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+  return locale && locale !== defaultLocale ? `/${locale}${normalizedPath}` : normalizedPath;
+}
+
 // Full public path including locale prefix. The default locale is un-prefixed
 // (matches the sitemap + existing routing).
 export function localizedContentPath(
@@ -134,5 +162,5 @@ export function localizedContentPath(
   parentSlug?: string | null,
 ): string {
   const path = contentPath(type, slug, urlType, citySlug, parentSlug);
-  return locale && locale !== defaultLocale ? `/${locale}${path}` : path;
+  return localizedRoutePath(path, locale);
 }

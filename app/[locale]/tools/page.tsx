@@ -5,7 +5,7 @@ import { ArrowRight, ArrowUpRight, BadgeCheck } from 'lucide-react';
 import ToolIcon from '@/components/tools/ToolIcon';
 import { ToolsFooter, ToolsHeader } from '@/components/tools/ToolsChrome';
 import { ToolsCatalogStructuredData } from '@/components/tools/ToolsStructuredData';
-import { metadataAlternates } from '@/lib/i18n/seoAlternates';
+import { englishOnlyMetadataAlternates } from '@/lib/i18n/seoAlternates';
 import {
   AUTHORITY_PUBLIC_ORIGIN,
   OFFICIAL_TOOLS,
@@ -18,17 +18,18 @@ interface ToolsIndexPageProps {
 }
 
 export async function generateMetadata({ params }: ToolsIndexPageProps): Promise<Metadata> {
-  const { locale } = await params;
+  await params;
   return {
     title: 'Free Egypt Travel Tools | Egypt Excursions Online',
     description:
       'Fifteen free planning tools for Egypt trips — budget, entry, customs, timing, crowds, transfers, diving, marine life, photography, packing and day-by-day itineraries.',
-    alternates: metadataAlternates(locale, '/tools'),
+    alternates: englishOnlyMetadataAlternates('/tools'),
   };
 }
 
 export default async function ToolsIndexPage({ params }: ToolsIndexPageProps) {
-  const { locale } = await params;
+  await params;
+  const locale = 'en';
   const { name, logoUrl, accent } = STOREFRONT_TOOL_BRAND;
 
   return (

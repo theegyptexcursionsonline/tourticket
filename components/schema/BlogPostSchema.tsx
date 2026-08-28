@@ -1,8 +1,7 @@
-// BlogPosting + Article schema for blog detail pages
+// BlogPosting schema for the source-backed fields visible on blog detail pages.
 import React from 'react';
 import { serializeJsonLd } from '@/lib/security/serializeJsonLd';
-
-const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://egypt-excursionsonline.com';
+import { localizedAbsoluteUrl, SEO_BASE_URL } from '@/lib/i18n/seoAlternates';
 
 interface Props {
   title: string;
@@ -12,12 +11,14 @@ interface Props {
   image?: string;
   author?: string;
   publishedAt?: string;
-  updatedAt?: string;
   tags?: string[];
+  locale?: string;
 }
 
-export default function BlogPostSchema({ title, slug, description, excerpt, image, author, publishedAt, updatedAt, tags }: Props) {
-  const postUrl = `${BASE_URL}/blog/${slug}`;
+export default function BlogPostSchema({ title, slug, description, excerpt, image, author, publishedAt, tags, locale = 'en' }: Props) {
+  const postUrl = localizedAbsoluteUrl(locale, `/blog/${slug}`);
+  const safeAuthor = author?.trim();
+  const safeTags = tags?.map((tag) => tag.trim()).filter(Boolean);
 
   const ld = {
     '@context': 'https://schema.org',
@@ -25,31 +26,14 @@ export default function BlogPostSchema({ title, slug, description, excerpt, imag
       {
         '@type': ['BlogPosting', 'Article'],
         headline: title,
-        description: description || excerpt,
+        ...((description || excerpt) ? { description: description || excerpt } : {}),
         url: postUrl,
-        image: image || `${BASE_URL}/og-image.jpg`,
-        author: {
-          '@type': 'Organization',
-          name: author || 'Egypt Excursions Online',
-          url: BASE_URL,
-        },
-        publisher: { '@id': `${BASE_URL}/#organization` },
-        datePublished: publishedAt,
-        dateModified: updatedAt || publishedAt,
+        ...(image ? { image } : {}),
+        ...(safeAuthor ? { author: { '@type': 'Person', name: safeAuthor } } : {}),
+        publisher: { '@id': `${SEO_BASE_URL}/#organization` },
+        ...(publishedAt ? { datePublished: publishedAt } : {}),
         mainEntityOfPage: { '@type': 'WebPage', '@id': postUrl },
-        ...(tags && tags.length > 0 ? { keywords: tags.join(', ') } : {}),
-        speakable: {
-          '@type': 'SpeakableSpecification',
-          cssSelector: ['h1', '.blog-content', 'article'],
-        },
-      },
-      {
-        '@type': 'BreadcrumbList',
-        itemListElement: [
-          { '@type': 'ListItem', position: 1, name: 'Home', item: BASE_URL },
-          { '@type': 'ListItem', position: 2, name: 'Blog', item: `${BASE_URL}/blog` },
-          { '@type': 'ListItem', position: 3, name: title, item: postUrl },
-        ],
+        ...(safeTags && safeTags.length > 0 ? { keywords: safeTags.join(', ') } : {}),
       },
     ],
   };

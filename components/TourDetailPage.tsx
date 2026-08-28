@@ -24,8 +24,6 @@ import StickyBookButton from '@/components/StickyBookButton';
 import TourPriceDisplay from '@/components/pricing/TourPriceDisplay';
 import ReviewList from '@/components/reviews/ReviewList';
 import ReviewForm from '@/components/reviews/ReviewForm';
-// Add these new imports for reviews
-import ReviewsStructuredData from '@/components/ReviewsStructuredData';
 import ElfsightWidget from '@/components/ElfsightWidget';
 import { sanitizeRichHtml } from '@/lib/security/sanitizeHtml';
 import { CANCELLATION_POLICY_SUMMARY } from '@/lib/bookings/cancellationPolicy';
@@ -750,9 +748,6 @@ const ReviewsSection = ({ tour, reviews, onReviewSubmitted, sectionRef }: {
           <span className="text-slate-500">({currentReviews.length} {currentReviews.length === 1 ? 'review' : 'reviews'})</span>
         </div>
       </div>
-
-      {/* Server-side JSON-LD for reviews (important for Google) */}
-      <ReviewsStructuredData />
 
       {/* Our own reviews UI (client) */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">

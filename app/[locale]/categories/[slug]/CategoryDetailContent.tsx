@@ -11,19 +11,21 @@ import CategoryPageClient from './CategoryPageClient';
 import CollectionSchema from '@/components/schema/CollectionSchema';
 import { localizeEntityFields, localizeStructuredEntries } from '@/lib/i18n/contentLocalization';
 import { categoryStructuredFields } from '@/lib/i18n/translationFields';
-import { metadataAlternates } from '@/lib/i18n/seoAlternates';
+import { explicitContentLocales, metadataAlternates } from '@/lib/i18n/seoAlternates';
 import {
   selectLocalizedTaxonomyEntries,
   selectLocalizedTours,
 } from '@/lib/i18n/localizedCollections';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
-import { contentPath } from '@/lib/content/contentUrl';
+import { PUBLIC_CONTENT_FILTER } from '@/lib/content/publicContentFilter';
+import { contentPath, localizedContentPath, tourContentPath } from '@/lib/content/contentUrl';
 import { resolveLinkedPageCards } from '@/lib/attractionPages/pageContent';
+import { buildContentBreadcrumbs } from '@/lib/content/breadcrumbs';
 
 export async function getCategoryMetadata(slug: string, locale: string, canonicalPath?: string): Promise<Metadata | null> {
   await dbConnect();
 
-  const categoryMatches = await CategoryModel.find({ slug, ...DEFAULT_TENANT_FILTER })
+  const categoryMatches = await CategoryModel.find({ slug, ...DEFAULT_TENANT_FILTER, ...PUBLIC_CONTENT_FILTER })
     .select('name description heroImage metaTitle metaDescription keywords translations')
     .lean();
 
@@ -54,7 +56,13 @@ export async function getCategoryMetadata(slug: string, locale: string, canonica
     title: String(category.metaTitle || `${categoryName} Tours | Egypt Excursions Online`),
     description: String(category.metaDescription || categoryDescription.substring(0, 160) || `Explore ${categoryName} tours and activities`),
     keywords: Array.isArray(category.keywords) ? category.keywords.map(String).join(', ') : undefined,
-    ...(canonicalPath ? { alternates: metadataAlternates(locale, canonicalPath) } : {}),
+    ...(canonicalPath ? {
+      alternates: metadataAlternates(
+        locale,
+        canonicalPath,
+        explicitContentLocales(categoryCandidate, ['name', 'description']),
+      ),
+    } : {}),
     openGraph: {
       title: categoryName,
       description: categoryDescription.substring(0, 160),
@@ -67,7 +75,7 @@ export async function getCategoryMetadata(slug: string, locale: string, canonica
 async function getPageData(slug: string, locale: string) {
   await dbConnect();
 
-  const categoryMatches = await CategoryModel.find({ slug, ...DEFAULT_TENANT_FILTER })
+  const categoryMatches = await CategoryModel.find({ slug, ...DEFAULT_TENANT_FILTER, ...PUBLIC_CONTENT_FILTER })
     .populate({
       path: 'popularDestinationIds',
       model: DestinationModel,
@@ -93,9 +101,12 @@ async function getPageData(slug: string, locale: string) {
   const categoryIds = serializedCategories.map((category) => String(category._id));
   const baseTours = await TourModel.find({
     category: { $in: categoryIds },
-    isPublished: true,
+    ...PUBLIC_CONTENT_FILTER,
     ...DEFAULT_TENANT_FILTER,
-  }).populate('destination').populate('category').lean();
+  })
+    .populate({ path: 'destination', match: { ...DEFAULT_TENANT_FILTER, ...PUBLIC_CONTENT_FILTER } })
+    .populate({ path: 'category', match: { ...DEFAULT_TENANT_FILTER, ...PUBLIC_CONTENT_FILTER } })
+    .lean();
 
   const serializedBaseTours = JSON.parse(JSON.stringify(baseTours)) as Record<string, unknown>[];
   const candidateSlugs = serializedBaseTours
@@ -107,10 +118,13 @@ async function getPageData(slug: string, locale: string) {
   if (locale.startsWith('de') && candidateSlugs.length > 0) {
     const localizedTourMatches = await TourModel.find({
       category: { $in: categoryIds },
-      isPublished: true,
+      ...PUBLIC_CONTENT_FILTER,
       slug: { $in: candidateSlugs },
       ...DEFAULT_TENANT_FILTER,
-    }).populate('destination').populate('category').lean();
+    })
+      .populate({ path: 'destination', match: { ...DEFAULT_TENANT_FILTER, ...PUBLIC_CONTENT_FILTER } })
+      .populate({ path: 'category', match: { ...DEFAULT_TENANT_FILTER, ...PUBLIC_CONTENT_FILTER } })
+      .lean();
 
     serializedTourCandidates = JSON.parse(JSON.stringify(localizedTourMatches)) as Record<string, unknown>[];
   }
@@ -244,6 +258,44 @@ export async function renderCategoryDetail(slug: string, locale: string): Promis
 
   if (!category) return null;
 
+  const categoryPath = contentPath(
+    'category',
+    slug,
+    category.urlType as string | undefined,
+    null,
+    (category.parentPage as { slug?: string } | null | undefined)?.slug,
+  );
+  const categoryForBreadcrumb = category as unknown as CategoryType;
+  const schemaBreadcrumbs = buildContentBreadcrumbs({
+    currentTitle: String(category.name || ''),
+    breadcrumbLabel: categoryForBreadcrumb.breadcrumbLabel,
+    parentPage: categoryForBreadcrumb.parentPage,
+    rootLabel: 'Categories',
+    rootHref: '/categories',
+  }).map((crumb) => ({ name: crumb.label, url: crumb.href || categoryPath }));
+  const contextualLinks = categoryTours.flatMap((tour) => {
+    const destination = tour.destination;
+    if (!destination || typeof destination !== 'object') return [];
+    const record = destination as {
+      name?: string;
+      slug?: string;
+      urlType?: string;
+      parentPage?: { slug?: string } | null;
+    };
+    if (!record.name || !record.slug) return [];
+    return [{
+      label: record.name,
+      href: localizedContentPath(
+        'destination',
+        record.slug,
+        record.urlType,
+        locale,
+        null,
+        record.parentPage?.slug,
+      ),
+    }];
+  });
+
   const [relatedInterests, linkedPages] = await Promise.all([
     getRelatedCategoryInterests(String(category._id), slug, locale),
     resolveLinkedPageCards(category, locale),
@@ -252,18 +304,14 @@ export async function renderCategoryDetail(slug: string, locale: string): Promis
   return (
     <>
       <CollectionSchema
+        locale={locale}
         name={String(category.name || '')}
         description={String(category.description || '')}
-        url={contentPath(
-          'category',
-          slug,
-          category.urlType as string | undefined,
-          null,
-          (category.parentPage as { slug?: string } | null | undefined)?.slug,
-        )}
+        url={categoryPath}
+        breadcrumbs={schemaBreadcrumbs}
         items={categoryTours.map((tour) => ({
           name: String(tour.title || ''),
-          url: contentPath('tour', String(tour.slug || ''), (tour as { urlType?: string }).urlType),
+          url: tourContentPath(tour as { slug: string; urlType?: string; destination?: { slug?: string }; parentPage?: { slug?: string } }),
           image: typeof tour.image === 'string' ? tour.image : undefined,
         }))}
       />
@@ -272,6 +320,7 @@ export async function renderCategoryDetail(slug: string, locale: string): Promis
         categoryTours={categoryTours as unknown as TourType[]}
         relatedInterests={relatedInterests}
         linkedPages={linkedPages}
+        contextualLinks={contextualLinks}
       />
     </>
   );

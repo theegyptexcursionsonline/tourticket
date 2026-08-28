@@ -14,6 +14,7 @@ import { Sparkles, MapPin, Clock, Star } from 'lucide-react';
 import 'instantsearch.css/themes/satellite.css';
 import { Link } from '@/i18n/routing';
 import Image from 'next/image';
+import { tourContentPath } from '@/lib/content/contentUrl';
 
 interface TourHitData {
   slug: string;
@@ -28,7 +29,9 @@ interface TourHitData {
   discountPrice?: number;
   price?: number;
   category?: { name?: string };
-  destination?: { name?: string };
+  destination?: { name?: string; slug?: string };
+  urlType?: string;
+  parentPage?: { slug?: string } | null;
 }
 
 const ALGOLIA_APP_ID = process.env.NEXT_PUBLIC_ALGOLIA_APP_ID || '1F31U1NOMS';
@@ -44,7 +47,7 @@ interface FallbackSearchProps {
 // Custom Hit Component for displaying tour results
 function TourHit({ hit }: { hit: TourHitData }) {
   return (
-    <Link href={`/${hit.slug}`} className="block">
+    <Link href={tourContentPath(hit)} className="block">
       <div className="bg-white rounded-xl border-2 border-slate-200 hover:border-blue-400 transition-all hover:shadow-lg p-4 group">
         {/* Tour Image */}
         {hit.image && (

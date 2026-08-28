@@ -7,6 +7,8 @@ import 'instantsearch.css/themes/satellite.css';
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import type { SearchHit } from '../componentTypes';
+import { Link } from '@/i18n/routing';
+import { tourContentPath } from '@/lib/content/contentUrl';
 
 const ALGOLIA_APP_ID = process.env.NEXT_PUBLIC_ALGOLIA_APP_ID || 'WMDNV9WSOI';
 const ALGOLIA_SEARCH_KEY = process.env.NEXT_PUBLIC_ALGOLIA_SEARCH_API_KEY || 'f485b4906072cedbd2f51a46e5ac2637';
@@ -68,8 +70,8 @@ export default function AlgoliaSearch() {
   // Custom Hit component to render tour results
   const Hit = ({ hit }: { hit: SearchHit }) => {
     return (
-      <a
-        href={`/${hit.slug}`}
+      <Link
+        href={tourContentPath(hit)}
         className="group bg-white border border-slate-200 rounded-xl overflow-hidden hover:shadow-xl hover:border-blue-300 transition-all duration-300 hover:-translate-y-1"
       >
         {/* Image */}
@@ -150,7 +152,7 @@ export default function AlgoliaSearch() {
             </span>
           </div>
         </div>
-      </a>
+      </Link>
     );
   };
 

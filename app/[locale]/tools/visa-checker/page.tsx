@@ -7,13 +7,13 @@ import { ToolsHeader, ToolsFooter } from '@/components/tools/ToolsChrome';
 import VisaChecker from '@/components/tools/VisaChecker';
 import EmbedCode from '@/components/tools/EmbedCode';
 import { getVisaConfig } from '@/lib/tools/visa';
-import { getSeoAlternates } from '@/lib/seo';
+import { englishOnlyMetadataAlternates } from '@/lib/i18n/seoAlternates';
 
 export const dynamic = 'force-dynamic';
 
 const ACCENT = '#E05D1A';
 
-export const metadata: Metadata = {
+const PAGE_METADATA: Metadata = {
   title: 'Egypt Visa Checker — Do I Need a Visa for Egypt? | Egypt Excursions Online',
   description:
     'Check Egypt entry requirements by nationality in seconds — e-visa, visa on arrival or visa-free, with cost and stay length. Free, and embeddable on your own site.',
@@ -23,8 +23,15 @@ export const metadata: Metadata = {
     type: 'website',
     siteName: 'Egypt Excursions Online',
   },
-  alternates: getSeoAlternates('/tools/visa-checker'),
 };
+
+export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
+  await params;
+  return {
+    ...PAGE_METADATA,
+    alternates: englishOnlyMetadataAlternates('/tools/visa-checker'),
+  };
+}
 
 export default async function VisaCheckerPage() {
   const h = await headers();

@@ -231,6 +231,7 @@ export interface Tour {
   id?: string | number;
   title: string;
   slug: string;
+  urlType?: string;
   breadcrumbLabel?: string;
   parentPage?: import('@/lib/content/contentNavigation').ParentPageValue | null;
   image: string;

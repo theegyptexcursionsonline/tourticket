@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
+import { contentPath, tourContentPath } from '@/lib/content/contentUrl';
 
 interface MasonryLandingPageProps {
   page: {
@@ -41,7 +42,9 @@ interface MasonryItem {
   discountPrice?: number;
   duration?: string;
   rating?: number;
-  destination?: { name?: string };
+  destination?: { name?: string; slug?: string };
+  urlType?: string;
+  parentPage?: { slug?: string } | null;
   tags?: string[];
   country?: string;
   tourCount?: number;
@@ -388,7 +391,7 @@ const MasonryContentCard = ({ item, index }: { item: MasonryItem; index: number 
 };
 
 const TourMasonryCard = ({ item, height }: { item: MasonryItem; height: string }) => (
-  <Link href={`/${item.slug}`} className="group block">
+  <Link href={tourContentPath(item)} className="group block">
     <div className="bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 hover:rotate-1">
       <div className={`relative ${height} overflow-hidden`}>
         <Image 
@@ -457,7 +460,7 @@ const TourMasonryCard = ({ item, height }: { item: MasonryItem; height: string }
 );
 
 const DestinationMasonryCard = ({ item, height }: { item: MasonryItem; height: string }) => (
-  <Link href={`/${item.slug}`} className="group block">
+  <Link href={contentPath('destination', item.slug || '', item.urlType, null, item.parentPage?.slug)} className="group block">
     <div className="bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2">
       <div className={`relative ${height} overflow-hidden`}>
         <Image 
@@ -495,7 +498,7 @@ const DestinationMasonryCard = ({ item, height }: { item: MasonryItem; height: s
 );
 
 const CategoryMasonryCard = ({ item }: { item: MasonryItem }) => (
-  <Link href={`/${item.slug}`} className="group block">
+  <Link href={contentPath('category', item.slug || '', item.urlType, null, item.parentPage?.slug)} className="group block">
     <div className="bg-gradient-to-br from-indigo-100 via-purple-50 to-pink-100 rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 hover:rotate-1 p-8">
       <div className="text-center">
         <div className="text-6xl mb-6 transform group-hover:scale-110 transition-transform duration-300">

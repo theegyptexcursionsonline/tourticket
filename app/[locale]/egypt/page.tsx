@@ -14,6 +14,8 @@ import EgyptHeroClient from './EgyptHeroClient';
 import EgyptToursClient from './EgyptToursClient';
 import { attractionPagePath, contentPath } from '@/lib/content/contentUrl';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
+import type { Metadata } from 'next';
+import { englishOnlyMetadataAlternates } from '@/lib/i18n/seoAlternates';
 
 interface EgyptAttractionSummary {
   _id: string;
@@ -28,6 +30,22 @@ interface EgyptAttractionSummary {
 
 // Enable ISR with 60 second revalidation for instant page loads
 export const revalidate = 1800; // 30 min — storefront content; edge serves stale-while-revalidate so clicks stay instant
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  await params;
+  const title = 'Egypt Tours & Experiences | Egypt Excursions Online';
+  const description = 'Explore tours, attractions, and travel experiences across Egypt.';
+  return {
+    title,
+    description,
+    openGraph: { title, description, type: 'website' },
+    alternates: englishOnlyMetadataAlternates('/egypt'),
+  };
+}
 
 /* ---------- Page Data ---------- */
 const FEATURES = [

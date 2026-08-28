@@ -8,6 +8,7 @@ import Image from 'next/image';
 import { Link } from '@/i18n/routing';
 import { useSettings } from '@/hooks/useSettings';
 import { useModalBehavior } from '@/hooks/useModalBehavior';
+import { tourContentPath } from '@/lib/content/contentUrl';
 
 export default function WishlistSidebar() {
   const { isWishlistSidebarOpen, closeWishlistSidebar, wishlist, removeFromWishlist } = useWishlist();
@@ -70,7 +71,7 @@ export default function WishlistSidebar() {
               <div className="flex-1 overflow-y-auto p-6 space-y-4">
                 {wishlist.map((tour) => (
                   <div key={tour._id} className="flex gap-4 items-start">
-                    <Link href={`/${tour.slug}`} onClick={closeWishlistSidebar} className="flex-shrink-0">
+                    <Link href={tourContentPath(tour)} onClick={closeWishlistSidebar} className="flex-shrink-0">
                       <Image
                         src={tour.image}
                         alt={tour.title}
@@ -80,7 +81,7 @@ export default function WishlistSidebar() {
                       />
                     </Link>
                     <div className="flex-1">
-                      <Link href={`/${tour.slug}`} onClick={closeWishlistSidebar}>
+                      <Link href={tourContentPath(tour)} onClick={closeWishlistSidebar}>
                         <h4 className="font-bold text-slate-800 hover:text-red-600 transition-colors line-clamp-2">
                           {tour.title}
                         </h4>

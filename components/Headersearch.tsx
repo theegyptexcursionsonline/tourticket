@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef, FC, useCallback } from 'react';
 import { ChevronDown, Search, ShoppingCart, X, Landmark, Ticket, Star, Clock, Zap, Menu, User, LogOut, Calendar } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
-import Link from 'next/link';
+import { Link } from '@/i18n/routing';
 import { useCart } from '@/hooks/useCart';
 import { useAuth } from '@/contexts/AuthContext';
 import CurrencyLanguageSwitcher from '@/components/shared/CurrencyLanguageSwitcher';
@@ -17,7 +17,7 @@ import { InstantSearch, Index, useSearchBox, useHits, Configure } from 'react-in
 import { filterTourSearchHitsByTenant } from '@/lib/tenantSearchHitFilter';
 import 'instantsearch.css/themes/satellite.css';
 import type { SearchHit } from './componentTypes';
-import { contentPath } from '@/lib/content/contentUrl';
+import { contentPath, tourContentPath } from '@/lib/content/contentUrl';
 
 type AuthUser = NonNullable<ReturnType<typeof useAuth>['user']>;
 
@@ -423,7 +423,7 @@ function TourHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limit?: 
       {limitedHits.map((hit) => (
         <a
           key={hit.objectID}
-          href={`/tours/${hit.slug || hit.objectID}`}
+          href={tourContentPath(hit)}
           onClick={onHitClick}
           className="block px-5 py-3.5 hover:bg-gradient-to-r hover:from-blue-50/50 hover:to-transparent transition-all duration-200 border-b border-gray-100/50 last:border-0 group"
         >

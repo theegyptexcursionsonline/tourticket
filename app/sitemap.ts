@@ -1,233 +1,223 @@
-import { MetadataRoute } from 'next';
-import dbConnect from '@/lib/dbConnect';
+import type { MetadataRoute } from 'next';
 import mongoose from 'mongoose';
+import dbConnect from '@/lib/dbConnect';
 import { locales, defaultLocale } from '@/i18n/config';
 import { contentPath, attractionPagePath } from '@/lib/content/contentUrl';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
-import { NOT_ARCHIVED_FILTER } from '@/lib/content/publicContentFilter';
+import { PUBLIC_CONTENT_FILTER } from '@/lib/content/publicContentFilter';
+import { explicitContentLocales, localePath, sitemapAlternates } from '@/lib/i18n/seoAlternates';
 
-const BASE_URL = 'https://egypt-excursionsonline.com';
+// A catalogue outage must produce an observable sitemap failure at request
+// time, never a successful but incomplete static-only sitemap.
+export const dynamic = 'force-dynamic';
 
-function getAlternates(path: string) {
-  return {
-    languages: Object.fromEntries(
-      locales.map(locale => [
-        locale,
-        `${BASE_URL}${locale === defaultLocale ? '' : '/' + locale}${path}`,
-      ])
-    ),
-  };
+type SitemapEntry = MetadataRoute.Sitemap[number];
+type SourceDate = Date | string | number | null | undefined;
+type CatalogDocument = {
+  slug: string;
+  updatedAt?: SourceDate;
+  createdAt?: SourceDate;
+  publishedAt?: SourceDate;
+  urlType?: string | null;
+  pageType?: string | null;
+  destination?: { slug?: string } | string | null;
+  cityDestination?: { slug?: string } | string | null;
+  parentPage?: { slug?: string } | null;
+  translations?: unknown;
+};
+
+type SitemapRoute = {
+  path: string;
+  changeFrequency: NonNullable<SitemapEntry['changeFrequency']>;
+  priority: number;
+  localizedPriority?: number;
+  availableLocales?: readonly string[];
+};
+
+/** Explicit inventory of indexable, real public listing/information routes. */
+export const STATIC_SITEMAP_ROUTES: readonly SitemapRoute[] = [
+  { path: '/', changeFrequency: 'daily', priority: 1 },
+  { path: '/about', changeFrequency: 'monthly', priority: 0.7, availableLocales: [defaultLocale] },
+  { path: '/contact', changeFrequency: 'monthly', priority: 0.6, availableLocales: [defaultLocale] },
+  { path: '/destinations', changeFrequency: 'weekly', priority: 0.9 },
+  { path: '/tours', changeFrequency: 'weekly', priority: 0.9 },
+  { path: '/blog', changeFrequency: 'weekly', priority: 0.8 },
+  { path: '/egypt', changeFrequency: 'monthly', priority: 0.7, availableLocales: [defaultLocale] },
+  { path: '/faqs', changeFrequency: 'monthly', priority: 0.5, availableLocales: [defaultLocale] },
+  { path: '/interests', changeFrequency: 'weekly', priority: 0.7 },
+  { path: '/tools', changeFrequency: 'monthly', priority: 0.6, availableLocales: [defaultLocale] },
+  { path: '/tools/trip-cost-calculator', changeFrequency: 'monthly', priority: 0.6, availableLocales: [defaultLocale] },
+  { path: '/tools/visa-checker', changeFrequency: 'monthly', priority: 0.6, availableLocales: [defaultLocale] },
+  { path: '/mobile-app', changeFrequency: 'monthly', priority: 0.5 },
+  { path: '/careers', changeFrequency: 'monthly', priority: 0.4, availableLocales: [defaultLocale] },
+  { path: '/terms', changeFrequency: 'yearly', priority: 0.3, availableLocales: [defaultLocale] },
+  { path: '/privacy', changeFrequency: 'yearly', priority: 0.3, availableLocales: [defaultLocale] },
+] as const;
+
+/** Return the first valid source date; omit lastModified when none exists. */
+export function sourceLastModified(...values: SourceDate[]): Date | undefined {
+  for (const value of values) {
+    if (value === null || value === undefined || value === '') continue;
+    const date = value instanceof Date ? value : new Date(value);
+    if (Number.isFinite(date.getTime())) return date;
+  }
+  return undefined;
+}
+
+export function localizedSitemapEntries(
+  route: SitemapRoute,
+  lastModified?: Date,
+): SitemapEntry[] {
+  const availableLocales = route.availableLocales ?? locales;
+  return availableLocales.map((locale) => ({
+    url: localePath(locale, route.path),
+    ...(lastModified ? { lastModified } : {}),
+    changeFrequency: route.changeFrequency,
+    priority: locale === defaultLocale
+      ? route.priority
+      : (route.localizedPriority ?? Math.max(0, route.priority - 0.05)),
+    alternates: sitemapAlternates(route.path, availableLocales),
+  }));
+}
+
+export function localizedDocumentSitemapEntries(
+  document: CatalogDocument,
+  route: SitemapRoute,
+  requiredTranslationFields: readonly string[],
+  lastModified?: Date,
+): SitemapEntry[] {
+  return localizedSitemapEntries(
+    { ...route, availableLocales: explicitContentLocales(document, requiredTranslationFields) },
+    lastModified,
+  );
+}
+
+function requiredModel(name: string): mongoose.Model<CatalogDocument> {
+  const model = mongoose.models[name] as mongoose.Model<CatalogDocument> | undefined;
+  if (!model) throw new Error(`Sitemap catalog model is unavailable: ${name}`);
+  return model;
+}
+
+function contentRoute(
+  path: string,
+  priority: number,
+  changeFrequency: SitemapRoute['changeFrequency'],
+): SitemapRoute {
+  return { path, priority, localizedPriority: Math.max(0, priority - 0.05), changeFrequency };
+}
+
+function assertUniqueUrls(entries: MetadataRoute.Sitemap): void {
+  const seen = new Set<string>();
+  for (const entry of entries) {
+    if (seen.has(entry.url)) throw new Error(`Duplicate sitemap URL: ${entry.url}`);
+    seen.add(entry.url);
+  }
 }
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const entries: MetadataRoute.Sitemap = [];
+  await dbConnect();
 
-  // Static pages
-  const staticPages = [
-    { url: '/', changeFrequency: 'daily' as const, priority: 1.0 },
-    { url: '/about', changeFrequency: 'monthly' as const, priority: 0.7 },
-    { url: '/contact', changeFrequency: 'monthly' as const, priority: 0.6 },
-    { url: '/destinations', changeFrequency: 'weekly' as const, priority: 0.9 },
-    { url: '/categories', changeFrequency: 'weekly' as const, priority: 0.8 },
-    { url: '/tours', changeFrequency: 'weekly' as const, priority: 0.9 },
-    { url: '/blog', changeFrequency: 'weekly' as const, priority: 0.8 },
-    { url: '/search', changeFrequency: 'weekly' as const, priority: 0.7 },
-    { url: '/egypt', changeFrequency: 'monthly' as const, priority: 0.7 },
-    { url: '/faqs', changeFrequency: 'monthly' as const, priority: 0.5 },
-    { url: '/careers', changeFrequency: 'monthly' as const, priority: 0.4 },
-    { url: '/terms', changeFrequency: 'yearly' as const, priority: 0.3 },
-    { url: '/privacy', changeFrequency: 'yearly' as const, priority: 0.3 },
-  ];
+  const Tour = requiredModel('Tour');
+  const Destination = requiredModel('Destination');
+  const Category = requiredModel('Category');
+  const Blog = requiredModel('Blog');
+  const AttractionPage = requiredModel('AttractionPage');
 
-  for (const page of staticPages) {
-    // Default locale (English) - no prefix
-    entries.push({
-      url: `${BASE_URL}${page.url}`,
-      lastModified: new Date(),
-      changeFrequency: page.changeFrequency,
-      priority: page.priority,
-      alternates: getAlternates(page.url),
-    });
+  // Every query is strict and awaited together: one failed collection makes
+  // the sitemap fail closed instead of publishing a partial catalogue.
+  const [tours, destinations, categories, posts, attractionPages] = await Promise.all([
+    Tour.find(
+      { ...DEFAULT_TENANT_FILTER, ...PUBLIC_CONTENT_FILTER },
+      { slug: 1, updatedAt: 1, createdAt: 1, urlType: 1, destination: 1, parentPage: 1, translations: 1 },
+    ).populate('destination', 'slug').sort({ slug: 1 }).lean<CatalogDocument[]>(),
+    Destination.find(
+      { ...DEFAULT_TENANT_FILTER, ...PUBLIC_CONTENT_FILTER },
+      { slug: 1, updatedAt: 1, createdAt: 1, urlType: 1, parentPage: 1, translations: 1 },
+    ).sort({ slug: 1 }).lean<CatalogDocument[]>(),
+    Category.find(
+      { ...DEFAULT_TENANT_FILTER, ...PUBLIC_CONTENT_FILTER },
+      { slug: 1, updatedAt: 1, createdAt: 1, urlType: 1, cityDestination: 1, parentPage: 1, translations: 1 },
+    ).populate('cityDestination', 'slug').sort({ slug: 1 }).lean<CatalogDocument[]>(),
+    Blog.find(
+      { status: 'published', ...DEFAULT_TENANT_FILTER },
+      { slug: 1, updatedAt: 1, publishedAt: 1, createdAt: 1, translations: 1 },
+    ).sort({ slug: 1 }).lean<CatalogDocument[]>(),
+    AttractionPage.find(
+      { ...DEFAULT_TENANT_FILTER, ...PUBLIC_CONTENT_FILTER },
+      { slug: 1, updatedAt: 1, createdAt: 1, pageType: 1, urlType: 1, cityDestination: 1, parentPage: 1, translations: 1 },
+    ).populate('cityDestination', 'slug').sort({ slug: 1 }).lean<CatalogDocument[]>(),
+  ]);
 
-    // Other locales - with prefix
-    for (const locale of locales) {
-      if (locale === defaultLocale) continue;
-      entries.push({
-        url: `${BASE_URL}/${locale}${page.url}`,
-        lastModified: new Date(),
-        changeFrequency: page.changeFrequency,
-        priority: page.priority * 0.9,
-        alternates: getAlternates(page.url),
-      });
-    }
+  const entries: MetadataRoute.Sitemap = STATIC_SITEMAP_ROUTES.flatMap((route) =>
+    localizedSitemapEntries(route),
+  );
+
+  for (const tour of tours) {
+    const citySlug = typeof tour.destination === 'object' ? tour.destination?.slug : undefined;
+    const path = contentPath('tour', tour.slug, tour.urlType, citySlug, tour.parentPage?.slug);
+    entries.push(...localizedDocumentSitemapEntries(
+      tour,
+      contentRoute(path, 0.9, 'weekly'),
+      ['title', 'description'],
+      sourceLastModified(tour.updatedAt, tour.createdAt),
+    ));
   }
 
-  // Dynamic pages from database
-  try {
-    await dbConnect();
-
-    // Published tours (these use the /[slug] catch-all route)
-    const Tour = mongoose.models.Tour;
-    if (Tour) {
-      const tours = await Tour.find(
-        { isPublished: true, ...DEFAULT_TENANT_FILTER },
-        { slug: 1, updatedAt: 1, urlType: 1, destination: 1, parentPage: 1 }
-      ).populate('destination', 'slug').lean();
-
-      for (const tour of tours) {
-        const citySlug = tour.destination && typeof tour.destination === 'object'
-          ? (tour.destination as { slug?: string }).slug
-          : undefined;
-        const path = contentPath('tour', tour.slug, tour.urlType, citySlug, tour.parentPage?.slug);
-        entries.push({
-          url: `${BASE_URL}${path}`,
-          lastModified: tour.updatedAt || new Date(),
-          changeFrequency: 'weekly',
-          priority: 0.9,
-          alternates: getAlternates(path),
-        });
-        for (const locale of locales) {
-          if (locale === defaultLocale) continue;
-          entries.push({
-            url: `${BASE_URL}/${locale}${path}`,
-            lastModified: tour.updatedAt || new Date(),
-            changeFrequency: 'weekly',
-            priority: 0.85,
-            alternates: getAlternates(path),
-          });
-        }
-      }
-    }
-
-    // Destinations
-    const Destination = mongoose.models.Destination;
-    if (Destination) {
-      const destinations = await Destination.find(
-        { isPublished: { $ne: false }, ...DEFAULT_TENANT_FILTER, ...NOT_ARCHIVED_FILTER },
-        { slug: 1, updatedAt: 1, urlType: 1, parentPage: 1 }
-      ).lean();
-
-      for (const dest of destinations) {
-        const path = contentPath('destination', dest.slug, dest.urlType, undefined, dest.parentPage?.slug);
-        entries.push({
-          url: `${BASE_URL}${path}`,
-          lastModified: dest.updatedAt || new Date(),
-          changeFrequency: 'weekly',
-          priority: 0.8,
-          alternates: getAlternates(path),
-        });
-        for (const locale of locales) {
-          if (locale === defaultLocale) continue;
-          entries.push({
-            url: `${BASE_URL}/${locale}${path}`,
-            lastModified: dest.updatedAt || new Date(),
-            changeFrequency: 'weekly',
-            priority: 0.75,
-            alternates: getAlternates(path),
-          });
-        }
-      }
-    }
-
-    // Categories
-    const Category = mongoose.models.Category;
-    if (Category) {
-      const categories = await Category.find(
-        { isPublished: true, ...DEFAULT_TENANT_FILTER },
-        { slug: 1, updatedAt: 1, urlType: 1, cityDestination: 1, parentPage: 1 }
-      ).populate('cityDestination', 'slug').lean();
-
-      for (const cat of categories) {
-        const catCity = cat.cityDestination && typeof cat.cityDestination === 'object'
-          ? (cat.cityDestination as { slug?: string }).slug
-          : undefined;
-        const path = contentPath('category', cat.slug, cat.urlType, catCity, cat.parentPage?.slug);
-        entries.push({
-          url: `${BASE_URL}${path}`,
-          lastModified: cat.updatedAt || new Date(),
-          changeFrequency: 'weekly',
-          priority: 0.7,
-          alternates: getAlternates(path),
-        });
-        for (const locale of locales) {
-          if (locale === defaultLocale) continue;
-          entries.push({
-            url: `${BASE_URL}/${locale}${path}`,
-            lastModified: cat.updatedAt || new Date(),
-            changeFrequency: 'weekly',
-            priority: 0.65,
-            alternates: getAlternates(path),
-          });
-        }
-      }
-    }
-
-    // Published blog posts
-    const Blog = mongoose.models.Blog;
-    if (Blog) {
-      const posts = await Blog.find(
-        { status: 'published', ...DEFAULT_TENANT_FILTER },
-        { slug: 1, updatedAt: 1, publishedAt: 1 }
-      ).lean();
-
-      for (const post of posts) {
-        entries.push({
-          url: `${BASE_URL}/blog/${post.slug}`,
-          lastModified: post.updatedAt || post.publishedAt || new Date(),
-          changeFrequency: 'monthly',
-          priority: 0.7,
-          alternates: getAlternates(`/blog/${post.slug}`),
-        });
-        for (const locale of locales) {
-          if (locale === defaultLocale) continue;
-          entries.push({
-            url: `${BASE_URL}/${locale}/blog/${post.slug}`,
-            lastModified: post.updatedAt || post.publishedAt || new Date(),
-            changeFrequency: 'monthly',
-            priority: 0.65,
-            alternates: getAlternates(`/blog/${post.slug}`),
-          });
-        }
-      }
-    }
-
-    // Published attraction/landing pages. Attraction-type pages honor the
-    // admin-chosen urlType; category-landing pages live at /category/{slug}.
-    const AttractionPage = mongoose.models.AttractionPage;
-    if (AttractionPage) {
-      const attractions = await AttractionPage.find(
-        { isPublished: true, ...DEFAULT_TENANT_FILTER },
-        { slug: 1, updatedAt: 1, pageType: 1, urlType: 1, cityDestination: 1, parentPage: 1 }
-      ).populate('cityDestination', 'slug').lean();
-
-      for (const attraction of attractions) {
-        const pageCity = attraction.cityDestination && typeof attraction.cityDestination === 'object'
-          ? (attraction.cityDestination as { slug?: string }).slug
-          : undefined;
-        const path = attractionPagePath(attraction.slug, attraction.pageType, attraction.urlType, pageCity, attraction.parentPage?.slug);
-        entries.push({
-          url: `${BASE_URL}${path}`,
-          lastModified: attraction.updatedAt || new Date(),
-          changeFrequency: 'monthly',
-          priority: 0.7,
-          alternates: getAlternates(path),
-        });
-        for (const locale of locales) {
-          if (locale === defaultLocale) continue;
-          entries.push({
-            url: `${BASE_URL}/${locale}${path}`,
-            lastModified: attraction.updatedAt || new Date(),
-            changeFrequency: 'monthly',
-            priority: 0.65,
-            alternates: getAlternates(path),
-          });
-        }
-      }
-    }
-  } catch (error) {
-    console.error('Sitemap generation - database error:', error);
-    // Return static pages only if DB is unavailable
+  for (const destination of destinations) {
+    const path = contentPath(
+      'destination',
+      destination.slug,
+      destination.urlType,
+      undefined,
+      destination.parentPage?.slug,
+    );
+    entries.push(...localizedDocumentSitemapEntries(
+      destination,
+      contentRoute(path, 0.8, 'weekly'),
+      ['name', 'description'],
+      sourceLastModified(destination.updatedAt, destination.createdAt),
+    ));
   }
 
+  for (const category of categories) {
+    const citySlug = typeof category.cityDestination === 'object' ? category.cityDestination?.slug : undefined;
+    const path = contentPath('category', category.slug, category.urlType, citySlug, category.parentPage?.slug);
+    entries.push(...localizedDocumentSitemapEntries(
+      category,
+      contentRoute(path, 0.7, 'weekly'),
+      ['name', 'description'],
+      sourceLastModified(category.updatedAt, category.createdAt),
+    ));
+  }
+
+  for (const post of posts) {
+    const path = `/blog/${post.slug}`;
+    entries.push(...localizedDocumentSitemapEntries(
+      post,
+      contentRoute(path, 0.7, 'monthly'),
+      ['title', 'excerpt', 'content'],
+      sourceLastModified(post.updatedAt, post.publishedAt, post.createdAt),
+    ));
+  }
+
+  for (const page of attractionPages) {
+    const citySlug = typeof page.cityDestination === 'object' ? page.cityDestination?.slug : undefined;
+    const path = attractionPagePath(
+      page.slug,
+      page.pageType,
+      page.urlType,
+      citySlug,
+      page.parentPage?.slug,
+    );
+    entries.push(...localizedDocumentSitemapEntries(
+      page,
+      contentRoute(path, 0.7, 'monthly'),
+      ['title', 'description'],
+      sourceLastModified(page.updatedAt, page.createdAt),
+    ));
+  }
+
+  entries.sort((left, right) => left.url.localeCompare(right.url));
+  assertUniqueUrls(entries);
   return entries;
 }

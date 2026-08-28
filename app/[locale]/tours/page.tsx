@@ -11,6 +11,7 @@ import { ITour } from '@/lib/models/Tour';
 import { localizeEntityFields } from '@/lib/i18n/contentLocalization';
 import { selectLocalizedTours } from '@/lib/i18n/localizedCollections';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
+import { metadataAlternates } from '@/lib/i18n/seoAlternates';
 
 // Netlify exposes the production database only to the runtime function. Static
 // generation therefore produced and cached an empty catalogue at deploy time.
@@ -60,17 +61,7 @@ export async function generateMetadata({
       description: meta.description,
       type: 'website',
     },
-    alternates: {
-      canonical: '/tours',
-      languages: {
-        'en': '/tours',
-        'ar': '/ar/tours',
-        'es': '/es/tours',
-        'fr': '/fr/tours',
-        'de': '/de/tours',
-        'x-default': '/tours',
-      },
-    },
+    alternates: metadataAlternates(locale, '/tours'),
   };
 };
 
@@ -103,6 +94,7 @@ async function getAllTours(locale: string): Promise<ITour[]> {
         'isFeatured',
         'featured',
         'urlType',
+        'parentPage',
         'destination',
         'category',
         'translations',
@@ -110,7 +102,7 @@ async function getAllTours(locale: string): Promise<ITour[]> {
         'tenantId',
         'createdAt',
       ].join(' '))
-      .populate('destination', 'name description country translations')
+      .populate('destination', 'name slug description country translations')
       .populate('category', 'name description longDescription translations')
       .sort({ featured: -1, createdAt: -1 }) // Featured first, then most recent
       .lean();
@@ -197,22 +189,23 @@ export default async function ToursIndexPage({
   const { locale } = await params;
   const tours = await getAllTours(locale);
   const schemaListName = locale.startsWith('de')
-    ? 'Alle Touren & Aktivitäten in Ägypten'
+    ? 'Alle Touren Entdecken'
     : locale.startsWith('ar')
-      ? 'جميع الجولات والأنشطة في مصر'
-      : 'All Tours & Activities in Egypt';
-  const schemaListDescription = locale.startsWith('de')
-    ? 'Entdecken Sie unsere komplette Auswahl an Touren und Erlebnissen in Ägypten'
-    : locale.startsWith('ar')
-      ? 'تصفح مجموعتنا الكاملة من الجولات والتجارب في مصر'
-      : 'Browse our complete collection of tours and experiences in Egypt';
-
+      ? 'استكشف جميع الجولات'
+      : 'Explore All Tours';
   return (
     <>
       <ToursListSchema
-        tours={tours.map((tour) => ({ title: tour.title, slug: tour.slug, image: tour.image, discountPrice: tour.pricingSummary?.fromPrice ?? tour.discountPrice, originalPrice: tour.originalPrice, rating: tour.rating, reviewCount: tour.reviewCount, duration: tour.duration }))}
+        locale={locale}
+        tours={tours.map((tour) => ({
+          title: tour.title,
+          slug: tour.slug,
+          urlType: tour.urlType,
+          destination: tour.destination as unknown as { slug?: string },
+          parentPage: tour.parentPage,
+          image: tour.image,
+        }))}
         listName={schemaListName}
-        listDescription={schemaListDescription}
       />
       <Header startSolid />
       <main className="min-h-screen bg-slate-50 pt-20">

@@ -6,8 +6,6 @@ import { ArrowLeft, CircleAlert, ExternalLink, ShieldCheck } from 'lucide-react'
 import AuthorityToolEmbed from '@/components/tools/AuthorityToolEmbed';
 import ToolIcon from '@/components/tools/ToolIcon';
 import { ToolsFooter, ToolsHeader } from '@/components/tools/ToolsChrome';
-import { ToolPageStructuredData } from '@/components/tools/ToolsStructuredData';
-import { metadataAlternates } from '@/lib/i18n/seoAlternates';
 import { getAuthorityToolState } from '@/lib/tools/authority';
 import {
   STOREFRONT_TOOL_BRAND,
@@ -30,7 +28,7 @@ function displayDate(value: string, locale: string): string {
 }
 
 export async function generateMetadata({ params }: ToolPageProps): Promise<Metadata> {
-  const { locale, tool: toolId } = await params;
+  const { tool: toolId } = await params;
   const tool = getOfficialTool(toolId);
 
   if (!tool) {
@@ -47,7 +45,6 @@ export async function generateMetadata({ params }: ToolPageProps): Promise<Metad
     // approves the tool/domain matrix and production configuration. Static
     // legacy tool routes keep their own metadata and are unaffected.
     robots: { index: false, follow: false },
-    alternates: metadataAlternates(locale, `/tools/${tool.id}`),
     openGraph: {
       title: `${tool.name} | Egypt Excursions Online`,
       description: tool.description,
@@ -67,7 +64,6 @@ export default async function ToolPage({ params }: ToolPageProps) {
 
   return (
     <div className="flex min-h-screen flex-col bg-slate-50 text-slate-800">
-      {state.ok && <ToolPageStructuredData locale={locale} tool={tool} />}
       <ToolsHeader name={name} logoUrl={logoUrl} accent={accent} locale={locale} />
 
       <main className="flex-grow">

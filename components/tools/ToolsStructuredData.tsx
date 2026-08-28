@@ -51,39 +51,11 @@ export function ToolPageStructuredData({ locale, tool }: { locale: string; tool:
             applicationCategory: 'TravelApplication',
             operatingSystem: 'Any web browser',
             isAccessibleForFree: true,
-            offers: {
-              '@type': 'Offer',
-              price: '0',
-              priceCurrency: 'USD',
-            },
             provider: {
               '@type': 'Organization',
               name: STOREFRONT_TOOL_BRAND.name,
               url: STOREFRONT_TOOL_BRAND.origin,
             },
-          },
-          {
-            '@type': 'BreadcrumbList',
-            itemListElement: [
-              {
-                '@type': 'ListItem',
-                position: 1,
-                name: 'Home',
-                item: STOREFRONT_TOOL_BRAND.origin,
-              },
-              {
-                '@type': 'ListItem',
-                position: 2,
-                name: 'Travel tools',
-                item: absoluteToolUrl(locale),
-              },
-              {
-                '@type': 'ListItem',
-                position: 3,
-                name: tool.name,
-                item: pageUrl,
-              },
-            ],
           },
         ],
       }}

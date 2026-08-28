@@ -26,7 +26,8 @@ import toast from 'react-hot-toast';
 import { useLocale } from 'next-intl';
 import { sanitizeRichHtml } from '@/lib/security/sanitizeHtml';
 import { imageMetadataFor, type ImageMetadata } from '@/lib/content/imageMetadata';
-import { contentPath } from '@/lib/content/contentUrl';
+import { tourContentPath } from '@/lib/content/contentUrl';
+import type { Destination } from '@/types';
 
 interface AuthorProfile {
   name: string;
@@ -45,6 +46,9 @@ export interface TourPreview {
   _id?: string;
   slug: string;
   title: string;
+  urlType?: string;
+  destination?: { slug?: string } | string;
+  parentPage?: { slug?: string } | null;
   image?: string;
   images?: string[];
   duration?: string;
@@ -72,6 +76,7 @@ export interface BlogPost {
   likes?: number;
   tags?: string[];
   relatedTours?: TourPreview[];
+  relatedDestinations?: Destination[];
   author: string;
   authorSlug?: string;
   authorRole?: string;
@@ -226,7 +231,7 @@ function ShareAndLike({ blog }: { blog: BlogPost }) {
 /* ---------- Small Tour Card used in sidebar CTA ---------- */
 function MiniTourCard({ tour }: { tour: TourPreview }) {
   return (
-    <Link href={tour?.slug ? contentPath('tour', tour.slug, (tour as { urlType?: string }).urlType) : '#'} className="flex gap-3 items-center p-3 rounded-lg border hover:shadow-md transition bg-white">
+    <Link href={tour?.slug ? tourContentPath(tour) : '#'} className="flex gap-3 items-center p-3 rounded-lg border hover:shadow-md transition bg-white">
       <div className="relative w-20 h-14 rounded-lg overflow-hidden bg-slate-100 flex-shrink-0">
         {tour?.image ? (
           <Image src={tour.image} alt={tour.title} fill className="object-cover" />
@@ -495,7 +500,7 @@ export default function BlogPostClient({ blog, relatedPosts, relevantTours = [] 
                   {relevantTours.slice(0, 6).map((t) => {
                     const img = t?.image || (Array.isArray(t?.images) ? t.images[0] : undefined);
                     return (
-                      <Link key={t._id || t.slug} href={`/${t.slug}`} className="group block rounded-xl border overflow-hidden hover:shadow-md transition bg-white">
+                      <Link key={t._id || t.slug} href={tourContentPath(t)} className="group block rounded-xl border overflow-hidden hover:shadow-md transition bg-white">
                         <div className="relative h-32 bg-slate-100">
                           {img ? (
                             <Image src={img} alt={t.title} fill className="object-cover transition group-hover:scale-105" />

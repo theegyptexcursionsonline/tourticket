@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
 import Tour from '@/lib/models/Tour';
+import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
+import { PUBLIC_CONTENT_FILTER } from '@/lib/content/publicContentFilter';
 
 interface PopulatedTaxonomy {
   _id?: { toString(): string } | string;
@@ -13,11 +15,10 @@ export async function GET() {
     await dbConnect();
 
     // Fetch tours from default tenant only (exclude German/other tenant tours)
-    const defaultTenantFilter = { $or: [{ tenantId: 'default' }, { tenantId: { $exists: false } }, { tenantId: null }] };
-    const tours = await Tour.find({ isPublished: true, ...defaultTenantFilter })
+    const tours = await Tour.find({ ...DEFAULT_TENANT_FILTER, ...PUBLIC_CONTENT_FILTER })
       .populate('destination', 'name slug')
       .populate('category', 'name slug')
-      .select('title slug description price discountPrice duration difficulty isPublished isFeatured image')
+      .select('title slug urlType parentPage description price discountPrice duration difficulty isPublished isFeatured image')
       .lean()
       .sort({ createdAt: -1 });
 
@@ -30,6 +31,8 @@ export async function GET() {
       id: tour._id.toString(),
       title: tour.title,
       slug: tour.slug,
+      urlType: tour.urlType,
+      parentPage: tour.parentPage,
       description: tour.description,
       price: tour.price,
       discountPrice: tour.discountPrice,

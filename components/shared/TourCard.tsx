@@ -13,7 +13,7 @@ import { Category, Tour } from '@/types';
 import { useSettings } from '@/hooks/useSettings';
 import { useWishlist } from '@/contexts/WishlistContext';
 import toast from 'react-hot-toast';
-import { contentPath } from '@/lib/content/contentUrl';
+import { contentPath, tourContentPath } from '@/lib/content/contentUrl';
 
 interface TourCardProps {
   tour: Tour;
@@ -76,7 +76,7 @@ const TourCard: React.FC<TourCardProps> = ({
     // sellable quote. Route to the tour instead of manufacturing an invalid
     // "Anytime" cart item that checkout must later reject.
     toast('Choose a date, time and option to continue.');
-    router.push(`/${tour.slug}`);
+    router.push(tourContentPath(tour));
   };
 
   const cardVariants = {

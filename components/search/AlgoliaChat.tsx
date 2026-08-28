@@ -7,6 +7,8 @@ import 'instantsearch.css/themes/satellite.css';
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import type { SearchHit } from '../componentTypes';
+import { Link } from '@/i18n/routing';
+import { tourContentPath } from '@/lib/content/contentUrl';
 
 type ChatProps = React.ComponentProps<typeof Chat> & { placeholder?: string };
 const ChatWithPlaceholder = Chat as React.ComponentType<ChatProps>;
@@ -49,8 +51,8 @@ const NoResultsBoundary = ({ children, fallback }: { children: React.ReactNode; 
 // Compact hit component for Crunchbase-style display
 const CompactHit = ({ hit }: { hit: SearchHit }) => {
   return (
-    <a
-      href={`/${hit.slug}`}
+    <Link
+      href={tourContentPath(hit)}
       className="block p-3 hover:bg-slate-50 transition-colors"
     >
       <div className="flex items-start gap-3">
@@ -103,7 +105,7 @@ const CompactHit = ({ hit }: { hit: SearchHit }) => {
           </div>
         )}
       </div>
-    </a>
+    </Link>
   );
 };
 

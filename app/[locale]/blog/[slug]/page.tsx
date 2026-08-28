@@ -4,15 +4,20 @@ import dbConnect from '@/lib/dbConnect';
 import Blog from '@/lib/models/Blog';
 import TourModel from '@/lib/models/Tour';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
-import { NOT_ARCHIVED_FILTER, PUBLIC_CONTENT_FILTER } from '@/lib/content/publicContentFilter';
+import { PUBLIC_CONTENT_FILTER } from '@/lib/content/publicContentFilter';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import BlogPostClient, { type BlogPost, type TourPreview } from './BlogPostClient';
 import BlogPostSchema from '@/components/schema/BlogPostSchema';
-import FAQSchema from '@/components/schema/FAQSchema';
 import { localizeHtmlLinks } from '@/lib/i18n/localizeHtmlLinks';
-import { metadataAlternates } from '@/lib/i18n/seoAlternates';
+import { localizedDocumentMetadata } from '@/lib/i18n/seoAlternates';
 import { localizeEntityFields } from '@/lib/i18n/contentLocalization';
+import ContextualDiscoveryLinks from '@/components/seo/ContextualDiscoveryLinks';
+import {
+  localizedContentPath,
+  localizedRoutePath,
+  localizedTourContentPath,
+} from '@/lib/content/contentUrl';
 
 const LOCALIZED_BLOG_FIELDS = ['title', 'excerpt', 'content', 'metaTitle', 'metaDescription'];
 
@@ -49,7 +54,12 @@ export async function generateMetadata({ params }: { params: Promise<Params> }) 
     return {
       title,
       description,
-      alternates: metadataAlternates(locale, `/blog/${slug}`),
+      ...localizedDocumentMetadata(
+        locale,
+        `/blog/${slug}`,
+        blog,
+        ['title', 'excerpt', 'content'],
+      ),
       openGraph: {
         title,
         description,
@@ -75,8 +85,8 @@ async function getBlogPost(slug: string) {
   await dbConnect();
 
   const blog = await Blog.findOne({ slug, status: 'published', ...DEFAULT_TENANT_FILTER })
-    .populate({ path: 'relatedDestinations', select: 'name slug image', match: NOT_ARCHIVED_FILTER })
-    .populate({ path: 'relatedTours', select: 'title slug image discountPrice', match: PUBLIC_CONTENT_FILTER })
+    .populate({ path: 'relatedDestinations', select: 'name slug image urlType parentPage', match: { ...DEFAULT_TENANT_FILTER, ...PUBLIC_CONTENT_FILTER } })
+    .populate({ path: 'relatedTours', select: 'title slug image discountPrice urlType destination parentPage', match: { ...DEFAULT_TENANT_FILTER, ...PUBLIC_CONTENT_FILTER }, populate: { path: 'destination', select: 'slug' } })
     .lean();
 
   if (!blog) {
@@ -99,32 +109,19 @@ async function getBlogPost(slug: string) {
     .select('title slug excerpt featuredImage imageMetadata author publishedAt readTime')
     .lean();
 
-  // Relevant bookable tours for the "Tours you'll love" section: match by the
-  // post's tags, then backfill with featured/recent tours so it's never empty.
+  // Relevant tours must share an explicit stored tag with the article. Do not
+  // backfill unrelated inventory merely to force a section to appear.
   const blogTags: string[] = Array.isArray((blog as { tags?: unknown }).tags)
     ? ((blog as { tags?: string[] }).tags as string[])
     : [];
-  const tourSelect = 'title slug image images price discountPrice duration location';
-  let relevantTours = blogTags.length
-    ? await TourModel.find({ isPublished: true, ...DEFAULT_TENANT_FILTER, tags: { $in: blogTags } })
+  const tourSelect = 'title slug urlType parentPage destination image images price discountPrice duration location';
+  const relevantTours = blogTags.length
+    ? await TourModel.find({ ...DEFAULT_TENANT_FILTER, ...PUBLIC_CONTENT_FILTER, tags: { $in: blogTags } })
         .limit(6)
         .select(tourSelect)
+        .populate('destination', 'slug')
         .lean()
     : [];
-  if (relevantTours.length < 3) {
-    const have = new Set(relevantTours.map((t) => String(t._id)));
-    const backfill = await TourModel.find({
-      isPublished: true,
-      ...DEFAULT_TENANT_FILTER,
-      _id: { $nin: Array.from(have) },
-    })
-      .sort({ featured: -1, createdAt: -1 })
-      .limit(6 - relevantTours.length)
-      .select(tourSelect)
-      .lean();
-    relevantTours = [...relevantTours, ...backfill];
-  }
-
   return {
     blog: JSON.parse(JSON.stringify(blog)) as BlogPost,
     relatedPosts: JSON.parse(JSON.stringify(relatedPosts)) as BlogPost[],
@@ -150,30 +147,45 @@ export default async function BlogPostPage({ params }: { params: Promise<Params>
   if (localized.content) {
     localized.content = localizeHtmlLinks(localized.content, locale);
   }
+  const contextualLinks = [
+    ...(localized.relatedDestinations || []).map((destination) => ({
+      label: destination.name,
+      href: localizedContentPath(
+        'destination',
+        destination.slug,
+        destination.urlType,
+        locale,
+        null,
+        destination.parentPage?.slug,
+      ),
+    })),
+    ...(localized.relatedTours || []).map((tour) => ({
+      label: tour.title,
+      href: localizedTourContentPath(tour, locale),
+    })),
+    ...relatedPosts.map((post) => ({
+      label: post.title,
+      href: localizedRoutePath(`/blog/${post.slug}`, locale),
+    })),
+  ];
 
   return (
     <>
       <BlogPostSchema
+        locale={locale}
         title={localized.title}
         slug={slug}
-        description={localized.metaDescription || localized.excerpt}
+        description={localized.excerpt}
         excerpt={localized.excerpt}
         image={localized.featuredImage}
         author={localized.author}
         publishedAt={localized.publishedAt?.toString()}
-        updatedAt={localized.updatedAt?.toString()}
         tags={localized.tags}
-      />
-      <FAQSchema
-        items={
-          (localized as unknown as {
-            faqs?: { question: string; answer: string }[];
-          }).faqs ?? []
-        }
       />
       <Header startSolid />
       <main className="pt-20">
         <BlogPostClient blog={localized} relatedPosts={relatedPosts} relevantTours={relevantTours} />
+        <ContextualDiscoveryLinks locale={locale} links={contextualLinks} />
       </main>
       <Footer />
     </>

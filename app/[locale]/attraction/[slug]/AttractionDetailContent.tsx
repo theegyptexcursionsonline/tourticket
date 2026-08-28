@@ -17,6 +17,8 @@ import {
 import { localizeEntityFields, localizeStructuredEntries } from '@/lib/i18n/contentLocalization';
 import { attractionPageStructuredFields } from '@/lib/i18n/translationFields';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
+import { PUBLIC_CONTENT_FILTER } from '@/lib/content/publicContentFilter';
+import { explicitContentLocales, metadataAlternates } from '@/lib/i18n/seoAlternates';
 
 type PageRecord = Record<string, unknown>;
 
@@ -27,8 +29,8 @@ async function getAttractionPageData(slug: string, locale: string) {
     const page = await AttractionPageModel.findOne({
       slug,
       pageType: 'attraction',
-      isPublished: true,
       ...DEFAULT_TENANT_FILTER,
+      ...PUBLIC_CONTENT_FILTER,
     })
       .populate({ path: 'categoryId', model: Category, match: DEFAULT_TENANT_FILTER, select: 'name slug' })
       .lean();
@@ -100,6 +102,11 @@ export async function getAttractionMetadata(
   const description = (page.metaDescription as string) || (page.description as string);
   const heroImage = page.heroImage as string | undefined;
   const canonical = canonicalPath || `/attraction/${page.slug}`;
+  const alternates = metadataAlternates(
+    locale,
+    canonical,
+    explicitContentLocales(page, ['title', 'description']),
+  );
 
   return {
     title,
@@ -110,7 +117,7 @@ export async function getAttractionMetadata(
       description,
       images: heroImage ? [heroImage] : [],
       type: 'website',
-      url: canonical,
+      url: alternates.canonical,
     },
     twitter: {
       card: 'summary_large_image',
@@ -118,7 +125,7 @@ export async function getAttractionMetadata(
       description,
       images: heroImage ? [heroImage] : [],
     },
-    alternates: { canonical },
+    alternates,
     robots: { index: true, follow: true },
   };
 }

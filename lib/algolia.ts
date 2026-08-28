@@ -2,7 +2,7 @@
 import { algoliasearch } from 'algoliasearch';
 
 type SearchId = string | { toString(): string };
-type TaxonomyRef = SearchId | { _id?: SearchId; name?: string; toString(): string };
+type TaxonomyRef = SearchId | { _id?: SearchId; name?: string; slug?: string; toString(): string };
 
 interface AlgoliaTourSource {
   _id: SearchId;
@@ -28,6 +28,8 @@ interface AlgoliaTourSource {
   included?: string[];
   excluded?: string[];
   tenantId?: string | null;
+  urlType?: string;
+  parentPage?: { slug?: string } | null;
 }
 
 interface AlgoliaDestinationSource {
@@ -97,7 +99,7 @@ const formatTaxonomyRef = (value?: TaxonomyRef) => {
   if (!value) return null;
   if (typeof value === 'string') return { _id: value, name: '' };
   if ('_id' in value || 'name' in value) {
-    return { _id: String(value._id || value), name: value.name || '' };
+    return { _id: String(value._id || value), name: value.name || '', slug: value.slug || '' };
   }
   return { _id: value.toString(), name: '' };
 };
@@ -169,6 +171,8 @@ export const formatTourForAlgolia = (tour: AlgoliaTourSource) => {
     included: tour.included || [],
     excluded: tour.excluded || [],
     tenantId: tour.tenantId || 'default',
+    urlType: tour.urlType || 'default',
+    parentPage: tour.parentPage || null,
     _tags: [
       ...(tour.tags || []),
       taxonomyName(tour.category),

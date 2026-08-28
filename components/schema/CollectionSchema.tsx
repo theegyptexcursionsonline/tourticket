@@ -1,8 +1,7 @@
 // CollectionPage + BreadcrumbList schema for listing pages (destinations, categories, interests, blog)
 import React from 'react';
 import { serializeJsonLd } from '@/lib/security/serializeJsonLd';
-
-const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://egypt-excursionsonline.com';
+import { localizedAbsoluteUrl, SEO_BASE_URL } from '@/lib/i18n/seoAlternates';
 
 interface ListItem {
   name: string;
@@ -16,14 +15,24 @@ interface Props {
   url: string;
   items?: ListItem[];
   breadcrumbs?: { name: string; url: string }[];
+  locale?: string;
 }
 
-export default function CollectionSchema({ name, description, url, items = [], breadcrumbs }: Props) {
-  const fullUrl = url.startsWith('http') ? url : `${BASE_URL}${url}`;
-  const crumbs = breadcrumbs || [
-    { name: 'Home', url: BASE_URL },
-    { name, url: fullUrl },
-  ];
+export default function CollectionSchema({ name, description, url, items = [], breadcrumbs, locale = 'en' }: Props) {
+  const fullUrl = localizedAbsoluteUrl(locale, url);
+  const crumbs = (breadcrumbs || []).filter(
+    (crumb) => crumb.name.trim().length > 0 && crumb.url.trim().length > 0,
+  );
+  const seenUrls = new Set<string>();
+  const visibleItems = items
+    .filter((item) => item.name.trim().length > 0 && item.url.trim().length > 0)
+    .filter((item) => {
+      const itemUrl = localizedAbsoluteUrl(locale, item.url);
+      if (seenUrls.has(itemUrl)) return false;
+      seenUrls.add(itemUrl);
+      return true;
+    })
+    .slice(0, 30);
 
   const ld = {
     '@context': 'https://schema.org',
@@ -31,40 +40,38 @@ export default function CollectionSchema({ name, description, url, items = [], b
       {
         '@type': 'CollectionPage',
         name,
-        description: description || `Browse ${name} on Egypt Excursions Online`,
+        ...(description ? { description } : {}),
         url: fullUrl,
-        isPartOf: { '@id': `${BASE_URL}/#website` },
-        about: { '@id': `${BASE_URL}/#organization` },
-        speakable: {
-          '@type': 'SpeakableSpecification',
-          cssSelector: ['h1', '.collection-description'],
-        },
+        isPartOf: { '@id': `${SEO_BASE_URL}/#website` },
+        about: { '@id': `${SEO_BASE_URL}/#organization` },
       },
-      ...(items.length > 0
+      ...(visibleItems.length > 0
         ? [
             {
               '@type': 'ItemList',
               name,
-              numberOfItems: items.length,
-              itemListElement: items.slice(0, 30).map((item, i) => ({
+              numberOfItems: visibleItems.length,
+              itemListElement: visibleItems.map((item, i) => ({
                 '@type': 'ListItem',
                 position: i + 1,
                 name: item.name,
-                url: item.url.startsWith('http') ? item.url : `${BASE_URL}${item.url}`,
+                url: localizedAbsoluteUrl(locale, item.url),
                 ...(item.image ? { image: item.image } : {}),
               })),
             },
           ]
         : []),
-      {
-        '@type': 'BreadcrumbList',
-        itemListElement: crumbs.map((c, i) => ({
-          '@type': 'ListItem',
-          position: i + 1,
-          name: c.name,
-          item: c.url.startsWith('http') ? c.url : `${BASE_URL}${c.url}`,
-        })),
-      },
+      ...(crumbs.length > 0
+        ? [{
+            '@type': 'BreadcrumbList',
+            itemListElement: crumbs.map((c, i) => ({
+              '@type': 'ListItem',
+              position: i + 1,
+              name: c.name,
+              item: localizedAbsoluteUrl(locale, c.url),
+            })),
+          }]
+        : []),
     ],
   };
 

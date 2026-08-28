@@ -4,6 +4,7 @@ import { ArrowRight, BellRing, CalendarDays, CheckCircle2, Smartphone, Ticket } 
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { Link } from '@/i18n/routing';
+import { metadataAlternates } from '@/lib/i18n/seoAlternates';
 
 export const revalidate = 1800; // 30 min — storefront content; edge serves stale-while-revalidate so clicks stay instant
 
@@ -23,6 +24,7 @@ export async function generateMetadata({ params }: MobileAppPageProps): Promise<
       description: t('metaDescription'),
       type: 'website',
     },
+    alternates: metadataAlternates(locale, '/mobile-app'),
   };
 }
 

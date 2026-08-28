@@ -18,7 +18,9 @@ import ContentBreadcrumbs from '@/components/navigation/ContentBreadcrumbs';
 import { normalizePageTemplate, type PageTemplate } from '@/lib/content/pageTemplate';
 import LinkedPageCardsSection from '@/components/content/LinkedPageCardsSection';
 import type { LinkedPageCard } from '@/lib/attractionPages/pageContent';
-import { contentPath } from '@/lib/content/contentUrl';
+import { contentPath, tourContentPath } from '@/lib/content/contentUrl';
+import ContextualDiscoveryLinks from '@/components/seo/ContextualDiscoveryLinks';
+import type { ContextualDiscoveryLink } from '@/lib/seo/contextualDiscovery';
 
 type CategoryPageCopy = {
   searchToursPlaceholder: string;
@@ -606,7 +608,7 @@ const TopPicksSection = ({
                     {tour.description?.replace(/<[^>]+>/g, '')}
                   </p>
                   <Link
-                    href={`/${tour.slug}`}
+                    href={tourContentPath(tour)}
                     className="inline-flex items-center gap-2 text-red-600 font-semibold"
                   >
                     {copy.learnMore}
@@ -755,7 +757,7 @@ const TourCard = ({
   return (
     <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow flex flex-col group">
       <div className="relative">
-        <Link href={`/${tour.slug}`}>
+        <Link href={tourContentPath(tour)}>
           <Image
             src={tour.image}
             alt={tour.title}
@@ -777,7 +779,7 @@ const TourCard = ({
       </div>
       <div className="p-4 flex-grow flex flex-col">
         <h3 className="font-bold text-lg text-slate-900 mb-2 line-clamp-2 flex-grow">
-          <Link href={`/${tour.slug}`} className="hover:text-red-600 transition-colors">
+          <Link href={tourContentPath(tour)} className="hover:text-red-600 transition-colors">
             {tour.title}
           </Link>
         </h3>
@@ -792,7 +794,7 @@ const TourCard = ({
             )}
             <span className="text-xl font-bold text-red-600">{formatPrice(displayedPrice)}</span>
           </div>
-          <Link href={`/${tour.slug}`} className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors text-sm font-medium">
+          <Link href={tourContentPath(tour)} className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors text-sm font-medium">
             {copy.viewDetails}
           </Link>
         </div>
@@ -807,10 +809,12 @@ export default function CategoryPageClient({
     categoryTours,
     relatedInterests = [],
     linkedPages = [],
+    contextualLinks = [],
 }: {
     category: Category;
     categoryTours: Tour[];
     linkedPages?: LinkedPageCard[];
+    contextualLinks?: ContextualDiscoveryLink[];
     relatedInterests?: Array<{
       _id: string;
       type: 'category' | 'attraction';
@@ -1116,6 +1120,8 @@ export default function CategoryPageClient({
                         limit={8}
                     />
                 </div>
+
+                <ContextualDiscoveryLinks locale={locale} links={contextualLinks} />
             </main>
 
             <Footer />

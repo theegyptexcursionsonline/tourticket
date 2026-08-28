@@ -2,11 +2,40 @@
 // Dynamic robots.txt generation — SEO-optimised, blocks AI scrapers & bad bots
 
 import { NextResponse } from 'next/server';
+import { locales } from '@/i18n/config';
+import { SEO_BASE_URL } from '@/lib/i18n/seoAlternates';
 
 export const dynamic = 'force-dynamic';
 
+const PRIVATE_PATHS = [
+  '/admin',
+  '/api',
+  '/user',
+  '/checkout',
+  '/cart',
+  '/login',
+  '/signup',
+  '/forgot',
+  '/reset-password',
+  '/profile',
+  '/bookings',
+  '/booking/verify',
+  '/accept-invitation',
+  '/offer',
+  '/payment',
+  '/redirecting',
+] as const;
+
+function privateDisallowRules(): string {
+  const paths = [
+    ...PRIVATE_PATHS,
+    ...locales.flatMap((locale) => PRIVATE_PATHS.map((path) => `/${locale}${path}`)),
+  ];
+  return paths.map((path) => `Disallow: ${path}`).join('\n');
+}
+
 export async function GET() {
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://egypt-excursionsonline.com';
+  const baseUrl = SEO_BASE_URL;
   const sitemapUrl = `${baseUrl}/sitemap.xml`;
 
   const robotsTxt = `# =============================================
@@ -19,31 +48,8 @@ export async function GET() {
 # -----------------------------------------------
 User-agent: *
 Allow: /
-Disallow: /admin
-Disallow: /admin/*
-Disallow: /api
-Disallow: /api/*
-Disallow: /user
-Disallow: /user/*
-Disallow: /checkout
-Disallow: /checkout/*
-Disallow: /cart
-Disallow: /login
-Disallow: /signup
-Disallow: /forgot
-Disallow: /forgot/*
-Disallow: /profile
-Disallow: /bookings
-Disallow: /booking/verify
-Disallow: /booking/verify/*
-Disallow: /accept-invitation
-Disallow: /accept-invitation/*
-Disallow: /payment
-Disallow: /payment/*
-Disallow: /redirecting
+${privateDisallowRules()}
 Disallow: /sentry-example-page
-Disallow: /_next
-Disallow: /_next/*
 Disallow: /coming-soon
 Disallow: /maintenance
 Disallow: /offline
@@ -54,22 +60,8 @@ Crawl-delay: 1
 # -----------------------------------------------
 User-agent: Googlebot
 Allow: /
-Disallow: /admin
-Disallow: /api
-Disallow: /user
-Disallow: /checkout
-Disallow: /cart
-Disallow: /login
-Disallow: /signup
-Disallow: /forgot
-Disallow: /profile
-Disallow: /bookings
-Disallow: /booking/verify
-Disallow: /accept-invitation
-Disallow: /payment
-Disallow: /redirecting
+${privateDisallowRules()}
 Disallow: /sentry-example-page
-Disallow: /_next
 Disallow: /coming-soon
 Disallow: /maintenance
 Disallow: /offline
@@ -81,30 +73,14 @@ User-agent: Googlebot-Image
 Allow: /images/
 Allow: /uploads/
 Allow: /static/
-Disallow: /admin
-Disallow: /api
-Disallow: /_next
+${privateDisallowRules()}
 
 # -----------------------------------------------
 # Bing
 # -----------------------------------------------
 User-agent: Bingbot
 Allow: /
-Disallow: /admin
-Disallow: /api
-Disallow: /user
-Disallow: /checkout
-Disallow: /cart
-Disallow: /login
-Disallow: /signup
-Disallow: /forgot
-Disallow: /profile
-Disallow: /bookings
-Disallow: /booking/verify
-Disallow: /accept-invitation
-Disallow: /payment
-Disallow: /redirecting
-Disallow: /_next
+${privateDisallowRules()}
 Disallow: /coming-soon
 Disallow: /maintenance
 Disallow: /offline

@@ -15,13 +15,14 @@ import {
 } from '@/lib/offer/campaign';
 import OfferPageClient, { type OfferTour, type OfferView } from './OfferPageClient';
 import { OFFER_FONT_CLASS } from './fonts';
+import { PRIVATE_ROUTE_METADATA } from '@/lib/seo/privateRouteMetadata';
 
 // Personal and time-boxed: never cached, never indexed.
 export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
+  ...PRIVATE_ROUTE_METADATA,
   title: 'Your private offer | Egypt Excursions Online',
-  robots: { index: false, follow: false },
 };
 
 // Catalog entries priced below this are data-entry errors, not offers.

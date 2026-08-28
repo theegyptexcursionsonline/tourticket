@@ -1,6 +1,6 @@
 import React from 'react';
 import { Metadata } from 'next';
-import { getSeoAlternates } from '@/lib/seo';
+import { englishOnlyMetadataAlternates } from '@/lib/i18n/seoAlternates';
 import ContactClientPage from './ContactClientPage';
 import OrganizationSchema from '@/components/schema/OrganizationSchema';
 import WebSiteSchema from '@/components/schema/WebSiteSchema';
@@ -9,7 +9,7 @@ import WebSiteSchema from '@/components/schema/WebSiteSchema';
 export const revalidate = 1800; // 30 min — storefront content; edge serves stale-while-revalidate so clicks stay instant
 
 // Generate metadata for SEO
-export const metadata: Metadata = {
+const PAGE_METADATA: Metadata = {
   title: 'Contact Us - Get in Touch | Egypt Excursions Online',
   description: 'Have a question? Contact Egypt Excursions Online. We are here to help you plan your perfect Egyptian adventure. 24/7 support available.',
   openGraph: {
@@ -18,18 +18,22 @@ export const metadata: Metadata = {
     type: 'website',
     images: ['https://egypt-excursionsonline.com/about.png'],
   },
-  alternates: getSeoAlternates('/contact'),
 };
+
+export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
+  await params;
+  return { ...PAGE_METADATA, alternates: englishOnlyMetadataAlternates('/contact') };
+}
 
 export default function ContactPage() {
   return (
     <>
       <OrganizationSchema />
       <WebSiteSchema
-        pageName="Contact Us - Get in Touch | Egypt Excursions Online"
-        pageDescription="Have a question? Contact Egypt Excursions Online. We are here to help you plan your perfect Egyptian adventure. 24/7 support available."
+        locale="en"
+        pageName="Get in Touch"
+        pageDescription="Have a question? We're here to help you plan your perfect Egyptian adventure."
         pageUrl="/contact"
-        breadcrumbs={[{ name: 'Home', url: '/' }, { name: 'Contact Us', url: '/contact' }]}
       />
       <ContactClientPage />
     </>

@@ -18,6 +18,8 @@ import {
   resolveLinkedPageCards,
 } from '@/lib/attractionPages/pageContent';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
+import { PUBLIC_CONTENT_FILTER } from '@/lib/content/publicContentFilter';
+import { explicitContentLocales, metadataAlternates } from '@/lib/i18n/seoAlternates';
 
 export async function getCataloguePage(slug: string, locale: string): Promise<CategoryPageData | null> {
   try {
@@ -26,8 +28,8 @@ export async function getCataloguePage(slug: string, locale: string): Promise<Ca
     const page = await AttractionPageModel.findOne({
       slug,
       pageType: 'category',
-      isPublished: true,
       ...DEFAULT_TENANT_FILTER,
+      ...PUBLIC_CONTENT_FILTER,
     })
     .populate({
       path: 'categoryId',
@@ -111,8 +113,10 @@ export async function getCataloguePageMetadata(
       images: [page.heroImage],
       type: 'website',
     },
-    alternates: {
-      canonical: canonicalPath || `/category/${page.slug}`,
-    },
+    alternates: metadataAlternates(
+      locale,
+      canonicalPath || `/category/${page.slug}`,
+      explicitContentLocales(page, ['title', 'description']),
+    ),
   };
 }

@@ -2,7 +2,7 @@
 
 import React, { useRef, useState, useEffect, useCallback } from "react";
 import Image from "next/image";
-import Link from "next/link";
+import { Link } from '@/i18n/routing';
 import {
     ArrowRight, Star, Tag, Clock, ChevronLeft, ChevronRight,
     ShoppingCart, Award, MapPin, CheckCircle2,
@@ -32,7 +32,9 @@ import { curateDestinationTours } from '@/lib/content/destinationTourCuration';
 import { buildContentBreadcrumbs } from '@/lib/content/breadcrumbs';
 import ContentBreadcrumbs from '@/components/navigation/ContentBreadcrumbs';
 import HostedAISearchEntry from '@/components/HostedAISearchEntry';
-import { contentPath } from '@/lib/content/contentUrl';
+import { contentPath, tourContentPath } from '@/lib/content/contentUrl';
+import ContextualDiscoveryLinks from '@/components/seo/ContextualDiscoveryLinks';
+import type { ContextualDiscoveryLink } from '@/lib/seo/contextualDiscovery';
 
 interface DestinationPageClientProps {
   destination: Destination;
@@ -40,6 +42,7 @@ interface DestinationPageClientProps {
   allCategories: Category[];
   reviews?: Review[];
   relatedDestinations?: Destination[];
+  contextualLinks?: ContextualDiscoveryLink[];
 }
 
 interface SearchHit {
@@ -508,7 +511,7 @@ const useSlidingText = (texts: string[], interval = 3000) => {
 const TourCard = ({ tour, onHitClick }: { tour: SearchTour; onHitClick?: () => void }) => (
   <motion.div whileHover={{ y: -4 }}>
     <Link
-      href={`/${tour.slug}`}
+      href={tourContentPath(tour)}
       onClick={onHitClick}
       className="group block flex-shrink-0 w-[240px] bg-white text-gray-900 rounded-xl overflow-hidden border shadow-sm hover:shadow-lg transition-all duration-300"
     >
@@ -1852,7 +1855,7 @@ const Top10Card = ({ tour, index, onAddToCartClick }: { tour: Tour, index: numbe
   };
 
   return (
-    <Link href={`/${tour.slug}`} className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-6 p-3 sm:p-4 bg-white hover:bg-slate-50 transition-colors duration-200 group rounded-lg border border-transparent hover:border-slate-200 hover:shadow-lg">
+    <Link href={tourContentPath(tour)} className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-6 p-3 sm:p-4 bg-white hover:bg-slate-50 transition-colors duration-200 group rounded-lg border border-transparent hover:border-slate-200 hover:shadow-lg">
       <span className="hidden sm:block text-3xl md:text-4xl font-extrabold text-slate-200 group-hover:text-red-500 transition-colors duration-200">{index + 1}.</span>
       <div className="relative w-full sm:w-20 md:w-24 h-32 sm:h-20 md:h-24 flex-shrink-0 rounded-md overflow-hidden">
         <Image src={tour.image} alt={tour.title} fill className="object-cover" />
@@ -1908,7 +1911,7 @@ const CombiDealCard = ({ tour, onAddToCartClick }: { tour: Tour, onAddToCartClic
   };
 
   return (
-    <Link href={`/${tour.slug}`} className="w-72 sm:w-80 flex-shrink-0 bg-white shadow-xl overflow-hidden transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 rounded-lg group">
+    <Link href={tourContentPath(tour)} className="w-72 sm:w-80 flex-shrink-0 bg-white shadow-xl overflow-hidden transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 rounded-lg group">
       <div className="relative">
         <Image src={tour.image} alt={tour.title} width={320} height={180} className="w-full h-36 sm:h-40 object-cover" />
         <button
@@ -2350,7 +2353,8 @@ export default function DestinationPageClient({
   destinationTours,
   allCategories,
   reviews = [],
-  relatedDestinations = []
+  relatedDestinations = [],
+  contextualLinks = [],
 }: DestinationPageClientProps) {
   const locale = useLocale();
   const rtl = isRTL(locale);
@@ -2519,6 +2523,8 @@ export default function DestinationPageClient({
         <RelatedDestinationsSection destinations={relatedDestinations} />
 
         <NewsletterSection destinationName={destination.name} />
+
+        <ContextualDiscoveryLinks locale={locale} links={contextualLinks} />
         
       </main>
       <Footer />

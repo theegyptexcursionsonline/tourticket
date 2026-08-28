@@ -20,7 +20,6 @@ import BookingSidebar from '@/components/BookingSidebar';
 import StickyBookButton from '@/components/StickyBookButton';
 import ReviewList from '@/components/reviews/ReviewList';
 import ReviewForm from '@/components/reviews/ReviewForm';
-import ReviewsStructuredData from '@/components/ReviewsStructuredData';
 import ElfsightWidget from '@/components/ElfsightWidget';
 import InteractiveItineraryMap from '@/components/tours/InteractiveItineraryMap';
 import TourPriceDisplay from '@/components/pricing/TourPriceDisplay';
@@ -958,8 +957,6 @@ const ReviewsSection = ({ tour, reviews, onReviewSubmitted, sectionRef, onBookNo
         )}
       </div>
 
-      <ReviewsStructuredData />
-      
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
         <ReviewList
           reviews={currentReviews}

@@ -17,7 +17,7 @@ import { useLocale, useTranslations } from 'next-intl';
 import { filterVisibleTaxonomyEntries } from '@/lib/utils/taxonomy';
 import type { SearchResponse } from 'algoliasearch';
 import { isPresent, isRecord, isSearchHit, type ChatPart, type SearchHit } from './componentTypes';
-import { contentPath } from '@/lib/content/contentUrl';
+import { contentPath, localizedTourContentPath } from '@/lib/content/contentUrl';
 import 'instantsearch.css/themes/satellite.css';
 
 // --- Types and Constants ---
@@ -251,6 +251,7 @@ function getUniqueSearchHits<T extends { slug?: string; objectID?: string; name?
 
 function TourHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limit?: number }) {
   const copy = useHeroCopy();
+  const locale = useLocale();
   const { hits } = useHits();
   const limitedHits = hits.slice(0, limit);
   const sliderRef = useRef<HTMLDivElement>(null);
@@ -297,6 +298,9 @@ function TourHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limit?: 
     isFeatured: hit.isFeatured,
     discountPrice: hit.discountPrice,
     originalPrice: hit.price,
+    urlType: hit.urlType,
+    destination: hit.destination,
+    parentPage: hit.parentPage,
   }));
 
   return (
@@ -363,7 +367,7 @@ function TourHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limit?: 
             {tours.map((tour, idx) => (
               <motion.a
                 key={limitedHits[idx].objectID}
-                href={`/${tour.slug}`}
+                href={localizedTourContentPath(tour, locale)}
                 onClick={onHitClick}
                 target="_blank"
                 rel="noopener noreferrer"
@@ -674,9 +678,10 @@ const useSlidingText = (
 // --- Enhanced AI Chat Components ---
 const TourCard = ({ tour }: { tour: SearchHit }) => {
   const copy = useHeroCopy();
+  const locale = useLocale();
   return (
   <motion.a
-    href={`/${tour.slug}`}
+    href={localizedTourContentPath(tour, locale)}
     target="_blank"
     rel="noopener noreferrer"
     className="group block flex-shrink-0 w-[260px] bg-white rounded-2xl overflow-hidden border-2 border-gray-100 shadow-md hover:shadow-2xl hover:border-blue-200 transition-all duration-300"

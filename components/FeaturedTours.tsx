@@ -8,6 +8,7 @@ import { useSettings } from '@/hooks/useSettings';
 import BookingSidebar from '@/components/BookingSidebar';
 import { Link } from '@/i18n/routing';
 import { getErrorMessage } from './componentTypes';
+import { tourContentPath } from '@/lib/content/contentUrl';
 
 /**
  * Enhanced FeaturedTours - Perfect Card Design with Activity Provider
@@ -98,7 +99,7 @@ const TourCard = ({ tour, onAddToCartClick }: { tour: Tour; onAddToCartClick: (t
 
   return (
     <Link
-      href={`/${tour.slug || '#'}`}
+      href={tour.slug ? tourContentPath(tour) : '#'}
       className="block w-[280px] sm:w-[320px] md:w-[360px] lg:w-[380px] xl:w-[400px] bg-white rounded-3xl overflow-hidden border border-red-100 transform transition-all duration-500 hover:-translate-y-2 group focus:outline-none focus-visible:ring-4 focus-visible:ring-red-200"
       aria-label={`Open tour ${tour.title || 'tour'}`}
     >

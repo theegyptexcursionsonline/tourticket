@@ -1126,7 +1126,7 @@ TourSchema.post('save', async function(doc) {
 
       // Populate category and destination before syncing
       await doc.populate('category', 'name');
-      await doc.populate('destination', 'name');
+      await doc.populate('destination', 'name slug');
 
       await syncTourToAlgolia(doc);
       console.log(`Auto-synced tour ${doc._id} to Algolia`);
