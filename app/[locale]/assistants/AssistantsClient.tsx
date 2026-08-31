@@ -8,8 +8,10 @@ const VOICE_SCRIPT_ID = 'eeo-assistants-voice-script';
 const VOICE_FRAME_ID = 'foxes-voice-widget-frame';
 
 const BOOKING_ORIGIN = process.env.NEXT_PUBLIC_FOXES_BOOKING_ORIGIN || 'https://booking.foxestechnology.com';
-const BOOKING_WIDGET_RELEASE = process.env.NEXT_PUBLIC_FOXES_BOOKING_WIDGET_RELEASE || '465c709';
+const BOOKING_WIDGET_RELEASE = process.env.NEXT_PUBLIC_FOXES_BOOKING_WIDGET_RELEASE || '683bc4a';
 const BOOKING_SCRIPT_ID = 'eeo-assistants-booking-script';
+const BOOKING_SIDEBAR_ID = 'foxes-v2-sidebar';
+const MOBILE_VOICE_OFFSET_PX = 72;
 
 /**
  * Direct mounts for the voice and booking assistants. This page is the
@@ -23,6 +25,56 @@ export default function AssistantsClient() {
   const [bookingLoaded, setBookingLoaded] = useState(false);
 
   useEffect(() => {
+    let coordinationFrame: number | null = null;
+
+    const syncAssistantLaunchers = () => {
+      const voiceFrame = document.getElementById(VOICE_FRAME_ID) as HTMLElement | null;
+      if (!voiceFrame) return;
+
+      const bookingSidebar = document.getElementById(BOOKING_SIDEBAR_ID);
+      const bookingOpen = bookingSidebar?.getAttribute('aria-hidden') === 'false';
+      const visibility = bookingOpen ? 'hidden' : '';
+      const pointerEvents = bookingOpen ? 'none' : '';
+      if (voiceFrame.style.visibility !== visibility) voiceFrame.style.visibility = visibility;
+      if (voiceFrame.style.pointerEvents !== pointerEvents) voiceFrame.style.pointerEvents = pointerEvents;
+
+      const mobile = window.matchMedia('(max-width: 639px)').matches;
+      const frameRect = voiceFrame.getBoundingClientRect();
+      const voiceOpen = mobile && frameRect.width >= window.innerWidth - 1;
+      if (!bookingOpen && bookingOrgId && mobile && !voiceOpen) {
+        // The collapsed voice pill and Booking trigger otherwise overlap on a
+        // 390px viewport. Keep both primary actions independently tappable.
+        if (
+          voiceFrame.style.bottom !== `${MOBILE_VOICE_OFFSET_PX}px` ||
+          voiceFrame.style.getPropertyPriority('bottom') !== 'important'
+        ) {
+          voiceFrame.style.setProperty('bottom', `${MOBILE_VOICE_OFFSET_PX}px`, 'important');
+        }
+      } else if (
+        voiceFrame.style.getPropertyPriority('bottom') === 'important' &&
+        voiceFrame.style.bottom === `${MOBILE_VOICE_OFFSET_PX}px`
+      ) {
+        voiceFrame.style.removeProperty('bottom');
+      }
+    };
+
+    const scheduleAssistantSync = () => {
+      if (coordinationFrame !== null) return;
+      coordinationFrame = window.requestAnimationFrame(() => {
+        coordinationFrame = null;
+        syncAssistantLaunchers();
+      });
+    };
+
+    const assistantObserver = new MutationObserver(scheduleAssistantSync);
+    assistantObserver.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['class', 'style', 'aria-hidden'],
+    });
+    window.addEventListener('resize', scheduleAssistantSync);
+
     if (!document.getElementById(VOICE_SCRIPT_ID)) {
       const script = document.createElement('script');
       script.id = VOICE_SCRIPT_ID;
@@ -51,9 +103,16 @@ export default function AssistantsClient() {
       );
       script.onload = () => setBookingLoaded(true);
       document.body.appendChild(script);
+    } else if (bookingOrgId) {
+      queueMicrotask(() => setBookingLoaded(true));
     }
 
+    scheduleAssistantSync();
+
     return () => {
+      assistantObserver.disconnect();
+      window.removeEventListener('resize', scheduleAssistantSync);
+      if (coordinationFrame !== null) window.cancelAnimationFrame(coordinationFrame);
       document.getElementById(VOICE_SCRIPT_ID)?.remove();
       document.getElementById(VOICE_FRAME_ID)?.remove();
       document.getElementById(BOOKING_SCRIPT_ID)?.remove();
