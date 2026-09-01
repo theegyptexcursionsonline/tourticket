@@ -11,6 +11,7 @@ const SCRIPT_ID = 'eeo-search-concierge-script';
 const HOST_ID = 'foxes-launcher-host';
 const CLOSE_EVENT = 'foxes:search:close';
 const DESTROY_EVENT = 'foxes:search:destroy';
+const SUPPORT_WIDGET_SELECTOR = 'iframe[id^="foxesconnect-widget-"]';
 // Exact primary blue sampled from the customer-facing EEO logo assets.
 const EEO_BRAND_BLUE = '#4385F6';
 const MOBILE_BOOKING_BAR_SELECTOR = '[data-mobile-booking-bar="true"]';
@@ -100,12 +101,22 @@ export default function EEOSearchConcierge() {
       const hasOpenAppDialog = Array.from(
         document.querySelectorAll<HTMLElement>('[role="dialog"][aria-modal="true"]'),
       ).some((dialog) => !dialog.closest('.gm-style') && dialog.getClientRects().length > 0);
+      // FoxesConnect is a separate support surface, mounted by its embed script
+      // outside React. Its iframe intentionally remains in the DOM while closed
+      // but is removed from hit-testing with display:none. Keep Search hidden for
+      // the complete support open/close transition so it cannot cover the
+      // support panel's bottom navigation on phones or overlap the desktop panel.
+      const hasOpenSupportWidget = Array.from(
+        document.querySelectorAll<HTMLIFrameElement>(SUPPORT_WIDGET_SELECTOR),
+      ).some((frame) => window.getComputedStyle(frame).display !== 'none');
       const onTourPage = Boolean(document.querySelector(TOUR_PAGE_SELECTOR));
-      const suppressed = hasOpenAppDialog || onTourPage;
-      if (suppressed) {
+      const suppressed = hasOpenAppDialog || hasOpenSupportWidget || onTourPage;
+      if (suppressed && !host.hidden) {
         window.dispatchEvent(new CustomEvent(CLOSE_EVENT));
       }
-      host.hidden = suppressed;
+      if (host.hidden !== suppressed) {
+        host.hidden = suppressed;
+      }
 
       if (!launcher) return;
 

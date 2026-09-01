@@ -24,6 +24,7 @@ describe('EEOSearchConcierge', () => {
     document.getElementById('eeo-search-concierge-script')?.remove();
     document.getElementById('foxes-launcher-host')?.remove();
     document.querySelector('[data-mobile-booking-bar="true"]')?.remove();
+    document.querySelectorAll('iframe[id^="foxesconnect-widget-"]').forEach((frame) => frame.remove());
   });
 
   it('loads one customer-branded hosted launcher on the EEO storefront', async () => {
@@ -161,6 +162,41 @@ describe('EEOSearchConcierge', () => {
 
     dialog.remove();
     await waitFor(() => expect(host.hidden).toBe(false));
+    window.removeEventListener('foxes:search:close', closeListener);
+  });
+
+  it('keeps Search hidden for the complete FoxesConnect support-panel transition', async () => {
+    const closeListener = jest.fn();
+    window.addEventListener('foxes:search:close', closeListener);
+    render(<EEOSearchConcierge />);
+
+    const host = document.createElement('div');
+    host.id = 'foxes-launcher-host';
+    document.body.appendChild(host);
+
+    const supportFrame = document.createElement('iframe');
+    supportFrame.id = 'foxesconnect-widget-test';
+    supportFrame.title = 'Support';
+    supportFrame.setAttribute('aria-hidden', 'true');
+    supportFrame.style.display = 'none';
+    document.body.appendChild(supportFrame);
+
+    await waitFor(() => expect(host.hidden).toBe(false));
+
+    supportFrame.style.display = 'block';
+    supportFrame.setAttribute('aria-hidden', 'false');
+    await waitFor(() => expect(host.hidden).toBe(true));
+    expect(closeListener).toHaveBeenCalled();
+
+    // The support embed fades out before setting display:none. Search must not
+    // reappear during that interval and cover the panel's navigation.
+    supportFrame.setAttribute('aria-hidden', 'true');
+    await new Promise((resolve) => setTimeout(resolve, 80));
+    expect(host.hidden).toBe(true);
+
+    supportFrame.style.display = 'none';
+    await waitFor(() => expect(host.hidden).toBe(false));
+
     window.removeEventListener('foxes:search:close', closeListener);
   });
 
