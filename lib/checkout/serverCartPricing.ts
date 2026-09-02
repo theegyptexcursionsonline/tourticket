@@ -2,10 +2,15 @@ import mongoose from 'mongoose';
 import Tour from '@/lib/models/Tour';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 import { resolveEffectivePrice, STANDARD_OPTION_KEY } from '@/lib/revenue/pricingResolver';
-import { isPerPersonAddOn } from '@/lib/checkout/addOnPricing';
+import {
+  ADD_ON_QUANTITY_VERSION,
+  hasChosenAddOnQuantities,
+  isPerPersonAddOn,
+} from '@/lib/checkout/addOnPricing';
 import { effectiveOptionPrice, effectiveTourPrice } from '@/lib/pricing/effectivePrice';
 import { authoritativeBasePrice } from '@/lib/pricing/authoritativePrice';
 import { isAddOnAvailableForOption, normalizedBookingOptionKeys } from '@/lib/bookings/addOnAvailability';
+import { clampAddOnQuantity, perPersonAddOnLimit } from '@/lib/bookings/bookingSelection';
 import { effectiveSlotGuestPrices } from '@/lib/revenue/guestPrices';
 import {
   capacityAvailability,
@@ -32,6 +37,7 @@ interface RawCartItem extends Record<string, unknown> {
   childQuantity?: unknown;
   infantQuantity?: unknown;
   selectedAddOns?: unknown;
+  addOnQuantityVersion?: unknown;
 }
 
 interface LeanBookingOption {
@@ -88,6 +94,8 @@ export interface SecureAddOnDetail {
   price: number;
   category: string;
   perGuest: boolean;
+  /** Units billed on a selected line (absent on the authored catalogue). */
+  quantity?: number;
 }
 
 export interface SecureCartItem extends Record<string, unknown> {
@@ -116,6 +124,7 @@ export interface SecureCartItem extends Record<string, unknown> {
   selectedAddOns: Record<string, number>;
   selectedAddOnDetails: Record<string, SecureAddOnDetail>;
   availableAddOns: SecureAddOnDetail[];
+  addOnQuantityVersion: typeof ADD_ON_QUANTITY_VERSION;
 }
 
 export class PriceChangedError extends Error {
@@ -326,8 +335,20 @@ export async function secureCartPricing(
       if (!addon || !Number.isFinite(addon.price) || addon.price < 0) {
         throw new Error('Invalid add-on');
       }
-      selectedAddOns[id] = count;
-      selectedAddOnDetails[id] = addon;
+      // A per-person add-on is billed for the units the guest chose, capped at
+      // one per paying participant (adults + children) — never multiplied by
+      // the party size on the guest's behalf, never above it, never for
+      // infants (client sheet EEO 24 Aug / MT 31 Aug). Per-unit add-ons keep
+      // their requested quantity. The billed figure is recorded on the line
+      // so booking detail pages and receipts render what was charged.
+      const payingParty = perPersonAddOnLimit(adultCount, childCount);
+      const billedQuantity = addon.perGuest
+        ? (hasChosenAddOnQuantities(rawItem.addOnQuantityVersion)
+          ? clampAddOnQuantity(count, payingParty)
+          : payingParty)
+        : count;
+      selectedAddOns[id] = billedQuantity;
+      selectedAddOnDetails[id] = { ...addon, quantity: billedQuantity };
     }
 
     return {
@@ -354,6 +375,7 @@ export async function secureCartPricing(
       selectedAddOns,
       selectedAddOnDetails,
       availableAddOns: catalogueAddons,
+      addOnQuantityVersion: ADD_ON_QUANTITY_VERSION,
     };
   }));
 }

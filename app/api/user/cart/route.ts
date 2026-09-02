@@ -45,6 +45,7 @@ interface CartItemInput {
   priceExecutionId?: string | null;
   priceOverrideId?: string | null;
   priceSource?: PriceSource;
+  addOnQuantityVersion?: unknown;
   selectedAddOns?: CartAddOnInput[];
   uniqueId: string;
   addedAt?: string | Date;
@@ -83,6 +84,7 @@ const toStoredCartItem = (item: CartItemInput, addedAt: string | Date = new Date
     priceExecutionId: pricingFields.priceExecutionId,
     priceOverrideId: pricingFields.priceOverrideId,
     priceSource: pricingFields.priceSource,
+    addOnQuantityVersion: item.addOnQuantityVersion === 1 ? 1 : undefined,
     selectedAddOns: (item.selectedAddOns || []).map((addon: CartAddOnInput) => ({
       id: addon.id,
       name: addon.name || addon.title,

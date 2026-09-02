@@ -34,6 +34,10 @@ jest.mock('@/lib/auth/verifyAdmin', () => ({ verifyAdmin: mockVerifyAdmin }));
 jest.mock('@/lib/algolia', () => ({ syncTourToAlgolia: jest.fn() }));
 jest.mock('@/lib/i18n/autoTranslate', () => ({ autoTranslateTour: jest.fn() }));
 jest.mock('@/lib/admin/cleanBookingOptions', () => ({ cleanBookingOptions: jest.fn((value) => value), bookingOptionCapacityError: jest.fn(() => null) }));
+jest.mock('@/lib/admin/tourTaxonomyOwnership', () => ({
+  TourTaxonomyOwnershipError: class TourTaxonomyOwnershipError extends Error {},
+  validateTourTaxonomyOwnership: jest.fn(),
+}));
 jest.mock('@/lib/revenue/pricingSummary', () => ({ refreshTourPricingSummary: jest.fn() }));
 jest.mock('@/lib/models/Tour', () => ({
   __esModule: true,
@@ -123,10 +127,35 @@ describe('GET /api/admin/tours list payload', () => {
     expect(mockPopulate).toHaveBeenNthCalledWith(1, {
       path: 'category',
       select: 'name title slug',
+      match: expect.objectContaining({ $or: expect.any(Array) }),
     });
     expect(mockPopulate).toHaveBeenNthCalledWith(2, {
       path: 'destination',
       select: 'name title slug',
+      match: expect.objectContaining({ $or: expect.any(Array) }),
     });
+  });
+
+  // The Manage Tours list needs trashed rows for its Trash tab, so the default
+  // stays inclusive; pickers that link tours elsewhere (destinations) opt out.
+  it('returns trashed tours by default so the Trash tab can render them', async () => {
+    const { GET } = await import('@/app/api/admin/tours/route');
+    await GET({ url: 'https://dashboard2.egypt-excursionsonline.com/api/admin/tours' } as never);
+    expect(mockTourFind.mock.calls[0][0]).not.toHaveProperty('archivedAt');
+  });
+
+  it('excludes trashed tours when includeArchived=false, keeping the tenant scope', async () => {
+    const { GET } = await import('@/app/api/admin/tours/route');
+    await GET({ url: 'https://dashboard2.egypt-excursionsonline.com/api/admin/tours?includeArchived=false' } as never);
+    expect(mockTourFind).toHaveBeenCalledWith(expect.objectContaining({
+      $or: expect.arrayContaining([{ tenantId: 'default' }]),
+      archivedAt: null,
+    }));
+  });
+
+  it('ignores any other includeArchived value (only an explicit false opts out)', async () => {
+    const { GET } = await import('@/app/api/admin/tours/route');
+    await GET({ url: 'https://dashboard2.egypt-excursionsonline.com/api/admin/tours?includeArchived=true' } as never);
+    expect(mockTourFind.mock.calls[0][0]).not.toHaveProperty('archivedAt');
   });
 });

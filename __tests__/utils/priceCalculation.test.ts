@@ -1,3 +1,4 @@
+import { clampAddOnQuantity, perPersonAddOnLimit } from '@/lib/bookings/bookingSelection';
 /**
  * Price Calculation Tests
  *
@@ -118,16 +119,21 @@ describe('Price Calculation Utilities', () => {
       expect(total).toBe(165);
     });
 
-    it('should handle per-guest add-ons correctly', () => {
+    // Client sheet (EEO 24 Aug): per-person add-ons are no longer multiplied by
+    // the party size — the guest picks 1..N units. This previously asserted
+    // price × 3 guests for a single selection.
+    it('bills per-person add-ons for the chosen units, capped at the paying party', () => {
       const basePrice = 100;
-      const guests = 3;
+      const limit = perPersonAddOnLimit(2, 1);
       const perGuestAddOn = { price: 10, perGuest: true };
 
-      const addOnTotal = perGuestAddOn.perGuest ? perGuestAddOn.price * guests : perGuestAddOn.price;
-      const total = basePrice + addOnTotal;
+      const chosenUnits = clampAddOnQuantity(2, limit);
+      const addOnTotal = perGuestAddOn.price * chosenUnits;
 
-      expect(addOnTotal).toBe(30);
-      expect(total).toBe(130);
+      expect(chosenUnits).toBe(2);
+      expect(addOnTotal).toBe(20);
+      expect(basePrice + addOnTotal).toBe(120);
+      expect(clampAddOnQuantity(5, limit)).toBe(3);
     });
   });
 });

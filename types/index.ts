@@ -468,6 +468,8 @@ export interface CartItem extends Tour {
   selectedDate: string;
   selectedTime: string;
   selectedAddOns: { [key: string]: number };
+  /** 1 = per-person add-on quantities were explicitly chosen; missing = legacy selection toggle. */
+  addOnQuantityVersion?: 1;
   selectedAddOnDetails?: {
     [key: string]: {
       id: string;
@@ -475,6 +477,8 @@ export interface CartItem extends Tour {
       price: number;
       category: string;
       perGuest: boolean;
+      /** Units billed for a per-person add-on once the server has priced the line. */
+      quantity?: number;
     }
   };
   selectedBookingOption?: {

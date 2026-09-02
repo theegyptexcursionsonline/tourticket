@@ -41,6 +41,7 @@ export interface ICartItem {
   priceExecutionId?: string | null;
   priceOverrideId?: string | null;
   priceSource?: 'catalogue' | 'override';
+  addOnQuantityVersion?: 1;
   selectedAddOns?: Array<{
     id: string;
     name: string;
@@ -285,6 +286,7 @@ const UserSchema: Schema<IUser> = new Schema({
     priceExecutionId: { type: String },
     priceOverrideId: { type: String },
     priceSource: { type: String, enum: ['catalogue', 'override'] },
+    addOnQuantityVersion: { type: Number, enum: [1], required: false },
     selectedAddOns: [{
       id: String,
       name: String,

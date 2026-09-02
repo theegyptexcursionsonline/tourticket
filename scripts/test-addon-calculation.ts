@@ -3,6 +3,8 @@
  * Run with: npx tsx scripts/test-addon-calculation.ts
  */
 
+import { clampAddOnQuantity, perPersonAddOnLimit } from '../lib/bookings/bookingSelection';
+
 // ============================================================
 // Test the add-on transformation and calculation logic
 // ============================================================
@@ -102,8 +104,9 @@ function getItemTotal(item: any) {
     Object.entries(item.selectedAddOns).forEach(([addOnId, quantity]) => {
       const addOnDetail = item.selectedAddOnDetails?.[addOnId];
       if (addOnDetail && (quantity as number) > 0) {
-        const totalGuests = (item.quantity || 0) + (item.childQuantity || 0);
-        const addOnQuantity = addOnDetail.perGuest ? totalGuests : 1;
+        const addOnQuantity = addOnDetail.perGuest
+          ? clampAddOnQuantity(quantity as number, perPersonAddOnLimit(item.quantity || 0, item.childQuantity || 0))
+          : Number(quantity);
         addOnsTotal += addOnDetail.price * addOnQuantity;
       }
     });
@@ -138,9 +141,9 @@ runTest('Combined total is correct (€80 + €35 = €115)', () => {
 });
 
 // ============================================================
-// Test 3: Per-guest Add-on Calculation
+// Test 3: Per-person Add-on Calculation
 // ============================================================
-console.log('\nTest 3: Per-guest Add-on Calculation');
+console.log('\nTest 3: Per-person Add-on Calculation');
 
 const cartItemWithPerGuestAddon = {
   price: 40,
@@ -159,13 +162,13 @@ runTest('Tour total with child (2 adults + 1 child)', () => {
   return addonResult2.tourTotal === 100;
 });
 
-runTest('Per-guest add-on multiplied by guest count', () => {
-  // €15 × 3 guests = €45
-  return addonResult2.addOnsTotal === 45;
+runTest('Per-person add-on uses the chosen quantity', () => {
+  // €15 × 1 chosen unit = €15 (the guest can step up to 3)
+  return addonResult2.addOnsTotal === 15;
 });
 
-runTest('Combined total is correct (€100 + €45 = €145)', () => {
-  return addonResult2.total === 145;
+runTest('Combined total is correct (€100 + €15 = €115)', () => {
+  return addonResult2.total === 115;
 });
 
 // ============================================================
@@ -304,6 +307,6 @@ if (failed > 0) {
   console.log('\nThe add-on calculation fix is working correctly.');
   console.log('- Server array format is transformed to client object format');
   console.log('- Add-on prices are now included in the total');
-  console.log('- Per-guest add-ons are multiplied by guest count');
+  console.log('- Per-person add-ons use the customer-chosen quantity');
   process.exit(0);
 }

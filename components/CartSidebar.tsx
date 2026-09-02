@@ -12,7 +12,7 @@ import { parseLocalDate } from '@/utils/date';
 import { useLocale } from 'next-intl';
 import { isRTL } from '@/i18n/config';
 import type { CartItem } from '@/types';
-import { unitCount } from '@/lib/bookings/unitPricing';
+import { checkoutAddOnUnits, checkoutItemSubtotal } from '@/lib/checkout/cartTotals';
 import { useModalBehavior } from '@/hooks/useModalBehavior';
 
 const CartSidebar: FC = () => {
@@ -25,33 +25,7 @@ const CartSidebar: FC = () => {
     const rtl = isRTL(locale);
 
   // Calculate individual item total including add-ons
-    const getItemTotal = (item: CartItem) => {
-        // Use selected booking option price if available, otherwise fall back to item price
-        const basePrice = item.selectedBookingOption?.price || item.discountPrice || 0;
-
-        // Unit-priced options (per couple/family/group) charge whole units
-        // over the total participant count — mirror of checkoutTourSubtotal.
-        const totalParticipants = (item.quantity || 1) + (item.childQuantity || 0) + (item.infantQuantity || 0);
-        const adultPrice = basePrice * (item.quantity || 1);
-        const childPrice = Number(item.guestPrices?.child ?? basePrice / 2) * (item.childQuantity || 0);
-        const tourTotal = item.unitPricing
-            ? unitCount(totalParticipants, item.unitPricing.unitSize || null) * item.unitPricing.unitPrice
-            : adultPrice + childPrice;
-
-        let addOnsTotal = 0;
-        if (item.selectedAddOns && item.selectedAddOnDetails) {
-            (Object.entries(item.selectedAddOns) as Array<[string, number]>).forEach(([addOnId, quantity]) => {
-                const addOnDetail = item.selectedAddOnDetails?.[addOnId];
-                if (addOnDetail && quantity > 0) {
-                    const totalGuests = item.quantity + item.childQuantity;
-                    const addOnQuantity = addOnDetail.perGuest ? totalGuests : quantity;
-                    addOnsTotal += addOnDetail.price * addOnQuantity;
-                }
-            });
-        }
-
-        return tourTotal + addOnsTotal;
-    };
+    const getItemTotal = (item: CartItem) => checkoutItemSubtotal(item);
 
     // Calculate total price including add-ons and booking options
     const cartTotal = cart.reduce((acc, item) => {
@@ -217,15 +191,14 @@ const CartSidebar: FC = () => {
                                                                 const addOnDetail = item.selectedAddOnDetails?.[addOnId];
                                                                 if (!addOnDetail || quantity === 0) return null;
 
-                                                                const totalGuests = item.quantity + item.childQuantity;
-                                                                const addOnQuantity = addOnDetail.perGuest ? totalGuests : quantity;
+                                                                const addOnQuantity = checkoutAddOnUnits(item, addOnId);
                                                                 const addOnTotal = addOnDetail.price * addOnQuantity;
 
                                                                 return (
                                                                     <div key={addOnId} className="flex items-center justify-between text-xs">
                                                                         <span className="text-slate-600 truncate pr-2">
                                                                             {addOnDetail.title}
-                                                                            {addOnDetail.perGuest && ` (${totalGuests}x)`}
+                                                                            {addOnDetail.perGuest && ` (${addOnQuantity}x)`}
                                                                         </span>
                                                                         <span className="text-slate-700 font-medium">
                                                                             {formatPrice(addOnTotal)}

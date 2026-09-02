@@ -34,6 +34,7 @@ function TestComponent() {
         selectedBookingOption: { id: 'standard-default', pricingKey: 'standard', title: 'Standard', price: 100 },
         guestPrices: { adult: 100, child: 50, infant: 0 },
         priceVersion: 1,
+        addOnQuantityVersion: 1,
       } as any, false)}>
         Add Item
       </button>
@@ -177,6 +178,32 @@ describe('CartContext', () => {
 
     const stored = localStorage.getItem('cart')
     expect(stored).toBeTruthy()
+    expect(JSON.parse(stored || '[]')[0].addOnQuantityVersion).toBe(1)
+  })
+
+  it('keeps an unversioned local cart unversioned for legacy whole-party pricing', async () => {
+    localStorage.setItem('cart', JSON.stringify([{
+      id: 'legacy-tour',
+      title: 'Legacy Tour',
+      quantity: 2,
+      childQuantity: 1,
+      selectedAddOns: { meal: 1 },
+      uniqueId: 'legacy-line',
+    }]))
+
+    render(
+      <CartProvider>
+        <TestComponent />
+      </CartProvider>
+    )
+
+    await act(async () => {
+      await new Promise(resolve => setTimeout(resolve, 10))
+    })
+
+    const cart = JSON.parse(screen.getByTestId('cart-items').textContent || '[]')
+    expect(cart[0]).toMatchObject({ id: 'legacy-tour', selectedAddOns: { meal: 1 } })
+    expect(cart[0]).not.toHaveProperty('addOnQuantityVersion')
   })
 
   it('atomically accepts and persists the complete authoritative quote', async () => {

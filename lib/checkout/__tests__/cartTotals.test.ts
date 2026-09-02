@@ -7,6 +7,7 @@ import {
 } from '@/lib/checkout/cartTotals';
 
 const item = {
+  addOnQuantityVersion: 1,
   quantity: 2,
   childQuantity: 1,
   infantQuantity: 1,
@@ -27,20 +28,31 @@ describe('authoritative checkout totals', () => {
     expect(checkoutAddOnGuestCount(item)).toBe(3);
   });
 
-  it('charges per-person add-ons per paying guest and per-unit add-ons per quantity', () => {
-    // meal: 5 × 3 paying guests = 15; photo: 10 × 2 units = 20
-    expect(checkoutAddOnsTotal(item)).toBe(35);
-    expect(checkoutItemSubtotal(item)).toBe(300);
+  // Client sheet (EEO 24 Aug): a per-person add-on is billed for the units the
+  // guest chose, not multiplied by the party size. This test previously pinned
+  // "5 × 3 paying guests = 15" for a stored quantity of 1; it now pins the
+  // chosen unit count.
+  it('charges per-person add-ons per chosen unit and per-unit add-ons per quantity', () => {
+    // meal: 5 × 1 chosen unit = 5; photo: 10 × 2 units = 20
+    expect(checkoutAddOnsTotal(item)).toBe(25);
+    expect(checkoutItemSubtotal(item)).toBe(290);
+    // meal: 5 × 2 chosen units = 10
+    expect(checkoutAddOnsTotal({ ...item, selectedAddOns: { meal: 2, photo: 2 } })).toBe(30);
   });
 
-  it('never multiplies a per-person add-on by its stored quantity (legacy carts stored the guest count there)', () => {
-    const legacyItem = {
+  it('caps a per-person add-on at one unit per paying participant (infants excluded)', () => {
+    // 2 adults + 1 child = 3 paying guests; the infant never counts.
+    expect(checkoutAddOnsTotal({ ...item, selectedAddOns: { meal: 9 } })).toBe(15);
+    // Legacy carts stored the guest count as the quantity — same cap, same charge.
+    expect(checkoutAddOnsTotal({ ...item, selectedAddOns: { meal: 3 } })).toBe(15);
+  });
+
+  it('preserves the whole paying-party charge for an unversioned cart toggle', () => {
+    expect(checkoutAddOnsTotal({
       ...item,
-      // Old clients wrote quantity = guest count for per-guest add-ons.
-      selectedAddOns: { meal: 3, photo: 2 },
-    };
-    // Still 5 × 3 guests = 15, not 5 × 3 × 3.
-    expect(checkoutAddOnsTotal(legacyItem)).toBe(35);
+      addOnQuantityVersion: undefined,
+      selectedAddOns: { meal: 1 },
+    })).toBe(15);
   });
 
   it('rounds only at item/cart currency boundaries', () => {
@@ -50,8 +62,11 @@ describe('authoritative checkout totals', () => {
     ])).toBe(20.02);
   });
 
+  // Recovery replays the billed unit count (`q`): meal 5 × 1 chosen unit = 5,
+  // photo 10 × 2 = 20, tour 265 → 290 (was 300 under the per-guest multiply).
   it('reconstructs the same add-on total for webhook recovery', () => {
     expect(recoveryCartItemSubtotal({
+      aqv: 1,
       a: 2,
       c: 1,
       n: 1,
@@ -61,7 +76,18 @@ describe('authoritative checkout totals', () => {
         { id: 'meal', q: 1, p: 5, pg: true },
         { id: 'photo', q: 2, p: 10, pg: false },
       ],
-    })).toBe(300);
+    })).toBe(290);
+  });
+
+  it('preserves the pre-release whole-party add-on charge for an in-flight Stripe quote without aqv', () => {
+    expect(recoveryCartItemSubtotal({
+      a: 2,
+      c: 1,
+      n: 1,
+      bp: 100,
+      gp: { adult: 100, child: 50, infant: 0 },
+      ao: [{ id: 'meal', q: 1, p: 5, pg: true }],
+    })).toBe(265);
   });
 });
 

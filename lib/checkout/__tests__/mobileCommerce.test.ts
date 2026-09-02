@@ -77,10 +77,14 @@ const pricedItem = {
   priceExecutionId: 'exec-1',
   priceOverrideId: 'override-1',
   priceSource: 'override' as const,
-  selectedAddOns: { '507f1f77bcf86cd799439012': 1 },
+  // Mobile commerce v1 predates manual per-person quantities: quantity=1 is
+  // a toggle for the whole paying party. secureCartPricing normalizes it to
+  // three billed units before returning this authoritative line.
+  addOnQuantityVersion: 1,
+  selectedAddOns: { '507f1f77bcf86cd799439012': 3 },
   selectedAddOnDetails: {
     '507f1f77bcf86cd799439012': {
-      id: '507f1f77bcf86cd799439012', title: 'Lunch', price: 25, category: 'Food', perGuest: true,
+      id: '507f1f77bcf86cd799439012', title: 'Lunch', price: 25, category: 'Food', perGuest: true, quantity: 3,
     },
   },
   availableAddOns: [{
@@ -133,6 +137,7 @@ describe('mobile canonical commerce adapter', () => {
         selectedTime: target.time,
       }),
     ], { allowUnversionedQuote: true });
+    expect(mockSecureCartPricing.mock.calls[0][0][0]).not.toHaveProperty('addOnQuantityVersion');
     expect(result.quote.pricing).toMatchObject({
       overrideVersion: 4,
       catalogueVersion: pricedItem.priceSourceVersion,

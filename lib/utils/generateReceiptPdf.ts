@@ -3,6 +3,7 @@
 import { PDFDocument, StandardFonts, rgb, PDFPage, PDFFont } from 'pdf-lib';
 import { Buffer } from 'buffer';
 import { parseLocalDate } from '@/utils/date';
+import { storedAddOnUnits } from '@/lib/checkout/addOnPricing';
 import * as QR from 'qrcode';
 
 // Helper functions
@@ -57,10 +58,11 @@ const calculateItemTotal = (item: ReceiptOrderedItem) => {
       const addOnDetail = item.selectedAddOnDetails?.[addOnId];
       const qtyNum = Number(qty) || 0;
       if (addOnDetail && qtyNum > 0) {
-        // Per-person add-ons charge per paying guest (infants free); per-unit
-        // add-ons charge per selected unit. Mirrors checkoutAddOnsTotal.
-        const payingGuests = (item.quantity || 0) + (item.childQuantity || 0);
-        const addOnQuantity = addOnDetail.perGuest ? payingGuests : qtyNum;
+        // Per-person add-ons charge the units the guest chose (recorded by the
+        // server, capped at the paying party); per-unit add-ons charge per
+        // selected unit. Orders from before the recorded quantity keep their
+        // per-guest charge. Mirrors checkoutAddOnsTotal.
+        const addOnQuantity = storedAddOnUnits(addOnDetail, qtyNum, item.quantity || 0, item.childQuantity || 0);
         addOnsTotal += addOnDetail.price * addOnQuantity;
       }
     });
@@ -109,7 +111,7 @@ export interface ReceiptOrderedItem {
     price?: number;
   };
   selectedAddOns?: Record<string, number>;
-  selectedAddOnDetails?: Record<string, { price: number; perGuest?: boolean }>;
+  selectedAddOnDetails?: Record<string, { price: number; perGuest?: boolean; quantity?: number }>;
 }
 
 export interface ReceiptPricing {

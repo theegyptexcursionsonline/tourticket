@@ -23,7 +23,7 @@ import {
   paidTenantValue,
 } from '@/lib/tenant/paidTenant';
 import Discount from '@/lib/models/Discount';
-import { recoveryCartItemSubtotal, roundMoney } from '@/lib/checkout/cartTotals';
+import { recoveryAddOnUnits, recoveryCartItemSubtotal, roundMoney } from '@/lib/checkout/cartTotals';
 import { reconcileStripeBookingRefund, reconcileUnboundStripeRefund } from '@/lib/bookings/refunds';
 import { sendBookingRefundNotification } from '@/lib/bookings/refundNotifications';
 import { deliverCheckoutNotifications } from '@/lib/bookings/checkoutNotificationDelivery';
@@ -62,6 +62,7 @@ function getStripe(): Stripe {
 const getWebhookSecret = () => process.env.STRIPE_WEBHOOK_SECRET || '';
 
 type RecoveryCartItem = {
+  aqv?: number;
   i?: number;
   t?: string;
   a?: number;
@@ -546,13 +547,17 @@ async function processSuccessfulPayment(paymentIntent: Stripe.PaymentIntent) {
           if (!ao?.id) continue;
           const qty = Number(ao?.q || 0);
           if (!Number.isFinite(qty) || qty <= 0) continue;
-          selectedAddOns[ao.id] = qty;
+          const billedQuantity = recoveryAddOnUnits(item, ao);
+          selectedAddOns[ao.id] = billedQuantity;
           selectedAddOnDetails[ao.id] = {
             id: ao.id,
             title: ao.t || 'Add-on',
             price: Number(ao.p || 0),
             category: 'add-on',
             perGuest: !!ao.pg,
+            // `q` is the server-billed unit count (chosen units, capped at
+            // the paying party for per-person add-ons).
+            quantity: billedQuantity,
           };
         }
       }
@@ -607,6 +612,7 @@ async function processSuccessfulPayment(paymentIntent: Stripe.PaymentIntent) {
         childGuests: item.c || 0,
         infantGuests: item.n || 0,
         selectedAddOns: Object.keys(selectedAddOns).length > 0 ? selectedAddOns : undefined,
+        addOnQuantityVersion: 1,
         selectedAddOnDetails: Object.keys(selectedAddOnDetails).length > 0 ? selectedAddOnDetails : undefined,
         selectedBookingOption: item.bo ? {
           id: item.bo,

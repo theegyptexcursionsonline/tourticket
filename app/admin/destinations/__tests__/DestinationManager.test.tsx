@@ -683,4 +683,39 @@ describe('DestinationManager', () => {
       }
     })
   })
+  describe('Tour listings picker', () => {
+    // Client report (EEO sheet, 24 Aug): the "Tour listings" selector offered
+    // tours that had been moved to the Trash. The picker asks the API for live
+    // tours only and drops any trashed row that still arrives.
+    it('never offers a trashed tour in the Tour listings selector', async () => {
+      const user = userEvent.setup()
+      global.fetch = jest.fn((url: string) => {
+        if (String(url).includes('/api/admin/tours')) {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({
+              success: true,
+              data: [
+                { _id: 'tour-live', title: 'Live Tour', slug: 'live-tour', archivedAt: null },
+                { _id: 'tour-trashed', title: 'Trashed Tour', slug: 'trashed-tour', archivedAt: '2026-08-01T00:00:00.000Z' },
+              ],
+            }),
+          })
+        }
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({ success: true, data: [] }) })
+      }) as jest.Mock
+
+      await renderManager()
+      await waitFor(() => expect(global.fetch).toHaveBeenCalled())
+      const tourRequest = (global.fetch as jest.Mock).mock.calls
+        .map((call) => String(call[0]))
+        .find((url) => url.includes('/api/admin/tours'))
+      expect(tourRequest).toContain('includeArchived=false')
+
+      await user.click(screen.getByRole('button', { name: /add destination/i }))
+      await user.click(screen.getByRole('button', { name: /^content$/i }))
+      expect(await screen.findByText('Live Tour')).toBeInTheDocument()
+      expect(screen.queryByText('Trashed Tour')).not.toBeInTheDocument()
+    })
+  })
 })

@@ -15,6 +15,7 @@ import {
 } from '@/lib/security/publicInput';
 import { isClaimableGuestProfile } from '@/lib/auth/guestProfileClaim';
 import { contentPath } from '@/lib/content/contentUrl';
+import { loadWelcomeTourRecommendations } from '@/lib/auth/welcomeRecommendations';
 
 export async function POST(request: NextRequest) {
   try {
@@ -125,12 +126,7 @@ export async function POST(request: NextRequest) {
 
     // 🆕 Send Welcome Email with real recommended tours
     try {
-      // Fetch recommended tours from database
-      const Tour = (await import('@/lib/models/Tour')).default;
-      const recommendedTours = await Tour.find({})
-        .select('title slug images discountPrice')
-        .limit(3)
-        .lean();
+      const recommendedTours = await loadWelcomeTourRecommendations();
 
       const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
 

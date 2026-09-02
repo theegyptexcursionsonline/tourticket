@@ -18,6 +18,7 @@ import { bookingOptionCapacityError, cleanBookingOptions } from '@/lib/admin/cle
 import { refreshTourPricingSummary } from '@/lib/revenue/pricingSummary';
 import { revalidateTourStorefront } from '@/lib/storefront/revalidateTourStorefront';
 import { hasOnlyConfiguredTimeSlots } from '@/lib/pricing/bookingOptionSlots';
+import { TourTaxonomyOwnershipError, validateTourTaxonomyOwnership } from '@/lib/admin/tourTaxonomyOwnership';
 
 // Helper function to find a tour by ID or Slug with safe population
 async function findTour(identifier: string) {
@@ -38,10 +39,10 @@ async function findTour(identifier: string) {
         if (tour.category) {
             try {
                 if (Array.isArray(tour.category)) {
-                    const categories = await Category.find({ _id: { $in: tour.category } });
+                    const categories = await Category.find({ $and: [DEFAULT_TENANT_FILTER, { _id: { $in: tour.category } }] });
                     tour.category = categories;
                 } else {
-                    const category = await Category.findById(tour.category);
+                    const category = await Category.findOne({ $and: [DEFAULT_TENANT_FILTER, { _id: tour.category }] });
                     tour.category = category;
                 }
             } catch (err) {
@@ -51,7 +52,7 @@ async function findTour(identifier: string) {
 
         if (tour.destination) {
             try {
-                const destination = await Destination.findById(tour.destination);
+                const destination = await Destination.findOne({ $and: [DEFAULT_TENANT_FILTER, { _id: tour.destination }] });
                 tour.destination = destination;
             } catch (err) {
                 console.warn('Failed to populate destination:', err);
@@ -237,6 +238,13 @@ async function PUTHandler(
             }
         }
 
+        if (body.destination !== undefined || body.category !== undefined) {
+            await validateTourTaxonomyOwnership({
+                destination: body.destination,
+                category: body.category,
+            });
+        }
+
         // Normalize availability only when the request actually sends it — a
         // partial update (archive/restore sends only its own fields) must never
         // replace a tour's real schedule with the daily/10:00 default.
@@ -326,6 +334,10 @@ async function PUTHandler(
         console.error('Tour update error:', error);
 
         if (error instanceof ParentPageValidationError) {
+            return NextResponse.json({ success: false, error: error.message }, { status: 400 });
+        }
+
+        if (error instanceof TourTaxonomyOwnershipError) {
             return NextResponse.json({ success: false, error: error.message }, { status: 400 });
         }
         

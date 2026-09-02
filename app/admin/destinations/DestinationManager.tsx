@@ -56,6 +56,14 @@ interface Tour {
 
 interface TourApiRecord extends Tour {
   destination?: string | { _id?: string } | null;
+  archivedAt?: string | null;
+}
+
+// The picker only ever offers live tours: a trashed tour must not be linkable
+// to a destination. The API already excludes them (includeArchived=false); the
+// client filter is defence in depth against a cached or older response.
+export function isSelectableTour(tour: { archivedAt?: string | null } | null | undefined): boolean {
+  return Boolean(tour) && !tour?.archivedAt;
 }
 
 interface FormData {
@@ -183,10 +191,10 @@ export default function DestinationManager({ initialDestinations }: { initialDes
   useEffect(() => {
     const fetchTours = async () => {
       try {
-        const response = await fetch('/api/admin/tours', { headers: getAuthHeaders() });
+        const response = await fetch('/api/admin/tours?includeArchived=false', { headers: getAuthHeaders() });
         const data = await response.json();
         if (data.success) {
-          const tours = Array.isArray(data.data) ? data.data as TourApiRecord[] : [];
+          const tours = Array.isArray(data.data) ? (data.data as TourApiRecord[]).filter(isSelectableTour) : [];
           setAvailableTours(tours.map((tour) => ({
             _id: tour._id,
             title: tour.title,
@@ -301,12 +309,12 @@ export default function DestinationManager({ initialDestinations }: { initialDes
 
     // Fetch tours for this destination
     if (dest._id) {
-      fetch(`/api/admin/tours`, { headers: getAuthHeaders() })
+      fetch('/api/admin/tours?includeArchived=false', { headers: getAuthHeaders() })
         .then(res => res.json())
         .then(data => {
           if (data.success) {
-            // Find tours that have this destination
-            const tours = Array.isArray(data.data) ? data.data as TourApiRecord[] : [];
+            // Find live tours that have this destination
+            const tours = Array.isArray(data.data) ? (data.data as TourApiRecord[]).filter(isSelectableTour) : [];
             const toursForThisDestination = tours
               .filter((tour) => {
                 const tourDestId = typeof tour.destination === 'string' ? tour.destination : tour.destination?._id;

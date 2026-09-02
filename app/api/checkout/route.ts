@@ -605,6 +605,7 @@ export async function POST(request: NextRequest) {
           childGuests: cartItem.childQuantity || 0,
           infantGuests: cartItem.infantQuantity || 0,
           selectedAddOns: cartItem.selectedAddOns || {},
+          addOnQuantityVersion: cartItem.addOnQuantityVersion,
           selectedBookingOption: cartItem.selectedBookingOption,
           priceSnapshot: {
             guestPrices: cartItem.guestPrices,

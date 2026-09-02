@@ -27,6 +27,7 @@ import toast from 'react-hot-toast';
 import QRCode from 'qrcode';
 import { CANCELLATION_POLICY_SUMMARY } from '@/lib/bookings/cancellationPolicy';
 import { contentPath } from '@/lib/content/contentUrl';
+import { storedAddOnUnits } from '@/lib/checkout/addOnPricing';
 
 interface BookingUser {
   _id: string;
@@ -332,8 +333,9 @@ const UserBookingDetailPage = () => {
       Object.entries(booking.selectedAddOns).forEach(([addOnId, quantity]) => {
         const addOnDetail = booking.selectedAddOnDetails?.[addOnId];
         if (addOnDetail && quantity > 0) {
-          const totalGuests = (booking.adultGuests || 0) + (booking.childGuests || 0);
-          const addOnQuantity = addOnDetail.perGuest ? totalGuests : quantity;
+          // Units the server billed: chosen units for per-person add-ons
+          // (older bookings without a recorded quantity were billed per guest).
+          const addOnQuantity = storedAddOnUnits(addOnDetail, quantity, booking.adultGuests || 0, booking.childGuests || 0);
           addOnsTotal += addOnDetail.price * addOnQuantity;
         }
       });
@@ -724,8 +726,7 @@ const UserBookingDetailPage = () => {
                     const addOnDetail = booking.selectedAddOnDetails?.[addOnId];
                     if (!addOnDetail || quantity === 0) return null;
                     
-                    const totalGuests = (booking.adultGuests || 0) + (booking.childGuests || 0);
-                    const addOnQuantity = addOnDetail.perGuest ? totalGuests : quantity;
+                    const addOnQuantity = storedAddOnUnits(addOnDetail, quantity, booking.adultGuests || 0, booking.childGuests || 0);
                     const addOnTotal = addOnDetail.price * addOnQuantity;
                     
                     return (
@@ -740,7 +741,7 @@ const UserBookingDetailPage = () => {
                               {addOnDetail.title}
                             </div>
                             <div className="text-sm text-slate-500">
-                              {addOnDetail.perGuest ? `Per guest (${totalGuests} guests)` : 'Per booking'}
+                              {addOnDetail.perGuest ? `Per person (${addOnQuantity} ${addOnQuantity === 1 ? 'unit' : 'units'})` : 'Per booking'}
                             </div>
                           </div>
                         </div>
@@ -749,7 +750,7 @@ const UserBookingDetailPage = () => {
                             ${safeToFixed(addOnTotal)}
                           </div>
                           <div className="text-xs text-slate-500">
-                            ${safeToFixed(addOnDetail.price)} {addOnDetail.perGuest ? 'per guest' : 'total'}
+                            ${safeToFixed(addOnDetail.price)} {addOnDetail.perGuest ? 'per person' : 'total'}
                           </div>
                         </div>
                       </div>

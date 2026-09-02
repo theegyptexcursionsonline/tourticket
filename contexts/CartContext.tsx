@@ -82,6 +82,7 @@ const serializeCartItemForServer = (item: CartItem) => {
         priceExecutionId: pricingFields.priceExecutionId,
         priceOverrideId: pricingFields.priceOverrideId,
         priceSource: pricingFields.priceSource,
+        addOnQuantityVersion: item.addOnQuantityVersion,
         selectedAddOns: item.selectedAddOnDetails
             ? Object.values(item.selectedAddOnDetails).map(addon => ({
                 id: addon.id,
@@ -117,6 +118,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     const [isCartOpen, setIsCartOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [hasSyncedFromServer, setHasSyncedFromServer] = useState(false);
+    const [hasLoadedGuestCart, setHasLoadedGuestCart] = useState(false);
     const cartRef = useRef<CartItem[]>([]);
 
     const { token, isAuthenticated } = useAuth();
@@ -189,8 +191,10 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
 
     // Load cart from localStorage (for guests or initial load)
     useEffect(() => {
-        if (!isAuthenticated) {
-            const timeoutId = window.setTimeout(() => {
+        // Defer both branches so this external-storage synchronization never
+        // cascades a synchronous state update from the effect body.
+        const timeoutId = window.setTimeout(() => {
+            if (!isAuthenticated) {
                 try {
                     const storedCart = localStorage.getItem('cart');
                     if (storedCart) {
@@ -202,9 +206,12 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
                     localStorage.removeItem('cart');
                 }
                 setHasSyncedFromServer(false);
-            }, 0);
-            return () => window.clearTimeout(timeoutId);
-        }
+                setHasLoadedGuestCart(true);
+            } else {
+                setHasLoadedGuestCart(false);
+            }
+        }, 0);
+        return () => window.clearTimeout(timeoutId);
     }, [isAuthenticated, normalizeCartItem]);
 
     // Sync cart from server when user logs in
@@ -282,14 +289,14 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
 
     // Save to localStorage (for guests) whenever cart changes
     useEffect(() => {
-        if (!isAuthenticated) {
+        if (!isAuthenticated && hasLoadedGuestCart) {
             try {
                 localStorage.setItem('cart', JSON.stringify(cart));
             } catch (error) {
                 console.error("Failed to save cart to localStorage", error);
             }
         }
-    }, [cart, isAuthenticated]);
+    }, [cart, isAuthenticated, hasLoadedGuestCart]);
 
     const openCart = useCallback(() => setIsCartOpen(true), []);
     const closeCart = useCallback(() => setIsCartOpen(false), []);

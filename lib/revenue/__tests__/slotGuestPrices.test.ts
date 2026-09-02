@@ -1,4 +1,4 @@
-import { effectiveSlotGuestPrices } from '@/lib/revenue/guestPrices';
+import { effectiveSlotGuestPrices, guestPricedSubtotal } from '@/lib/revenue/guestPrices';
 
 describe('effectiveSlotGuestPrices', () => {
   it('uses independent slot overrides and inherits omitted guest prices', () => {
@@ -21,5 +21,14 @@ describe('effectiveSlotGuestPrices', () => {
 
   it('falls back safely when no child or infant catalogue price exists', () => {
     expect(effectiveSlotGuestPrices({ adult: 81 })).toEqual({ adult: 81, child: 40.5, infant: 0 });
+  });
+
+  it('includes an authored infant price in the customer-visible option subtotal', () => {
+    expect(guestPricedSubtotal(
+      { adult: 100, child: 70, infant: 15 },
+      2,
+      1,
+      1,
+    )).toBe(285);
   });
 });

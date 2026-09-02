@@ -2,6 +2,20 @@ import { applyDiscountPercent } from '@/lib/pricing/effectivePrice';
 
 export type ComparableGuestPrices = { adult: number; child: number; infant: number };
 
+export function guestPricedSubtotal(
+  prices: ComparableGuestPrices,
+  adults: number,
+  children: number,
+  infants: number,
+): number {
+  const count = (value: number) => Math.max(0, Math.floor(Number(value) || 0));
+  return Math.round((
+    prices.adult * count(adults)
+    + prices.child * count(children)
+    + prices.infant * count(infants)
+  ) * 100) / 100;
+}
+
 export function guestPricesEqual(left: unknown, right: unknown) {
   if (!left || !right || typeof left !== 'object' || typeof right !== 'object') return false;
   return (['adult', 'child', 'infant'] as const).every((guest) => {

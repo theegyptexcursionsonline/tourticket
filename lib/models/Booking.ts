@@ -99,6 +99,7 @@ export interface IBooking extends Document {
   childGuests?: number;
   infantGuests?: number;
   selectedAddOns?: { [key: string]: number };
+  addOnQuantityVersion?: 1;
   selectedBookingOption?: {
     id: string;
     pricingKey?: string;
@@ -125,6 +126,8 @@ export interface IBooking extends Document {
       price: number;
       category?: string;
       perGuest?: boolean;
+      /** Units billed for a per-person add-on (recorded since 2026-09; absent on older bookings). */
+      quantity?: number;
     };
   };
   // Edit history tracking
@@ -481,6 +484,12 @@ const BookingSchema: Schema<IBooking> = new Schema({
     default: new Map(),
   },
 
+  addOnQuantityVersion: {
+    type: Number,
+    enum: [1],
+    required: false,
+  },
+
   selectedBookingOption: {
     type: {
       id: String,
@@ -518,6 +527,7 @@ const BookingSchema: Schema<IBooking> = new Schema({
       price: Number,
       category: String,
       perGuest: Boolean,
+      quantity: Number,
     },
     default: new Map(),
   },

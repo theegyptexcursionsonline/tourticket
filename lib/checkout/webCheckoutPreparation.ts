@@ -125,6 +125,10 @@ function quantity(value: unknown, fallback = 0): number {
 
 function recoveryCart(cart: SecureCartItem[]) {
   return cart.map((item, index) => ({
+    // Add-on quantity contract v1: q is the server-billed, customer-chosen
+    // unit count. Missing means the pre-2026-09 contract, where a per-person
+    // add-on was billed for the whole paying party regardless of q.
+    aqv: 1,
     i: index,
     t: item._id || item.id,
     a: item.quantity || 1,

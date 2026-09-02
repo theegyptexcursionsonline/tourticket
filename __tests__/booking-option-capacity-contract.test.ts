@@ -142,14 +142,16 @@ describe('checkout option list collapses and puts multiple times in a dropdown',
 describe('option card quotes adult and child rates that follow the departure', () => {
   const sidebar = read('components/BookingSidebar.tsx');
 
-  it('replaces the single per-person line with Per Adult and Per Child', () => {
+  it('replaces the single per-person line with adult, child and infant rates', () => {
     expect(sidebar).toContain('Per Adult: {formatPrice(basePrice)}');
     expect(sidebar).toContain('Per Child: {formatPrice(childPrice)}');
+    expect(sidebar).toContain('Per Infant: {formatPrice(infantPrice)}');
   });
 
   it('prices follow the selected departure, not the option base', () => {
     expect(sidebar).toContain('const basePrice = representativeSlot?.price ?? option.price;');
-    expect(sidebar).toContain('representativeSlot?.guestPrices?.child');
+    expect(sidebar).toContain('const cardGuestPrices = representativeSlot?.guestPrices');
+    expect(sidebar).toContain('effectiveSlotGuestPrices({ adult: basePrice, base: option.guestPrices })');
   });
 
   it('falls back to the first BOOKABLE departure before one is chosen', () => {
@@ -157,7 +159,7 @@ describe('option card quotes adult and child rates that follow the departure', (
   });
 
   it('charges the quoted child rate instead of a hardcoded half', () => {
-    expect(sidebar).toContain('(adults * basePrice) + (childCount * childPrice)');
+    expect(sidebar).toContain('guestPricedSubtotal(cardGuestPrices, adults, childCount, infantCount)');
     expect(sidebar).not.toContain('(childCount * basePrice * 0.5)');
   });
 
