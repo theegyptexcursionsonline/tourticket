@@ -1,48 +1,25 @@
 /**
- * Customer authentication must survive the identity provider being
- * unavailable.
+ * Customer authentication runs entirely on the platform's own credential
+ * store. No external identity provider is called.
  *
- * On 2026-09-03 the Google project behind sign-in was suspended and every
- * sign-in and sign-up on the storefront failed, with the provider's raw error
- * — API key included — rendered to visitors. These tests pin the behaviour
- * that prevents both halves of that: fall back to the platform's own
- * credential store on a provider outage, and never surface provider text.
+ * History this pins: the storefront's sign-in depended on a single external
+ * provider. When that provider's project was suspended on 2026-09-03, sign-in,
+ * sign-up and password reset all died at once and the page rendered the
+ * provider's raw error — API key included — to visitors. Auth now has no such
+ * dependency, and no provider text can reach a customer.
  */
 
 import React from 'react';
 import { render, screen, act } from '@testing-library/react';
 
 // `jest.setup.js` replaces this context with a stub for every component test,
-// which is convenient there and means the real customer sign-in logic has
-// never been exercised by the suite. Exercise the real one here.
+// which is why the real sign-in logic was invisible to the suite for so long.
 jest.unmock('@/contexts/AuthContext');
 
 const mockPush = jest.fn();
 jest.mock('next/navigation', () => ({
   usePathname: () => '/login',
   useRouter: () => ({ push: mockPush }),
-}));
-
-const mockSignIn = jest.fn();
-const mockCreateUser = jest.fn();
-const mockUpdateProfile = jest.fn();
-const mockSignOut = jest.fn();
-const mockOnAuthStateChanged = jest.fn();
-
-jest.mock('@/lib/firebase/config', () => ({
-  __esModule: true,
-  auth: { name: 'test-auth' },
-  googleProvider: { name: 'google' },
-  isFirebaseClientConfigured: true,
-}));
-
-jest.mock('firebase/auth', () => ({
-  __esModule: true,
-  signInWithEmailAndPassword: (...a: unknown[]) => mockSignIn(...a),
-  createUserWithEmailAndPassword: (...a: unknown[]) => mockCreateUser(...a),
-  updateProfile: (...a: unknown[]) => mockUpdateProfile(...a),
-  signOut: (...a: unknown[]) => mockSignOut(...a),
-  onAuthStateChanged: (...a: unknown[]) => mockOnAuthStateChanged(...a),
 }));
 
 const mockPlatformLogin = jest.fn();
@@ -59,16 +36,6 @@ jest.mock('@/lib/auth/platformAuth', () => ({
 
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 
-function suspendedProjectError() {
-  const error = new Error(
-    "Firebase: Error (auth/permission-denied:-consumer-'api-key:aizasyc3nhtgnodh4vgm8pvyedpbzggzdcrrg-w'-has-been-suspended.).",
-  );
-  Object.assign(error, {
-    code: "auth/permission-denied:-consumer-'api-key:aizasyc3nhtgnodh4vgm8pvyedpbzggzdcrrg-w'-has-been-suspended.",
-  });
-  return error;
-}
-
 const platformCustomer = {
   id: 'user-1',
   _id: 'user-1',
@@ -80,52 +47,38 @@ const platformCustomer = {
 };
 
 let lastError = '';
+let googleAvailable: boolean | undefined;
 
 function Harness() {
-  const { login, signup, logout, isAuthenticated, user } = useAuth();
+  const { login, signup, logout, loginWithGoogle, isAuthenticated, user, googleSignInAvailable } = useAuth();
+  googleAvailable = googleSignInAvailable;
+  const run = (fn: () => Promise<void>) => async () => {
+    try {
+      await fn();
+    } catch (e) {
+      lastError = (e as Error).message;
+    }
+  };
   return (
     <div>
       <span data-testid="authed">{String(isAuthenticated)}</span>
       <span data-testid="email">{user?.email ?? ''}</span>
       <span data-testid="provider">{user?.authProvider ?? ''}</span>
+      <button onClick={run(() => login('traveller@example.com', 'correct-horse'))}>login</button>
       <button
-        onClick={async () => {
-          try {
-            await login('traveller@example.com', 'correct-horse');
-          } catch (e) {
-            lastError = (e as Error).message;
-          }
-        }}
-      >
-        login
-      </button>
-      <button
-        onClick={async () => {
-          try {
-            await signup({
-              firstName: 'Test',
-              lastName: 'Traveller',
-              email: 'traveller@example.com',
-              password: 'correct-horse-battery',
-            });
-          } catch (e) {
-            lastError = (e as Error).message;
-          }
-        }}
+        onClick={run(() =>
+          signup({
+            firstName: 'Test',
+            lastName: 'Traveller',
+            email: 'traveller@example.com',
+            password: 'correct-horse-battery',
+          }),
+        )}
       >
         signup
       </button>
-      <button
-        onClick={async () => {
-          try {
-            await logout();
-          } catch (e) {
-            lastError = (e as Error).message;
-          }
-        }}
-      >
-        logout
-      </button>
+      <button onClick={run(() => loginWithGoogle())}>google</button>
+      <button onClick={run(() => logout())}>logout</button>
     </div>
   );
 }
@@ -149,22 +102,14 @@ async function click(name: string) {
 beforeEach(() => {
   jest.clearAllMocks();
   lastError = '';
-  // No provider session on mount, and no platform session either.
-  mockOnAuthStateChanged.mockImplementation((_auth: unknown, cb: (u: unknown) => void) => {
-    cb(null);
-    return () => {};
-  });
+  googleAvailable = undefined;
   mockPlatformSession.mockResolvedValue(null);
-  global.fetch = jest.fn().mockResolvedValue({
-    ok: true,
-    status: 204,
-    json: async () => ({}),
-  }) as unknown as typeof fetch;
+  // The same-origin preflight that applies the platform's abuse limits.
+  global.fetch = jest.fn().mockResolvedValue({ ok: true, status: 204, json: async () => ({}) }) as unknown as typeof fetch;
 });
 
-describe('login when the identity provider is unavailable', () => {
-  it('signs the customer in through the platform credential store', async () => {
-    mockSignIn.mockRejectedValue(suspendedProjectError());
+describe('sign-in', () => {
+  it('authenticates against the platform store with no provider call', async () => {
     mockPlatformLogin.mockResolvedValue({ ok: true, status: 200, token: 't', user: platformCustomer });
 
     await mount();
@@ -177,24 +122,18 @@ describe('login when the identity provider is unavailable', () => {
     expect(lastError).toBe('');
   });
 
-  it('shows a message that names no provider and leaks no key when the fallback cannot serve', async () => {
-    mockSignIn.mockRejectedValue(suspendedProjectError());
-    mockPlatformLogin.mockResolvedValue({ ok: false, status: 401 });
+  it('reports a rejected credential in wording that cannot enumerate accounts', async () => {
+    mockPlatformLogin.mockResolvedValue({ ok: false, status: 401, error: 'Invalid credentials' });
 
     await mount();
     await click('login');
 
     expect(screen.getByTestId('authed').textContent).toBe('false');
-    const message = lastError.toLowerCase();
-    expect(message).not.toContain('firebase');
-    expect(message).not.toContain('api-key');
-    expect(message).not.toContain('aizasy');
-    expect(message).not.toContain('suspended');
-    expect(message).toContain('reset your password');
+    // Identical for an unknown email and a wrong password.
+    expect(lastError).toBe('Invalid credentials');
   });
 
   it('surfaces the platform rate limit rather than masking it', async () => {
-    mockSignIn.mockRejectedValue(suspendedProjectError());
     mockPlatformLogin.mockResolvedValue({
       ok: false,
       status: 429,
@@ -206,25 +145,35 @@ describe('login when the identity provider is unavailable', () => {
 
     expect(lastError).toBe('Too many login attempts. Try again later.');
   });
-});
 
-describe('login when the credential itself is rejected', () => {
-  it('does not replay the credential against the platform store', async () => {
-    const wrongPassword = new Error('bad');
-    Object.assign(wrongPassword, { code: 'auth/invalid-credential' });
-    mockSignIn.mockRejectedValue(wrongPassword);
+  it('stops before the credential check when the abuse preflight refuses', async () => {
+    global.fetch = jest
+      .fn()
+      .mockResolvedValue({ ok: false, status: 429, json: async () => ({ error: 'Too many attempts.' }) }) as unknown as typeof fetch;
 
     await mount();
     await click('login');
 
     expect(mockPlatformLogin).not.toHaveBeenCalled();
-    expect(lastError).toBe('Invalid email or password.');
+    expect(lastError).toBe('Too many attempts.');
+  });
+
+  it('never leaks provider vocabulary when the platform is unreachable', async () => {
+    mockPlatformLogin.mockResolvedValue({ ok: false, status: 0 });
+
+    await mount();
+    await click('login');
+
+    const message = lastError.toLowerCase();
+    for (const forbidden of ['firebase', 'api-key', 'aizasy', 'suspended', 'consumer']) {
+      expect(message).not.toContain(forbidden);
+    }
+    expect(message.length).toBeGreaterThan(10);
   });
 });
 
-describe('signup when the identity provider is unavailable', () => {
-  it('creates the account on the platform and signs the customer straight in', async () => {
-    mockCreateUser.mockRejectedValue(suspendedProjectError());
+describe('sign-up', () => {
+  it('creates the account and signs the customer straight in', async () => {
     mockPlatformSignup.mockResolvedValue({ ok: true, status: 200, token: 't', user: platformCustomer });
 
     await mount();
@@ -237,11 +186,9 @@ describe('signup when the identity provider is unavailable', () => {
       password: 'correct-horse-battery',
     });
     expect(screen.getByTestId('authed').textContent).toBe('true');
-    expect(screen.getByTestId('provider').textContent).toBe('jwt');
   });
 
   it('passes through the platform copy for an email that already exists', async () => {
-    mockCreateUser.mockRejectedValue(suspendedProjectError());
     mockPlatformSignup.mockResolvedValue({
       ok: false,
       status: 409,
@@ -256,8 +203,22 @@ describe('signup when the identity provider is unavailable', () => {
   });
 });
 
+describe('federated sign-in', () => {
+  it('is declared unavailable so the UI hides the control instead of offering a dead one', async () => {
+    await mount();
+    expect(googleAvailable).toBe(false);
+  });
+
+  it('fails honestly and points at the method that works', async () => {
+    await mount();
+    await click('google');
+    expect(lastError).toContain('email and password');
+    expect(lastError.toLowerCase()).not.toContain('firebase');
+  });
+});
+
 describe('session restore and sign-out', () => {
-  it('restores a platform session when the provider reports nobody signed in', async () => {
+  it('restores an existing platform session on load', async () => {
     mockPlatformSession.mockResolvedValue(platformCustomer);
 
     await mount();
@@ -266,9 +227,8 @@ describe('session restore and sign-out', () => {
     expect(screen.getByTestId('provider').textContent).toBe('jwt');
   });
 
-  it('signs the customer out even when the provider cannot be reached', async () => {
+  it('signs out by clearing the platform session', async () => {
     mockPlatformSession.mockResolvedValue(platformCustomer);
-    mockSignOut.mockRejectedValue(suspendedProjectError());
 
     await mount();
     expect(screen.getByTestId('authed').textContent).toBe('true');
