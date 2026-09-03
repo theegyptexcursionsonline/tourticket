@@ -2,6 +2,13 @@
 jest.unmock('@/contexts/CartContext')
 jest.unmock('@/hooks/useCart')
 
+// Cart behavior is exercised as a signed-out customer in this file. Declare
+// that state locally instead of relying on a global AuthContext replacement,
+// so unrelated suites continue to load the production auth provider.
+jest.mock('@/contexts/AuthContext', () => ({
+  useAuth: () => ({ token: null, isAuthenticated: false }),
+}))
+
 import React from 'react'
 import { render, screen, act } from '@testing-library/react'
 import { CartProvider } from '../CartContext'

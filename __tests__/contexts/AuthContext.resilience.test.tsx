@@ -12,9 +12,9 @@
 import React from 'react';
 import { render, screen, act } from '@testing-library/react';
 
-// `jest.setup.js` replaces this context with a stub for every component test,
-// which is why the real sign-in logic was invisible to the suite for so long.
-jest.unmock('@/contexts/AuthContext');
+// AuthContext is intentionally not mocked in global test setup. Individual
+// component tests may provide a local state double, but this suite always
+// exercises the production provider implementation.
 
 const mockPush = jest.fn();
 jest.mock('next/navigation', () => ({

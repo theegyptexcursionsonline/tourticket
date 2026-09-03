@@ -149,18 +149,6 @@ jest.mock('@/contexts/WishlistContext', () => ({
   }),
 }))
 
-// Mock AuthContext
-jest.mock('@/contexts/AuthContext', () => ({
-  AuthProvider: ({ children }) => children,
-  useAuth: () => ({
-    user: null,
-    loading: false,
-    login: jest.fn(),
-    logout: jest.fn(),
-    signup: jest.fn(),
-  }),
-}))
-
 // Mock SettingsContext + useSettings hook
 jest.mock('@/contexts/SettingsContext', () => {
   const React = require('react')

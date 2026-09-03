@@ -1,86 +1,355 @@
 /**
- * API Tests: Authentication Endpoints
+ * Customer authentication route contracts.
  *
- * Tests for user authentication flows
+ * These tests exercise the real route decisions while keeping the database,
+ * password hashing, mail delivery, and token signing behind deterministic
+ * boundaries. They deliberately replace the former `expect(true)` suite:
+ * authentication is a checkout dependency and a no-op test is false safety.
  */
 
-describe('Authentication API', () => {
-  const API_BASE = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+jest.mock('next/server', () => {
+  class MockNextResponse {
+    status: number;
+    private readonly body: unknown;
+    headers: Map<string, string>;
+    cookies: { set: jest.Mock };
 
-  describe('POST /api/auth/signup', () => {
-    it('should register new user with valid data', async () => {
-      const userData = {
-        email: `test${Date.now()}@example.com`,
-        password: 'Test123!',
-        name: 'Test User',
-        firstName: 'Test',
-        lastName: 'User',
-      };
+    constructor(body: unknown, init?: { status?: number; headers?: Record<string, string> }) {
+      this.body = body;
+      this.status = init?.status || 200;
+      this.headers = new Map(Object.entries(init?.headers || {}));
+      this.cookies = { set: jest.fn() };
+    }
 
-      // Mock fetch or use actual API call
-      // const response = await fetch(`${API_BASE}/api/auth/signup`, {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify(userData),
-      // });
-      // const data = await response.json();
+    async json() {
+      return this.body;
+    }
 
-      // expect(response.status).toBe(201);
-      // expect(data.success).toBe(true);
-      // expect(data.data.email).toBe(userData.email);
+    static json(body: unknown, init?: { status?: number; headers?: Record<string, string> }) {
+      return new MockNextResponse(body, init);
+    }
+  }
 
-      expect(true).toBe(true); // Placeholder
-    });
+  return { NextResponse: MockNextResponse, NextRequest: jest.fn() };
+});
 
-    it('should reject signup with existing email', async () => {
-      // Test duplicate email registration
-      expect(true).toBe(true); // Placeholder
-    });
+const mockDbConnect = jest.fn();
+jest.mock('@/lib/dbConnect', () => (...args: unknown[]) => mockDbConnect(...args));
 
-    it('should reject signup with weak password', async () => {
-      // Test password validation
-      expect(true).toBe(true); // Placeholder
-    });
+const mockFindOne = jest.fn();
+const mockCreate = jest.fn();
+jest.mock('@/lib/models/user', () => ({
+  __esModule: true,
+  default: {
+    findOne: (...args: unknown[]) => mockFindOne(...args),
+    create: (...args: unknown[]) => mockCreate(...args),
+  },
+}));
 
-    it('should reject signup with invalid email', async () => {
-      // Test email format validation
-      expect(true).toBe(true); // Placeholder
-    });
+const mockCompare = jest.fn();
+const mockGenSalt = jest.fn();
+const mockHash = jest.fn();
+jest.mock('bcryptjs', () => ({
+  __esModule: true,
+  default: {
+    compare: (...args: unknown[]) => mockCompare(...args),
+    genSalt: (...args: unknown[]) => mockGenSalt(...args),
+    hash: (...args: unknown[]) => mockHash(...args),
+  },
+}));
+
+const mockSignToken = jest.fn();
+jest.mock('@/lib/jwt', () => ({
+  signToken: (...args: unknown[]) => mockSignToken(...args),
+}));
+
+const mockLimits = jest.fn();
+jest.mock('@/lib/security/distributedAbuseLimit', () => ({
+  enforcePublicActionLimits: (...args: unknown[]) => mockLimits(...args),
+}));
+
+const mockDefaultPermissions = jest.fn();
+jest.mock('@/lib/constants/adminPermissions', () => ({
+  getDefaultPermissions: (...args: unknown[]) => mockDefaultPermissions(...args),
+}));
+
+const mockSendWelcomeEmail = jest.fn();
+jest.mock('@/lib/email/emailService', () => ({
+  EmailService: {
+    sendWelcomeEmail: (...args: unknown[]) => mockSendWelcomeEmail(...args),
+  },
+}));
+
+const mockWelcomeRecommendations = jest.fn();
+jest.mock('@/lib/auth/welcomeRecommendations', () => ({
+  loadWelcomeTourRecommendations: (...args: unknown[]) => mockWelcomeRecommendations(...args),
+}));
+
+const mockAuthenticate = jest.fn();
+const mockFormatUser = jest.fn();
+jest.mock('@/lib/firebase/authHelpers', () => ({
+  authenticateFirebaseUser: (...args: unknown[]) => mockAuthenticate(...args),
+  formatUserForClient: (...args: unknown[]) => mockFormatUser(...args),
+}));
+
+import { POST as login } from '@/app/api/auth/login/route';
+import { POST as signup } from '@/app/api/auth/signup/route';
+import { GET as me } from '@/app/api/auth/me/route';
+import { POST as logout } from '@/app/api/auth/logout/route';
+
+function requestWith(body: unknown) {
+  return {
+    headers: new Headers({ 'content-type': 'application/json' }),
+    json: async () => body,
+  } as never;
+}
+
+function selectable<T>(value: T) {
+  return { select: jest.fn().mockResolvedValue(value) };
+}
+
+function userDoc(overrides: Record<string, unknown> = {}) {
+  return {
+    _id: 'customer-1',
+    email: 'traveller@example.com',
+    firstName: 'Test',
+    lastName: 'Traveller',
+    password: 'password-hash',
+    isActive: true,
+    role: 'customer',
+    permissions: [],
+    adminLoginAttempts: 0,
+    adminLockUntil: undefined,
+    save: jest.fn().mockResolvedValue(undefined),
+    ...overrides,
+  };
+}
+
+beforeEach(() => {
+  jest.clearAllMocks();
+  mockDbConnect.mockResolvedValue(undefined);
+  mockLimits.mockResolvedValue({ allowed: true, retryAfterSeconds: 60 });
+  mockDefaultPermissions.mockReturnValue(['read:own']);
+  mockSignToken.mockResolvedValue('signed-token');
+  mockCompare.mockResolvedValue(true);
+  mockGenSalt.mockResolvedValue('salt');
+  mockHash.mockResolvedValue('password-hash');
+  mockWelcomeRecommendations.mockResolvedValue([]);
+  mockSendWelcomeEmail.mockResolvedValue(undefined);
+});
+
+describe('POST /api/auth/login', () => {
+  it('normalizes the identity, signs a customer token, and sets the httpOnly session cookie', async () => {
+    const user = userDoc();
+    mockFindOne.mockReturnValue(selectable(user));
+
+    const response = await login(requestWith({
+      email: '  Traveller@Example.COM ',
+      password: 'correct-password',
+    }));
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(mockFindOne).toHaveBeenCalledWith({ email: 'traveller@example.com' });
+    expect(mockCompare).toHaveBeenCalledWith('correct-password', 'password-hash');
+    expect(mockSignToken).toHaveBeenCalledWith(expect.objectContaining({
+      sub: 'customer-1',
+      email: 'traveller@example.com',
+      role: 'customer',
+      scope: 'customer',
+    }));
+    expect(body).toMatchObject({ success: true, token: 'signed-token' });
+    expect(response.cookies.set).toHaveBeenCalledWith('authToken', 'signed-token', expect.objectContaining({
+      httpOnly: true,
+      sameSite: 'lax',
+      path: '/',
+    }));
+    expect(user.save).toHaveBeenCalledWith({ validateBeforeSave: false });
   });
 
-  describe('POST /api/auth/login', () => {
-    it('should login with valid credentials', async () => {
-      // Test successful login
-      expect(true).toBe(true); // Placeholder
-    });
+  it('returns one generic response for a missing account after a timing-safe comparison', async () => {
+    mockFindOne.mockReturnValue(selectable(null));
 
-    it('should reject login with invalid credentials', async () => {
-      // Test failed login
-      expect(true).toBe(true); // Placeholder
-    });
+    const response = await login(requestWith({
+      email: 'unknown@example.com',
+      password: 'not-the-password',
+    }));
 
-    it('should return JWT token on successful login', async () => {
-      // Test token generation
-      expect(true).toBe(true); // Placeholder
-    });
+    expect(response.status).toBe(401);
+    expect(await response.json()).toEqual({ error: 'Invalid credentials' });
+    expect(mockCompare).toHaveBeenCalledTimes(1);
+    expect(mockSignToken).not.toHaveBeenCalled();
   });
 
-  describe('GET /api/auth/me', () => {
-    it('should return current user when authenticated', async () => {
-      // Test authenticated request
-      expect(true).toBe(true); // Placeholder
-    });
+  it('persists a failed-password attempt and reveals no account detail', async () => {
+    const user = userDoc({ adminLoginAttempts: 1 });
+    mockFindOne.mockReturnValue(selectable(user));
+    mockCompare.mockResolvedValue(false);
 
-    it('should return 401 when not authenticated', async () => {
-      // Test unauthenticated request
-      expect(true).toBe(true); // Placeholder
-    });
+    const response = await login(requestWith({
+      email: 'traveller@example.com',
+      password: 'wrong-password',
+    }));
+
+    expect(response.status).toBe(401);
+    expect(await response.json()).toEqual({ error: 'Invalid credentials' });
+    expect(user.adminLoginAttempts).toBe(2);
+    expect(user.save).toHaveBeenCalledWith({ validateBeforeSave: false });
+    expect(mockSignToken).not.toHaveBeenCalled();
   });
 
-  describe('POST /api/auth/logout', () => {
-    it('should clear authentication cookies', async () => {
-      // Test logout
-      expect(true).toBe(true); // Placeholder
+  it('enforces the distributed limit before looking up an account', async () => {
+    mockLimits.mockResolvedValue({ allowed: false, retryAfterSeconds: 75 });
+
+    const response = await login(requestWith({
+      email: 'traveller@example.com',
+      password: 'correct-password',
+    }));
+
+    expect(response.status).toBe(429);
+    expect(response.headers.get('Retry-After')).toBe('75');
+    expect(mockFindOne).not.toHaveBeenCalled();
+  });
+});
+
+describe('POST /api/auth/signup', () => {
+  it('creates a normalized customer account, signs it in, and attempts the welcome message', async () => {
+    const user = userDoc({ password: undefined });
+    mockFindOne.mockReturnValue(selectable(null));
+    mockCreate.mockResolvedValue(user);
+
+    const response = await signup(requestWith({
+      firstName: '  Test  ',
+      lastName: '  Traveller  ',
+      email: ' Traveller@Example.COM ',
+      password: 'strong-password',
+    }));
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(mockHash).toHaveBeenCalledWith('strong-password', 'salt');
+    expect(mockCreate).toHaveBeenCalledWith(expect.objectContaining({
+      firstName: 'Test',
+      lastName: 'Traveller',
+      email: 'traveller@example.com',
+      password: 'password-hash',
+      role: 'customer',
+      permissions: [],
+      isGuestProfile: false,
+    }));
+    expect(mockSignToken).toHaveBeenCalledWith(expect.objectContaining({ scope: 'customer' }));
+    expect(body).toMatchObject({ success: true, token: 'signed-token' });
+    expect(response.cookies.set).toHaveBeenCalledWith('authToken', 'signed-token', expect.objectContaining({
+      httpOnly: true,
+      sameSite: 'lax',
+    }));
+    expect(mockSendWelcomeEmail).toHaveBeenCalledTimes(1);
+  });
+
+  it('rejects a weak password before connecting to the database', async () => {
+    const response = await signup(requestWith({
+      firstName: 'Test',
+      lastName: 'Traveller',
+      email: 'traveller@example.com',
+      password: 'short',
+    }));
+
+    expect(response.status).toBe(400);
+    expect((await response.json()).error).toContain('between 8 and 128');
+    expect(mockDbConnect).not.toHaveBeenCalled();
+    expect(mockCreate).not.toHaveBeenCalled();
+  });
+
+  it('never claims an existing profile from email equality alone', async () => {
+    mockFindOne.mockReturnValue(selectable(userDoc()));
+
+    const response = await signup(requestWith({
+      firstName: 'Test',
+      lastName: 'Traveller',
+      email: 'traveller@example.com',
+      password: 'strong-password',
+    }));
+    const body = await response.json();
+
+    expect(response.status).toBe(409);
+    expect(body.code).toBe('ACCOUNT_EXISTS');
+    expect(mockCreate).not.toHaveBeenCalled();
+    expect(mockSignToken).not.toHaveBeenCalled();
+  });
+
+  it('returns a deterministic conflict if a concurrent signup wins the unique index', async () => {
+    mockFindOne.mockReturnValue(selectable(null));
+    mockCreate.mockRejectedValue({ code: 11000 });
+
+    const response = await signup(requestWith({
+      firstName: 'Test',
+      lastName: 'Traveller',
+      email: 'traveller@example.com',
+      password: 'strong-password',
+    }));
+
+    expect(response.status).toBe(409);
+    expect(await response.json()).toEqual({ error: 'An account with this email already exists' });
+    expect(mockSignToken).not.toHaveBeenCalled();
+  });
+
+  it('enforces the signup limit before checking or creating an account', async () => {
+    mockLimits.mockResolvedValue({ allowed: false, retryAfterSeconds: 300 });
+
+    const response = await signup(requestWith({
+      firstName: 'Test',
+      lastName: 'Traveller',
+      email: 'traveller@example.com',
+      password: 'strong-password',
+    }));
+
+    expect(response.status).toBe(429);
+    expect(response.headers.get('Retry-After')).toBe('300');
+    expect(mockFindOne).not.toHaveBeenCalled();
+    expect(mockCreate).not.toHaveBeenCalled();
+  });
+});
+
+describe('GET /api/auth/me', () => {
+  it('returns only the helper-approved current-user shape for an authenticated request', async () => {
+    const storedUser = userDoc({ password: 'must-not-leak' });
+    const clientUser = { id: 'customer-1', email: 'traveller@example.com' };
+    mockAuthenticate.mockResolvedValue({ success: true, user: storedUser });
+    mockFormatUser.mockReturnValue(clientUser);
+
+    const response = await me({} as never);
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ success: true, user: clientUser });
+    expect(mockFormatUser).toHaveBeenCalledWith(storedUser);
+    expect(JSON.stringify(await response.json())).not.toContain('must-not-leak');
+  });
+
+  it('passes through the authentication failure status without formatting a user', async () => {
+    mockAuthenticate.mockResolvedValue({
+      success: false,
+      error: 'Invalid or expired token',
+      statusCode: 401,
     });
+
+    const response = await me({} as never);
+
+    expect(response.status).toBe(401);
+    expect(await response.json()).toEqual({ success: false, error: 'Invalid or expired token' });
+    expect(mockFormatUser).not.toHaveBeenCalled();
+  });
+});
+
+describe('POST /api/auth/logout', () => {
+  it('expires the platform session cookie at the root path', async () => {
+    const response = await logout();
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({ success: true });
+    expect(response.cookies.set).toHaveBeenCalledWith('authToken', '', expect.objectContaining({
+      httpOnly: true,
+      expires: new Date(0),
+      path: '/',
+    }));
   });
 });

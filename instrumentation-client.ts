@@ -3,6 +3,11 @@
 // https://docs.sentry.io/platforms/javascript/guides/nextjs/
 
 import * as Sentry from "@sentry/nextjs";
+import {
+  SENTRY_CLIENT_SAMPLE_RATES,
+  clientTraceSampleRate,
+  filterClientSentryEvent,
+} from "@/lib/monitoring/sentryClientPolicy";
 
 Sentry.init({
   dsn: "https://1e487dfcf46247c460d5626e1e7598b1@o4510057591668736.ingest.us.sentry.io/4510057591865344",
@@ -12,25 +17,27 @@ Sentry.init({
     Sentry.replayIntegration(),
   ],
 
-  // Admin sessions are few and every slow-dashboard report needs a trace,
-  // so sample them fully; keep the public storefront at 10%.
+  // Keep full local observability, while bounding both admin and high-volume
+  // storefront traces in production so a traffic or provider-error spike
+  // cannot consume the client telemetry budget.
   tracesSampler: () => {
-    if (process.env.NODE_ENV === "development") return 1.0;
-    if (typeof window !== "undefined" && window.location.pathname.startsWith("/admin")) {
-      return 1.0;
-    }
-    return 0.1;
+    const pathname = typeof window === "undefined" ? "/" : window.location.pathname;
+    return clientTraceSampleRate(pathname, process.env.NODE_ENV);
   },
-  // Enable logs to be sent to Sentry
-  enableLogs: true,
+  // Browser console output is intentionally not forwarded wholesale. Captured
+  // exceptions still flow through Sentry, without duplicating noisy SDK logs.
+  enableLogs: false,
 
-  // Define how likely Replay events are sampled.
-  // This sets the sample rate to be 10%. You may want this to be 100% while
-  // in development and sample at a lower rate in production
-  replaysSessionSampleRate: 0.1,
+  // Suppress only known Analytics/Installations background retry noise. Auth
+  // failures and unrelated application exceptions remain actionable.
+  beforeSend: filterClientSentryEvent,
+
+  // Record a small baseline of ordinary sessions and a larger—but bounded—
+  // sample when an error occurs.
+  replaysSessionSampleRate: SENTRY_CLIENT_SAMPLE_RATES.sessionReplay,
 
   // Define how likely Replay events are sampled when an error occurs.
-  replaysOnErrorSampleRate: 1.0,
+  replaysOnErrorSampleRate: SENTRY_CLIENT_SAMPLE_RATES.errorReplay,
 
   // Setting this option to true will print useful information to the console while you're setting up Sentry.
   debug: false,
