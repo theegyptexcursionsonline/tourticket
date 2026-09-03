@@ -39,6 +39,7 @@ import {
   markPaymentInventoryConverted,
   refundUnavailablePaidInventory,
 } from '@/lib/checkout/inventoryPaymentRecovery';
+import { queuePersistedBookingEvent } from '@/lib/integrations/bookingEventProducers';
 
 // Lazy Stripe initialization to avoid build-time errors
 let stripeInstance: Stripe | null = null;
@@ -682,6 +683,13 @@ export async function POST(request: NextRequest) {
     // later non-critical email failure must not cancel the reservation.
     bankReservationKey = undefined;
     bankCreatedBookingIds.length = 0;
+
+    if (!isCardPayment) {
+      await Promise.all(createdBookings.map((booking) => queuePersistedBookingEvent({
+        type: 'payment_pending',
+        booking,
+      })));
+    }
 
     // Count a card-backed discount at most once even when checkout and Stripe
     // webhook delivery race or the browser retries the completion request.

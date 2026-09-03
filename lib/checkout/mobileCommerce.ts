@@ -21,6 +21,7 @@ import { signToken, verifyToken } from '@/lib/jwt';
 import Booking from '@/lib/models/Booking';
 import { STANDARD_OPTION_KEY } from '@/lib/revenue/pricingResolver';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
+import { queuePersistedBookingEvent } from '@/lib/integrations/bookingEventProducers';
 
 export const MOBILE_COMMERCE_CONTRACT = 'eeo.mobile-commerce.v1' as const;
 export const MOBILE_COMMERCE_PAYMENT_METADATA = {
@@ -476,6 +477,7 @@ type CanonicalMobileBooking = {
   tenantId?: string | null;
   bookingReference?: string;
   tour?: unknown;
+  user?: unknown;
   dateString?: string;
   time?: string;
   guests?: number;
@@ -487,6 +489,7 @@ type CanonicalMobileBooking = {
   amountPaid?: number;
   paymentConfirmedAt?: Date;
   paymentConfirmedBy?: string;
+  customerPhone?: string;
   paymentId?: string;
   paymentItemIndex?: number;
   checkoutItemKey?: string;
@@ -586,9 +589,10 @@ async function claimCanonicalMobileBooking(input: {
     paymentItemIndex: 0,
     $and: [DEFAULT_TENANT_FILTER],
   }).select([
-    '_id', 'tenantId', 'bookingReference', 'tour', 'dateString', 'time', 'guests',
+    '_id', 'tenantId', 'bookingReference', 'tour', 'user', 'dateString', 'time', 'guests',
     'totalPrice', 'currency', 'status', 'source', 'paymentStatus', 'amountPaid',
     'paymentConfirmedAt', 'paymentConfirmedBy', 'paymentId', 'paymentItemIndex',
+    'customerPhone',
     'checkoutItemKey', 'paymentDetails',
     'selectedBookingOption', 'commerceContractVersion', 'commerceQuoteVersion',
     'commerceTargetBinding', 'checkoutAttemptId',
@@ -786,6 +790,8 @@ export async function commitMobileCommerceHold(
   if (finalized.matchedCount !== 1) {
     throw new MobileCommerceError(503, 'BOOKING_COMMIT_RECEIPT_FAILED', 'Inventory was protected, but its booking receipt needs reconciliation.');
   }
+  booking.status = 'Confirmed';
+  await queuePersistedBookingEvent({ type: 'booking_confirmed', booking });
   return {
     contractVersion: MOBILE_COMMERCE_CONTRACT,
     tenantId: TENANT_ID,

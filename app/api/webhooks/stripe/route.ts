@@ -15,6 +15,7 @@ import { unpackCartMetadata } from '@/lib/checkout/cartMetadata';
 import { recordWebhookOutcome } from '@/lib/checkout/webhookOutcomeLog';
 import CheckoutPaymentQuote from '@/lib/models/CheckoutPaymentQuote';
 import {
+  isDefaultTenant,
   loadPaidTenant,
   paidCheckoutReservationKey,
   paidTenantFilter,
@@ -42,6 +43,7 @@ import {
   releasePaymentInventory,
 } from '@/lib/checkout/inventoryPaymentRecovery';
 import { loadWebhookPaymentQuote } from '@/lib/checkout/hostedCheckoutQuote';
+import { queuePersistedBookingEvent } from '@/lib/integrations/bookingEventProducers';
 
 // Lazy Stripe initialization to avoid build-time errors
 let stripeInstance: Stripe | null = null;
@@ -82,6 +84,14 @@ type RecoveryCartItem = {
   po?: string;
   ao?: Array<{ id?: string; q?: number; p?: number; pg?: boolean; t?: string }>;
 };
+
+async function queueConfirmedBookingEvents(bookings: IBooking[], tenantId: string) {
+  if (!isDefaultTenant(tenantId)) return;
+  await Promise.all(bookings.map((booking) => queuePersistedBookingEvent({
+    type: 'booking_confirmed',
+    booking,
+  })));
+}
 
 // Format date consistently for display
 function formatBookingDate(dateString: string | Date | undefined): string {
@@ -272,21 +282,28 @@ async function processSuccessfulPayment(paymentIntent: Stripe.PaymentIntent) {
     // If booking is still "Pending", update to "Confirmed" and send customer email
     if (existingBookings.some((booking) => booking.status === 'Pending') || !existingBooking.confirmationSentAt) {
       console.log(`[Webhook] Updating booking ${existingBooking.bookingReference} from Pending to Confirmed`);
+      const confirmedAt = existingBookings.find((booking) => booking.paymentConfirmedAt)?.paymentConfirmedAt || new Date();
       await Booking.updateMany(
         { _id: { $in: existingBookings.map((booking) => booking._id) } },
         [{ $set: {
           status: 'Confirmed',
           paymentStatus: 'paid',
           amountPaid: '$totalPrice',
-          paymentConfirmedAt: new Date(),
+          paymentConfirmedAt: { $ifNull: ['$paymentConfirmedAt', confirmedAt] },
           paymentConfirmedBy: `stripe:${paymentId}`,
         } }],
       );
-      existingBooking.status = 'Confirmed';
+      for (const booking of existingBookings) {
+        booking.status = 'Confirmed';
+        booking.paymentStatus = 'paid';
+        booking.paymentConfirmedAt = booking.paymentConfirmedAt || confirmedAt;
+      }
       
       // Need to send customer confirmation email - get tour info
       const tour = await Tour.findOne({ _id: existingBooking.tour, ...tenantFilter });
       const user = await User.findById(existingBooking.user);
+
+      await queueConfirmedBookingEvents(existingBookings, tenantId);
       
       if (tour && user) {
         // Send customer confirmation email (see email sending section below)
@@ -431,6 +448,7 @@ async function processSuccessfulPayment(paymentIntent: Stripe.PaymentIntent) {
     
     // Booking exists and is already Confirmed
     console.log(`[Webhook] Booking ${existingBooking.bookingReference} already confirmed, skipping`);
+    await queueConfirmedBookingEvents(existingBookings, tenantId);
     await recordDiscountUsage();
     await markPaymentInventoryConverted(paymentId, tenantId);
     return { created: false, reason: 'already_confirmed', bookingId: existingBooking.bookingReference };
@@ -702,16 +720,30 @@ async function processSuccessfulPayment(paymentIntent: Stripe.PaymentIntent) {
     throw new Error('Paid booking recovery is incomplete');
   }
 
+  const recoveredConfirmedAt = new Date();
   await Booking.updateMany(
     { paymentId, status: 'Pending' },
     [{ $set: {
       status: 'Confirmed',
       paymentStatus: 'paid',
       amountPaid: '$totalPrice',
-      paymentConfirmedAt: new Date(),
+      paymentConfirmedAt: { $ifNull: ['$paymentConfirmedAt', recoveredConfirmedAt] },
       paymentConfirmedBy: `stripe:${paymentId}`,
     } }],
   );
+
+  // Queue only a fresh post-update snapshot. Some multi-item races contribute
+  // checkout-created Pending documents to createdBookings; freezing those
+  // stale objects would permanently label a booking_confirmed event Pending.
+  const confirmedForEvents = isDefaultTenant(tenantId)
+    ? await Booking.find({
+        _id: { $in: createdBookings.map(({ booking }) => booking._id) },
+        ...tenantFilter,
+        status: 'Confirmed',
+        paymentStatus: 'paid',
+      })
+    : [];
+  await queueConfirmedBookingEvents(confirmedForEvents, tenantId);
 
   await recordDiscountUsage();
   await markPaymentInventoryConverted(paymentId, tenantId);

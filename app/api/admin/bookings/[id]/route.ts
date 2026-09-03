@@ -15,6 +15,7 @@ import { verifyAdmin } from '@/lib/auth/verifyAdmin';
 import type { PopulatedBookingTour, PopulatedBookingUser } from '@/lib/types/populatedBooking';
 import { InventoryHoldError, withBookingInventoryCapacity } from '@/lib/checkout/inventoryHolds';
 import { validateAdminLifecycleTransition } from '@/lib/bookings/statusTransitions';
+import { queuePersistedBookingEvent } from '@/lib/integrations/bookingEventProducers';
 
 // Helper to format dates consistently and avoid timezone issues
 function formatBookingDate(dateString: string | Date | undefined): string {
@@ -469,6 +470,16 @@ async function PATCHHandler(
         { success: false, message: 'Failed to update booking' },
         { status: 500 }
       );
+    }
+
+    if (status && status !== oldStatus) {
+      const lifecycleTypes: Array<'booking_confirmed' | 'service_completed'> = [];
+      if (status === 'Confirmed') lifecycleTypes.push('booking_confirmed');
+      if (status === 'Completed') lifecycleTypes.push('service_completed');
+      await Promise.all(lifecycleTypes.map((type) => queuePersistedBookingEvent({
+        type,
+        booking: updatedBooking,
+      })));
     }
 
     // Send email notifications if there are changes

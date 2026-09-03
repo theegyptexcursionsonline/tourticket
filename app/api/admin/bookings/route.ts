@@ -30,6 +30,7 @@ import {
   readBoundedJson,
 } from '@/lib/security/publicInput';
 import { generateUniqueBookingReference } from '@/lib/utils/bookingReference';
+import { queuePersistedBookingEvent } from '@/lib/integrations/bookingEventProducers';
 
 let stripeInstance: Stripe | null = null;
 
@@ -637,6 +638,14 @@ async function POSTHandler(request: NextRequest) {
     inventoryReservationKey = undefined;
     manualCreatedBookingId = undefined;
     manualCreatedBookingReference = undefined;
+
+    const lifecycleTypes: Array<'booking_confirmed' | 'payment_pending'> = bookingStatus === 'Confirmed'
+      ? ['booking_confirmed']
+      : ['payment_pending'];
+    await Promise.all(lifecycleTypes.map((type) => queuePersistedBookingEvent({
+      type,
+      booking: newBooking,
+    })));
 
     console.log(`[Manual Booking] Created booking ${bookingReference}`);
 
