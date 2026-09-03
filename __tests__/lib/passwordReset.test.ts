@@ -26,9 +26,12 @@ describe('createResetToken', () => {
     expect(seen.size).toBe(200);
   });
 
-  it('expires one hour after issue', () => {
+  it('expires when the reset page says it does — fifteen minutes', () => {
+    // The page copy promises 15 minutes. If the token outlives that, the page
+    // is lying to the customer and the credential lives longer than intended.
     const now = new Date('2026-09-03T10:00:00.000Z');
     const issued = createResetToken(now);
+    expect(RESET_TOKEN_TTL_MS).toBe(15 * 60 * 1000);
     expect(issued.expiresAt.getTime() - now.getTime()).toBe(RESET_TOKEN_TTL_MS);
   });
 });

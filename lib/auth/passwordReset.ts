@@ -19,8 +19,13 @@ import { createHash, randomBytes, timingSafeEqual } from 'crypto';
 /** 32 random bytes rendered as 64 hex characters — matches the existing link shape. */
 export const RESET_TOKEN_PATTERN = /^[a-f0-9]{64}$/i;
 
-/** One hour. Long enough to find the email, short enough to limit exposure. */
-export const RESET_TOKEN_TTL_MS = 60 * 60 * 1000;
+/**
+ * Fifteen minutes — because that is what the reset page already promises the
+ * customer ("It expires after 15 minutes"). The window and the copy have to
+ * agree: a link that outlives its stated lifetime is both a lie to the
+ * customer and a longer-lived bearer credential than anyone intended.
+ */
+export const RESET_TOKEN_TTL_MS = 15 * 60 * 1000;
 
 export const MIN_PASSWORD_LENGTH = 8;
 export const MAX_PASSWORD_LENGTH = 128;
