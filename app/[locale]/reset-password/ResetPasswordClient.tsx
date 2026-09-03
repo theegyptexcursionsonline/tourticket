@@ -10,9 +10,15 @@ const RESET_TOKEN = /^[a-f0-9]{64}$/i;
 interface ResetPasswordClientProps {
   token: string;
   email?: string;
+  /** Which token store issued this link. Defaults to the mobile backend. */
+  endpoint?: string;
 }
 
-export default function ResetPasswordClient({token, email = ''}: ResetPasswordClientProps) {
+export default function ResetPasswordClient({
+  token,
+  email = '',
+  endpoint = '/api/mobile-auth/reset-password',
+}: ResetPasswordClientProps) {
   const t = useTranslations('resetPasswordPage');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -57,7 +63,7 @@ export default function ResetPasswordClient({token, email = ''}: ResetPasswordCl
 
     setSubmitting(true);
     try {
-      const response = await fetch('/api/mobile-auth/reset-password', {
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({

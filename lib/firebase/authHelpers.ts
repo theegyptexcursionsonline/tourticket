@@ -1,5 +1,6 @@
 // Firebase Authentication helper utilities
 import { verifyFirebaseToken } from './admin';
+import { verifyToken } from '@/lib/jwt';
 import dbConnect from '@/lib/dbConnect';
 import User from '@/lib/models/user';
 import type { IUser } from '@/lib/models/user';
@@ -37,24 +38,88 @@ export function extractFirebaseToken(request: NextRequest): string | null {
 }
 
 /**
+ * Authenticate a session issued by the platform's own credential store
+ * (`/api/auth/login`, `/api/auth/signup`) from its httpOnly `authToken` cookie.
+ *
+ * Two guards, because a cookie — unlike a Bearer token — is sent by the browser
+ * automatically:
+ *  - the cookie is `SameSite=Lax`, so it is not sent on cross-site POSTs; and
+ *  - a cross-origin request is refused outright here rather than trusted.
+ * Together those keep the state-changing routes below this helper free of CSRF
+ * exposure that the Bearer-only model did not have.
+ */
+async function authenticatePlatformSession(request: NextRequest): Promise<FirebaseAuthenticationResult> {
+  const sessionToken = request.cookies.get('authToken')?.value;
+  if (!sessionToken) {
+    return { success: false, error: 'No authentication token provided', statusCode: 401 };
+  }
+
+  const origin = request.headers.get('origin');
+  if (origin) {
+    let sameOrigin = false;
+    try {
+      sameOrigin = new URL(origin).host === request.headers.get('host');
+    } catch {
+      sameOrigin = false;
+    }
+    if (!sameOrigin) {
+      return { success: false, error: 'Invalid or expired token', statusCode: 401 };
+    }
+  }
+
+  let subject: string | undefined;
+  try {
+    const payload = (await verifyToken(sessionToken)) as { sub?: unknown } | null;
+    if (payload && typeof payload.sub === 'string' && payload.sub.length > 0) {
+      subject = payload.sub;
+    }
+  } catch {
+    subject = undefined;
+  }
+  if (!subject) {
+    return { success: false, error: 'Invalid or expired token', statusCode: 401 };
+  }
+
+  await dbConnect();
+  const user = (await User.findOne({ _id: subject, isActive: true })) as IUser | null;
+  if (!user) {
+    return { success: false, error: 'User not found or inactive', statusCode: 404 };
+  }
+
+  return {
+    success: true,
+    user,
+    // Platform sessions carry no provider uid. Callers read `user`; this stays
+    // present only so the result shape is identical for both session types.
+    firebaseUid: String((user as unknown as { firebaseUid?: string }).firebaseUid || ''),
+    email: user.email,
+    emailVerified: Boolean(user.emailVerified),
+  };
+}
+
+/**
  * Verify Firebase token and get MongoDB user
  * This is the main authentication middleware for user routes
  */
 export async function authenticateFirebaseUser(request: NextRequest): Promise<FirebaseAuthenticationResult> {
   const token = extractFirebaseToken(request);
 
+  // A customer who signed in through the platform's own credential store holds
+  // a session cookie, not a provider ID token. Without this they would be
+  // signed in yet unable to use their cart, wishlist, profile or checkout —
+  // every route below this helper would reject them. Tried when no provider
+  // token is present, and again when one fails to verify, because the provider
+  // being unreachable is exactly when this path matters.
   if (!token) {
-    return {
-      success: false,
-      error: 'No authentication token provided',
-      statusCode: 401,
-    };
+    return authenticatePlatformSession(request);
   }
 
   // Verify Firebase token
   const verifyResult = await verifyFirebaseToken(token);
 
   if (!verifyResult.success || !verifyResult.uid) {
+    const platform = await authenticatePlatformSession(request);
+    if (platform.success) return platform;
     return {
       success: false,
       error: 'Invalid or expired token',

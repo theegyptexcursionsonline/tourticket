@@ -77,6 +77,10 @@ export interface IUser extends Document {
   adminLockUntil?: Date;
   invitationToken?: string;
   invitationExpires?: Date;
+  // Platform-owned password recovery. Only the SHA-256 hash of the emailed
+  // token is kept, so a database read cannot yield live reset links.
+  passwordResetTokenHash?: string;
+  passwordResetExpires?: Date;
   requirePasswordChange?: boolean;
   // Admin access an invitee has been offered but has NOT yet accepted. Nothing
   // here grants access: the grant only moves onto role/permissions/scopes when
@@ -195,6 +199,14 @@ const UserSchema: Schema<IUser> = new Schema({
     select: false, // Don't include in queries by default
   },
   invitationExpires: {
+    type: Date,
+    select: false,
+  },
+  passwordResetTokenHash: {
+    type: String,
+    select: false, // A bearer credential for the account — never returned by default
+  },
+  passwordResetExpires: {
     type: Date,
     select: false,
   },

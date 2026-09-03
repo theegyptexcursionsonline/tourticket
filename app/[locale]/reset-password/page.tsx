@@ -16,6 +16,7 @@ interface ResetPasswordPageProps {
   searchParams: Promise<{
     token?: string | string[];
     email?: string | string[];
+    src?: string | string[];
   }>;
 }
 
@@ -29,6 +30,14 @@ export default async function ResetPasswordPage({searchParams}: ResetPasswordPag
     <ResetPasswordClient
       token={firstQueryValue(query.token).trim()}
       email={firstQueryValue(query.email).trim()}
+      // The mobile app and the storefront keep separate token stores, so the
+      // link says which one issued it. Anything other than an explicit `web`
+      // keeps the existing mobile behaviour untouched.
+      endpoint={
+        firstQueryValue(query.src).trim() === 'web'
+          ? '/api/auth/reset-password'
+          : '/api/mobile-auth/reset-password'
+      }
     />
   );
 }

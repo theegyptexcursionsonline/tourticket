@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
+import User from '@/lib/models/user';
+import { buildResetUrl, createResetToken } from '@/lib/auth/passwordReset';
 import { generateFirebasePasswordResetLink } from '@/lib/firebase/admin';
 import { sendPasswordResetEmail } from '@/lib/mailgun';
 import { enforcePublicActionLimits } from '@/lib/security/distributedAbuseLimit';
@@ -32,6 +34,22 @@ function configuredBaseUrl(): string {
 function firebaseErrorCode(error: unknown): string {
   if (typeof error !== 'object' || error === null || !('code' in error)) return '';
   return String((error as { code?: unknown }).code || '');
+}
+
+/**
+ * Issue a platform-owned reset link for `email`, or `null` when there is no
+ * eligible account. Only the token's hash is persisted.
+ */
+async function issuePlatformResetUrl(email: string, baseOrigin: string): Promise<string | null> {
+  const user = await User.findOne({ email }).select('+passwordResetTokenHash +passwordResetExpires');
+  if (!user || user.isActive === false) return null;
+
+  const issued = createResetToken();
+  user.passwordResetTokenHash = issued.tokenHash;
+  user.passwordResetExpires = issued.expiresAt;
+  await user.save({ validateBeforeSave: false });
+
+  return buildResetUrl(baseOrigin, issued.token, email);
 }
 
 export async function POST(request: NextRequest) {
@@ -72,7 +90,21 @@ export async function POST(request: NextRequest) {
       if (code === 'auth/user-not-found' || code === 'auth/user-disabled') {
         return noStoreJson({ success: true, message: GENERIC_MESSAGE }, 202);
       }
-      throw error;
+      // The provider cannot issue a link. Account recovery is the one path
+      // that must not depend on it — otherwise a provider outage locks every
+      // customer out of their own account for its duration. Fall back to a
+      // platform-owned token, which sets the bcrypt password `/api/auth/login`
+      // verifies, so a reset restores sign-in immediately.
+      console.error(
+        'Provider reset link unavailable, using platform recovery:',
+        error instanceof Error ? error.name : 'unknown_error',
+      );
+      const platformUrl = await issuePlatformResetUrl(email, configuredBaseUrl());
+      // No eligible account: answer exactly as for a known one.
+      if (!platformUrl) {
+        return noStoreJson({ success: true, message: GENERIC_MESSAGE }, 202);
+      }
+      resetUrl = platformUrl;
     }
 
     try {
