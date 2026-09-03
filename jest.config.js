@@ -44,8 +44,10 @@ const customJestConfig = {
   ],
   // Also keep worktrees out of the haste map: their __mocks__ copies collide
   // with the repo's own manual mocks ("duplicate manual mock found").
-  modulePathIgnorePatterns: ['<rootDir>/.claude/'],
+  // These were two separate keys, so the second silently replaced the first and
+  // `.claude/` was never actually ignored — one array, both entries.
   modulePathIgnorePatterns: [
+    '<rootDir>/.claude/',
     '<rootDir>/.netlify/',
   ],
 }

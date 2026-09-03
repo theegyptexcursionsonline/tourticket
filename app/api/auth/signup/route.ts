@@ -160,12 +160,26 @@ export async function POST(request: NextRequest) {
     }
 
     // Success response (keep existing)
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       message: 'Account created successfully!',
       token,
       user: userPayload,
     });
+
+    // Signing up IS signing in. Without this cookie the new account held a
+    // token in memory only, so every cookie-authenticated route (cart,
+    // wishlist, profile, checkout) treated the customer as a guest on the next
+    // request. Matches `/api/auth/login` exactly.
+    response.cookies.set('authToken', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 60 * 60 * 24 * 7,
+      path: '/',
+    });
+
+    return response;
 
   } catch (error: unknown) {
     if (error instanceof PublicInputError) {

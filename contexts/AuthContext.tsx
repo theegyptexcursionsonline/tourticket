@@ -4,6 +4,18 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { usePathname } from 'next/navigation';
 import { useRouter } from 'next/navigation';
 import type { User as FirebaseUser } from 'firebase/auth';
+import {
+  classifyAuthFailure,
+  customerAuthMessage,
+  shouldFallBackToPlatform,
+} from '@/lib/auth/providerStatus';
+import {
+  platformLogin,
+  platformLogout,
+  platformSession,
+  platformSignup,
+  type PlatformUser,
+} from '@/lib/auth/platformAuth';
 
 // --- Interfaces ---
 interface User {
@@ -90,6 +102,32 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       googleProvider,
       ...firebaseAuth,
     };
+  };
+
+  // --- Adopt a session established against the platform's own credentials ---
+  // Used when the identity provider is unavailable. The provider-backed
+  // listener owns `firebaseUser`; a platform session deliberately leaves it
+  // null so the two can never be confused.
+  const adoptPlatformSession = (platformUser: PlatformUser, sessionToken?: string) => {
+    const first = platformUser.firstName || '';
+    const last = platformUser.lastName || '';
+    const normalizedUser: User = {
+      id: platformUser.id || platformUser._id || '',
+      _id: platformUser._id || platformUser.id || '',
+      email: platformUser.email,
+      name: platformUser.name || `${first} ${last}`.trim(),
+      firstName: first,
+      lastName: last,
+      role: platformUser.role || 'customer',
+      permissions: platformUser.permissions || [],
+      authProvider: 'jwt',
+      emailVerified: Boolean(platformUser.emailVerified),
+    };
+    setFirebaseUser(null);
+    setUser(normalizedUser);
+    // The session itself lives in an httpOnly cookie. This value only drives
+    // `isAuthenticated` in the client; it is never the authority for access.
+    setToken(sessionToken || 'platform-session');
   };
 
   // --- Sync Firebase user with MongoDB and get user data ---
@@ -210,9 +248,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             setUser(normalizedUser);
           }
         } else {
-          setFirebaseUser(null);
-          setUser(null);
-          setToken(null);
+          // No provider session. There may still be a platform session from a
+          // sign-in taken while the provider was unavailable — without this
+          // the customer would appear signed out on every page load.
+          const existing = await platformSession();
+          if (cancelled) return;
+          if (existing) {
+            adoptPlatformSession(existing);
+          } else {
+            setFirebaseUser(null);
+            setUser(null);
+            setToken(null);
+          }
         }
       } catch (error) {
         console.error('Error in auth state change:', error);
@@ -220,11 +267,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setIsLoading(false);
       }
     });
-    }).catch((error) => {
+    }).catch(async (error) => {
       if (getFirebaseErrorCode(error) !== 'auth/configuration-not-found') {
-        console.error('Failed to initialize auth listener:', error);
+        console.error('Failed to initialize auth listener:', classifyAuthFailure(error));
       }
-      setIsLoading(false);
+      // The provider could not start at all. Fall back to the platform session
+      // so an outage does not sign every customer out.
+      try {
+        const existing = await platformSession();
+        if (!cancelled && existing) adoptPlatformSession(existing);
+      } catch {
+        // Nothing further to try; the customer is simply signed out.
+      }
+      if (!cancelled) setIsLoading(false);
     });
 
     // Cleanup subscription
@@ -236,7 +291,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   // --- Refresh user data ---
   const refreshUser = async () => {
-    if (!firebaseUser) return;
+    if (!firebaseUser) {
+      // A platform session refreshes from its own endpoint. Returning early
+      // here would have left profile changes stale for these customers.
+      if (user) {
+        const existing = await platformSession();
+        if (existing) adoptPlatformSession(existing, token || undefined);
+      }
+      return;
+    }
 
     try {
       // Force token refresh
@@ -287,28 +350,30 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       await signInWithEmailAndPassword(auth, email, password);
       // User state will be updated by onAuthStateChanged listener
     } catch (error: unknown) {
-      const errorCode = getFirebaseErrorCode(error);
-      console.error('Login failed:', errorCode || (error instanceof Error ? error.name : 'unknown_error'));
-      let errorMessage = error instanceof Error
-        ? error.message
-        : 'Failed to log in. Please check your credentials.';
+      const kind = classifyAuthFailure(error);
+      // Log the classification, never the provider's text: on 2026-09-03 that
+      // text carried the project's API key.
+      console.error('Login failed:', kind);
 
-      if (
-        errorCode === 'auth/user-not-found'
-        || errorCode === 'auth/wrong-password'
-        || errorCode === 'auth/invalid-credential'
-        || errorCode === 'auth/user-disabled'
-      ) {
-        errorMessage = 'Invalid email or password.';
-      } else if (errorCode === 'auth/invalid-email') {
-        errorMessage = 'Invalid email address.';
-      } else if (errorCode === 'auth/too-many-requests') {
-        errorMessage = 'Too many failed login attempts. Please try again later.';
-      } else if (errorCode === 'auth/configuration-not-found') {
-        errorMessage = 'Authentication is temporarily unavailable. Please try again later.';
+      // Only a provider outage is retried. A rejected credential, a rate limit
+      // or a cancelled flow must never be replayed against another store.
+      if (shouldFallBackToPlatform(error)) {
+        const fallback = await platformLogin(email, password);
+        if (fallback.ok && fallback.user) {
+          adoptPlatformSession(fallback.user, fallback.token);
+          return;
+        }
+        // 401 here is genuinely ambiguous — either the password is wrong, or
+        // this account only exists with the unavailable provider. Say what is
+        // true for both without revealing which, so the response cannot be
+        // used to enumerate accounts.
+        if (fallback.status === 429 && fallback.error) {
+          throw new Error(fallback.error);
+        }
+        throw new Error(customerAuthMessage('provider_unavailable', 'login'));
       }
 
-      throw new Error(errorMessage);
+      throw new Error(customerAuthMessage(kind, 'login'));
     } finally {
       setIsLoading(false);
     }
@@ -336,23 +401,44 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       // User will be synced with backend by onAuthStateChanged listener
     } catch (error: unknown) {
-      console.error('Signup error:', error);
-      let errorMessage = 'Failed to create account. Please try again.';
+      const kind = classifyAuthFailure(error);
+      console.error('Signup failed:', kind);
 
-      const errorCode = getFirebaseErrorCode(error);
-      if (errorCode === 'auth/email-already-in-use') {
-        errorMessage = 'An account with this email already exists. Please log in instead.';
-      } else if (errorCode === 'auth/invalid-email') {
-        errorMessage = 'Invalid email address.';
-      } else if (errorCode === 'auth/weak-password') {
-        errorMessage = 'Password should be at least 6 characters.';
-      } else if (errorCode === 'auth/operation-not-allowed') {
-        errorMessage = 'Email/password accounts are not enabled.';
-      } else if (errorCode === 'auth/configuration-not-found') {
-        errorMessage = 'Authentication is temporarily unavailable. Please try again later.';
+      if (shouldFallBackToPlatform(error)) {
+        const fallback = await platformSignup({
+          firstName: data.firstName,
+          lastName: data.lastName,
+          email: data.email,
+          password: data.password,
+        });
+        if (fallback.ok && fallback.user) {
+          // The route sets the session cookie, so creating the account also
+          // signs the customer in — they can go straight to checkout.
+          adoptPlatformSession(fallback.user, fallback.token);
+          return;
+        }
+        // 4xx bodies from our own route are already customer-safe copy
+        // ("An account with this email already exists…", password rules).
+        if (fallback.status >= 400 && fallback.status < 500 && fallback.error) {
+          throw new Error(fallback.error);
+        }
+        throw new Error(customerAuthMessage('provider_unavailable', 'signup'));
       }
 
-      throw new Error(errorMessage);
+      if (kind === 'credential') {
+        const code = getFirebaseErrorCode(error);
+        if (code === 'auth/email-already-in-use') {
+          throw new Error('An account with this email already exists. Please log in instead.');
+        }
+        if (code === 'auth/weak-password') {
+          throw new Error('Password should be at least 8 characters.');
+        }
+        if (code === 'auth/invalid-email') {
+          throw new Error('Invalid email address.');
+        }
+      }
+
+      throw new Error(customerAuthMessage(kind, 'signup'));
     } finally {
       setIsLoading(false);
     }
@@ -366,23 +452,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       await signInWithPopup(auth, googleProvider);
       // User state will be updated by onAuthStateChanged listener
     } catch (error: unknown) {
-      console.error('Google login error:', error);
-      let errorMessage = 'Failed to sign in with Google.';
+      const kind = classifyAuthFailure(error);
+      console.error('Google sign-in failed:', kind);
 
       const errorCode = getFirebaseErrorCode(error);
-      if (errorCode === 'auth/popup-closed-by-user') {
-        errorMessage = 'Sign-in popup was closed.';
-      } else if (errorCode === 'auth/cancelled-popup-request') {
-        errorMessage = 'Sign-in was cancelled.';
-      } else if (errorCode === 'auth/popup-blocked') {
-        errorMessage = 'Sign-in popup was blocked. Please allow popups and try again.';
-      } else if (errorCode === 'auth/account-exists-with-different-credential') {
-        errorMessage = 'An account already exists with this email using a different sign-in method.';
-      } else if (errorCode === 'auth/configuration-not-found') {
-        errorMessage = 'Authentication is temporarily unavailable. Please try again later.';
+      if (errorCode === 'auth/popup-blocked') {
+        throw new Error('Sign-in popup was blocked. Please allow popups and try again.');
+      }
+      if (errorCode === 'auth/account-exists-with-different-credential') {
+        throw new Error('An account already exists with this email using a different sign-in method.');
       }
 
-      throw new Error(errorMessage);
+      // Google sign-in has no offline equivalent — there is no password to
+      // verify locally — so this states the fact and points at the path that
+      // still works rather than leaving a dead button.
+      throw new Error(customerAuthMessage(kind, 'google'));
     } finally {
       setIsLoading(false);
     }
@@ -390,19 +474,24 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   // --- Logout Function ---
   const logout = async () => {
+    // Signing out must succeed even when the identity provider is unreachable.
+    // Previously a provider outage threw here, leaving a customer unable to
+    // end their own session.
     try {
       const { auth, signOut } = await loadFirebaseAuth();
       await signOut(auth);
-      setUser(null);
-      setFirebaseUser(null);
-      setToken(null);
-
-      // Redirect to login page
-      router.push('/login');
     } catch (error) {
-      console.error('Logout error:', error);
-      throw new Error('Failed to log out. Please try again.');
+      console.error('Provider sign-out unavailable:', classifyAuthFailure(error));
     }
+
+    // Always clear the platform session cookie as well; a customer may hold
+    // one, the other, or both.
+    await platformLogout();
+
+    setUser(null);
+    setFirebaseUser(null);
+    setToken(null);
+    router.push('/login');
   };
 
   // --- Context Value ---
