@@ -10,6 +10,8 @@ import SupportIdentityHandle, {
 } from '@/lib/models/SupportIdentityHandle';
 import { consumeAbuseLimit } from '@/lib/security/distributedAbuseLimit';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
+import BookingSupportRequest, { type BookingSupportActionKind, BOOKING_SUPPORT_ACTION_KINDS } from '@/lib/models/BookingSupportRequest';
+import { randomBytes } from 'node:crypto';
 
 const HANDLE_TTL_MS = 15 * 60 * 1_000;
 const HANDLE_BUCKET_MS = 5 * 60 * 1_000;
@@ -75,6 +77,25 @@ type SupportMcpDependencies = {
   }) => Promise<SupportHandleRecord | null>;
   touchHandle?: (id: mongoose.Types.ObjectId, now: Date) => Promise<void>;
   revokeHandle?: (tokenHash: string, config: SupportMcpConfig, binding: SupportBinding, now: Date) => Promise<boolean>;
+  findSupportRequestByKey?: (input: { config: SupportMcpConfig; binding: SupportBinding; idempotencyKey: string }) => Promise<SupportRequestRecord | null>;
+  persistSupportRequest?: (input: SupportRequestInsert) => Promise<SupportRequestRecord | 'duplicate'>;
+  findSupportRequestById?: (input: { config: SupportMcpConfig; binding: SupportBinding; requestId: string }) => Promise<SupportRequestRecord | null>;
+  transitionSupportRequest?: (input: { config: SupportMcpConfig; requestId: string; from: readonly SupportRequestStatus[]; set: Record<string, unknown> }) => Promise<SupportRequestRecord | null>;
+};
+
+export type SupportRequestStatus = 'proposed' | 'received' | 'withdrawn' | 'in_progress' | 'resolved';
+export type SupportRequestRecord = { requestId: string; status: SupportRequestStatus };
+export type SupportRequestInsert = {
+  config: SupportMcpConfig;
+  binding: SupportBinding;
+  requestId: string;
+  bookingId: mongoose.Types.ObjectId;
+  bookingReference: string;
+  actionKind: BookingSupportActionKind;
+  customerRequest: string;
+  language: string;
+  idempotencyKey: string;
+  now: Date;
 };
 
 export type VerifySupportIdentityResult =
@@ -279,7 +300,7 @@ async function defaultPersistHandle(input: {
         workspaceKey: input.binding.workspaceKey,
         conversationId: input.binding.conversationId.toLowerCase(),
         channel: input.binding.channel,
-        allowedTools: ['booking_summary', 'pickup_status'],
+        allowedTools: ['booking_summary', 'pickup_status', 'booking_action'],
         expiresAt: input.expiresAt,
       },
     },
@@ -410,7 +431,7 @@ export async function verifySupportBookingIdentity(
     handle: issued.handle,
     bookingReferenceMask: maskReference(booking.bookingReference),
     expiresAt: issued.expiresAt.toISOString(),
-    allowedTools: ['booking_summary', 'pickup_status'],
+    allowedTools: ['booking_summary', 'pickup_status', 'booking_action'],
   };
 }
 
@@ -517,3 +538,171 @@ export async function revokeSupportIdentity(
   );
   return { revoked };
 }
+
+// ---------------------------------------------------------------------------
+// Ops requests (suggest-then-approve). Registered while the customer's handle
+// is live, confirmed later by FoxesConnect after a person approved, withdrawn
+// on rejection/expiry. None of these mutate a booking.
+// ---------------------------------------------------------------------------
+
+export { BOOKING_SUPPORT_ACTION_KINDS };
+
+async function defaultFindSupportRequestByKey(input: { config: SupportMcpConfig; binding: SupportBinding; idempotencyKey: string }) {
+  await dbConnect();
+  const row = await BookingSupportRequest.findOne({
+    tenantId: input.config.tenantId,
+    workspaceKey: input.binding.workspaceKey,
+    idempotencyKey: input.idempotencyKey,
+  })
+    .select('requestId status')
+    .lean();
+  return row ? { requestId: row.requestId, status: row.status } : null;
+}
+
+async function defaultPersistSupportRequest(input: SupportRequestInsert): Promise<SupportRequestRecord | 'duplicate'> {
+  await dbConnect();
+  try {
+    await BookingSupportRequest.create({
+      tenantId: input.config.tenantId,
+      requestId: input.requestId,
+      booking: input.bookingId,
+      bookingReference: input.bookingReference,
+      workspaceKey: input.binding.workspaceKey,
+      conversationId: input.binding.conversationId.toLowerCase(),
+      channel: input.binding.channel,
+      actionKind: input.actionKind,
+      customerRequest: input.customerRequest,
+      language: input.language,
+      idempotencyKey: input.idempotencyKey,
+      status: 'proposed',
+      proposedAt: input.now,
+    });
+    return { requestId: input.requestId, status: 'proposed' };
+  } catch (error) {
+    if (error && typeof error === 'object' && (error as { code?: number }).code === 11000) return 'duplicate';
+    throw error;
+  }
+}
+
+async function defaultFindSupportRequestById(input: { config: SupportMcpConfig; binding: SupportBinding; requestId: string }) {
+  await dbConnect();
+  const row = await BookingSupportRequest.findOne({
+    tenantId: input.config.tenantId,
+    workspaceKey: input.binding.workspaceKey,
+    conversationId: input.binding.conversationId.toLowerCase(),
+    channel: input.binding.channel,
+    requestId: input.requestId,
+  })
+    .select('requestId status')
+    .lean();
+  return row ? { requestId: row.requestId, status: row.status } : null;
+}
+
+async function defaultTransitionSupportRequest(input: { config: SupportMcpConfig; requestId: string; from: readonly SupportRequestStatus[]; set: Record<string, unknown> }) {
+  await dbConnect();
+  const row = await BookingSupportRequest.findOneAndUpdate(
+    { tenantId: input.config.tenantId, requestId: input.requestId, status: { $in: [...input.from] } },
+    { $set: input.set },
+    { new: true },
+  )
+    .select('requestId status')
+    .lean();
+  return row ? { requestId: row.requestId, status: row.status } : null;
+}
+
+function isActionKind(value: string): value is BookingSupportActionKind {
+  return (BOOKING_SUPPORT_ACTION_KINDS as readonly string[]).includes(value);
+}
+
+function requestIdIsValid(value: string): boolean {
+  return /^bsr_[a-f0-9]{24}$/.test(value);
+}
+
+export type SupportRequestToolResult =
+  | { requestId: string; status: 'proposed' | 'received' | 'duplicate' | 'withdrawn' }
+  | { code: 'IDENTITY_REQUIRED' | 'INVALID_INPUT' | 'NOT_FOUND' | 'INVALID_STATE'; message: string };
+
+/** Register a verified customer's request as PROPOSED. Idempotent on `idempotencyKey`. */
+export async function proposeBookingSupportRequest(
+  input: { handle: string; actionKind: string; customerRequest: string; language: string; idempotencyKey: string; binding: SupportBinding },
+  config: SupportMcpConfig,
+  dependencies: SupportMcpDependencies = {},
+): Promise<SupportRequestToolResult> {
+  if (!isActionKind(input.actionKind) || !/^[A-Za-z0-9][A-Za-z0-9:_-]{7,179}$/.test(input.idempotencyKey)) {
+    return { code: 'INVALID_INPUT', message: 'Unsupported request.' };
+  }
+  const existing = await (dependencies.findSupportRequestByKey ?? defaultFindSupportRequestByKey)({ config, binding: input.binding, idempotencyKey: input.idempotencyKey });
+  if (existing) return { requestId: existing.requestId, status: 'duplicate' };
+  const booking = await resolveHandleBooking(input.handle, input.binding, 'booking_action', config, dependencies);
+  if (!booking) return { code: 'IDENTITY_REQUIRED', message: 'Booking identity is unavailable.' };
+  const now = dependencies.now?.() ?? new Date();
+  const requestId = `bsr_${randomBytes(12).toString('hex')}`;
+  const persisted = await (dependencies.persistSupportRequest ?? defaultPersistSupportRequest)({
+    config,
+    binding: input.binding,
+    requestId,
+    bookingId: booking._id,
+    bookingReference: booking.bookingReference,
+    actionKind: input.actionKind,
+    customerRequest: input.customerRequest.replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 600),
+    language: input.language.slice(0, 8),
+    idempotencyKey: input.idempotencyKey,
+    now,
+  });
+  if (persisted === 'duplicate') {
+    const raced = await (dependencies.findSupportRequestByKey ?? defaultFindSupportRequestByKey)({ config, binding: input.binding, idempotencyKey: input.idempotencyKey });
+    return raced ? { requestId: raced.requestId, status: 'duplicate' } : { code: 'INVALID_STATE', message: 'Request could not be registered.' };
+  }
+  return { requestId: persisted.requestId, status: 'proposed' };
+}
+
+/** FoxesConnect approved: make the request visible to operations. Idempotent; no handle needed. */
+export async function confirmBookingSupportRequest(
+  input: { requestId: string; idempotencyKey: string; approvedBy: string; binding: SupportBinding },
+  config: SupportMcpConfig,
+  dependencies: SupportMcpDependencies = {},
+): Promise<SupportRequestToolResult> {
+  if (!requestIdIsValid(input.requestId) || !bindingIsValid(input.binding, config)) return { code: 'INVALID_INPUT', message: 'Unsupported request.' };
+  const current = await (dependencies.findSupportRequestById ?? defaultFindSupportRequestById)({ config, binding: input.binding, requestId: input.requestId });
+  if (!current) return { code: 'NOT_FOUND', message: 'Request not found.' };
+  if (current.status === 'received' || current.status === 'in_progress' || current.status === 'resolved') {
+    return { requestId: current.requestId, status: 'duplicate' };
+  }
+  if (current.status === 'withdrawn') return { requestId: current.requestId, status: 'withdrawn' };
+  const now = dependencies.now?.() ?? new Date();
+  const updated = await (dependencies.transitionSupportRequest ?? defaultTransitionSupportRequest)({
+    config,
+    requestId: input.requestId,
+    from: ['proposed'],
+    set: { status: 'received', confirmedAt: now, confirmedBy: input.approvedBy.slice(0, 120) },
+  });
+  if (!updated) {
+    const again = await (dependencies.findSupportRequestById ?? defaultFindSupportRequestById)({ config, binding: input.binding, requestId: input.requestId });
+    return again && again.status !== 'proposed' && again.status !== 'withdrawn'
+      ? { requestId: again.requestId, status: 'duplicate' }
+      : { code: 'INVALID_STATE', message: 'Request is not awaiting confirmation.' };
+  }
+  return { requestId: updated.requestId, status: 'received' };
+}
+
+/** Rejected or expired on the FoxesConnect side. Idempotent. */
+export async function withdrawBookingSupportRequest(
+  input: { requestId: string; reason: string; binding: SupportBinding },
+  config: SupportMcpConfig,
+  dependencies: SupportMcpDependencies = {},
+): Promise<SupportRequestToolResult> {
+  if (!requestIdIsValid(input.requestId) || !bindingIsValid(input.binding, config)) return { code: 'INVALID_INPUT', message: 'Unsupported request.' };
+  const current = await (dependencies.findSupportRequestById ?? defaultFindSupportRequestById)({ config, binding: input.binding, requestId: input.requestId });
+  if (!current) return { code: 'NOT_FOUND', message: 'Request not found.' };
+  if (current.status === 'withdrawn') return { requestId: current.requestId, status: 'withdrawn' };
+  if (current.status === 'in_progress' || current.status === 'resolved') return { code: 'INVALID_STATE', message: 'Operations already handled this request.' };
+  const now = dependencies.now?.() ?? new Date();
+  const updated = await (dependencies.transitionSupportRequest ?? defaultTransitionSupportRequest)({
+    config,
+    requestId: input.requestId,
+    from: ['proposed', 'received'],
+    set: { status: 'withdrawn', withdrawnAt: now, withdrawReason: input.reason.replace(/\s+/g, ' ').trim().slice(0, 200) },
+  });
+  return updated ? { requestId: updated.requestId, status: 'withdrawn' } : { code: 'INVALID_STATE', message: 'Request could not be withdrawn.' };
+}
+

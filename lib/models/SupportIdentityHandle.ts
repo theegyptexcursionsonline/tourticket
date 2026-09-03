@@ -1,7 +1,7 @@
 import mongoose, { type Model, Schema } from 'mongoose';
 
 export type SupportIdentityChannel = 'widget' | 'whatsapp';
-export type SupportIdentityTool = 'booking_summary' | 'pickup_status';
+export type SupportIdentityTool = 'booking_summary' | 'pickup_status' | 'booking_action';
 
 export interface ISupportIdentityHandle {
   tenantId: string;
@@ -28,8 +28,8 @@ const SupportIdentityHandleSchema = new Schema<ISupportIdentityHandle>(
     channel: { type: String, enum: ['widget', 'whatsapp'], required: true },
     allowedTools: {
       type: [String],
-      enum: ['booking_summary', 'pickup_status'],
-      default: ['booking_summary', 'pickup_status'],
+      enum: ['booking_summary', 'pickup_status', 'booking_action'],
+      default: ['booking_summary', 'pickup_status', 'booking_action'],
     },
     expiresAt: { type: Date, required: true },
     revokedAt: { type: Date, default: null },

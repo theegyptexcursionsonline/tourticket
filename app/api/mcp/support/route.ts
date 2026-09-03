@@ -7,6 +7,10 @@ import { z } from 'zod';
 import dbConnect from '@/lib/dbConnect';
 import { consumeAbuseLimit } from '@/lib/security/distributedAbuseLimit';
 import {
+  BOOKING_SUPPORT_ACTION_KINDS,
+  confirmBookingSupportRequest,
+  proposeBookingSupportRequest,
+  withdrawBookingSupportRequest,
   authenticateSupportMcp,
   getBookingSupportSummary,
   getPickupSupportStatus,
@@ -24,7 +28,18 @@ const TOOL_NAMES = [
   'get_booking_support_summary',
   'get_pickup_support_status',
   'revoke_booking_identity',
+  'propose_booking_support_request',
+  'confirm_booking_support_request',
+  'withdraw_booking_support_request',
 ] as const;
+
+// Ops-request tools write a REQUEST row, never a booking. Idempotent per key.
+const REQUEST_WRITE_ANNOTATIONS = {
+  readOnlyHint: false,
+  destructiveHint: false,
+  idempotentHint: true,
+  openWorldHint: false,
+};
 
 const READ_ONLY_ANNOTATIONS = {
   readOnlyHint: true,
@@ -154,6 +169,71 @@ function createServer(config: SupportMcpConfig): McpServer {
     },
   );
 
+  server.registerTool(
+    'propose_booking_support_request',
+    {
+      title: 'Propose booking support request',
+      description:
+        'Register a verified customer\'s request (pickup change, booking change, cancellation, callback, voucher resend) as PROPOSED for the operations team. It never changes a booking; the request stays invisible to operations until FoxesConnect confirms it after a person approved.',
+      inputSchema: z
+        .object({
+          handle: z.string().trim().regex(/^eih_[A-Za-z0-9_-]{43}$/),
+          actionKind: z.enum(BOOKING_SUPPORT_ACTION_KINDS),
+          customerRequest: z.string().trim().min(1).max(600),
+          language: z.string().trim().min(2).max(8),
+          idempotencyKey: z.string().trim().regex(/^[A-Za-z0-9][A-Za-z0-9:_-]{7,179}$/),
+          binding: bindingSchema,
+        })
+        .strict(),
+      annotations: REQUEST_WRITE_ANNOTATIONS,
+    },
+    async (input) => {
+      const result = await proposeBookingSupportRequest(input, config);
+      return 'code' in result ? toolResult(result, true) : toolResult(result);
+    },
+  );
+
+  server.registerTool(
+    'confirm_booking_support_request',
+    {
+      title: 'Confirm booking support request',
+      description: 'A FoxesConnect teammate approved a PROPOSED request: make it visible and actionable for operations. Idempotent; never changes a booking.',
+      inputSchema: z
+        .object({
+          requestId: z.string().trim().regex(/^bsr_[a-f0-9]{24}$/),
+          idempotencyKey: z.string().trim().regex(/^[A-Za-z0-9][A-Za-z0-9:_-]{7,179}$/),
+          approvedBy: z.string().trim().min(1).max(120),
+          binding: bindingSchema,
+        })
+        .strict(),
+      annotations: REQUEST_WRITE_ANNOTATIONS,
+    },
+    async (input) => {
+      const result = await confirmBookingSupportRequest(input, config);
+      return 'code' in result ? toolResult(result, true) : toolResult(result);
+    },
+  );
+
+  server.registerTool(
+    'withdraw_booking_support_request',
+    {
+      title: 'Withdraw booking support request',
+      description: 'FoxesConnect rejected or expired a request: withdraw it so operations never act on it. Idempotent.',
+      inputSchema: z
+        .object({
+          requestId: z.string().trim().regex(/^bsr_[a-f0-9]{24}$/),
+          reason: z.string().trim().min(1).max(200),
+          binding: bindingSchema,
+        })
+        .strict(),
+      annotations: REQUEST_WRITE_ANNOTATIONS,
+    },
+    async (input) => {
+      const result = await withdrawBookingSupportRequest(input, config);
+      return 'code' in result ? toolResult(result, true) : toolResult(result);
+    },
+  );
+
   return server;
 }
 
@@ -223,7 +303,7 @@ export async function GET(request: NextRequest) {
       workspaceKey: auth.config.workspaceKey,
       tenantId: auth.config.tenantId,
       tools: TOOL_NAMES,
-      bookingData: 'read-only',
+      bookingData: 'read-only; ops requests via FoxesConnect approval (never booking mutations)',
       driverToolAvailable: false,
     },
     { headers: { 'Cache-Control': 'private, no-store' } },

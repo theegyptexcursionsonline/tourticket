@@ -3,12 +3,23 @@ jest.mock('@/lib/models/Booking', () => ({ __esModule: true, default: {} }));
 jest.mock('@/lib/models/Tour', () => ({ __esModule: true, default: {} }));
 jest.mock('@/lib/models/user', () => ({ __esModule: true, default: {} }));
 jest.mock('@/lib/models/SupportIdentityHandle', () => ({ __esModule: true, default: {} }));
+jest.mock('@/lib/models/BookingSupportRequest', () => ({
+  __esModule: true,
+  default: {},
+  BOOKING_SUPPORT_ACTION_KINDS: ['request_pickup_change', 'request_booking_change', 'request_cancellation', 'request_human_callback', 'resend_voucher'],
+  BOOKING_SUPPORT_REQUEST_STATUSES: ['proposed', 'received', 'withdrawn', 'in_progress', 'resolved'],
+}));
 jest.mock('@/lib/security/distributedAbuseLimit', () => ({
   consumeAbuseLimit: jest.fn(),
 }));
 
 import {
   authenticateSupportMcp,
+  confirmBookingSupportRequest,
+  type SupportRequestRecord,
+  type SupportRequestStatus,
+  proposeBookingSupportRequest,
+  withdrawBookingSupportRequest,
   getBookingSupportSummary,
   getPickupSupportStatus,
   revokeSupportIdentity,
@@ -121,7 +132,7 @@ describe('TourTicket support MCP identity boundary', () => {
     expect(first).toMatchObject({
       verified: true,
       bookingReferenceMask: 'EEO-••••-7D6C',
-      allowedTools: ['booking_summary', 'pickup_status'],
+      allowedTools: ['booking_summary', 'pickup_status', 'booking_action'],
     });
     expect(first.verified && first.handle).toMatch(/^eih_[A-Za-z0-9_-]{43}$/);
     expect(first.verified && nextVerification.verified && nextVerification.handle).not.toBe(first.verified && first.handle);
@@ -292,4 +303,75 @@ describe('TourTicket support MCP identity boundary', () => {
     expect(wrong).toEqual({ revoked: false });
     expect(revokeHandle).toHaveBeenCalledTimes(1);
   });
+
+  describe('ops requests (suggest-then-approve)', () => {
+    const handle = `eih_${'F'.repeat(43)}`;
+    function requestDeps(overrides: Record<string, unknown> = {}) {
+      const store = new Map<string, SupportRequestRecord>();
+      return {
+        now: () => now,
+        findHandle: jest.fn().mockResolvedValue({ _id: handleId, booking: bookingId, allowedTools: ['booking_summary', 'pickup_status', 'booking_action'], expiresAt: new Date(now.getTime() + 60_000) }),
+        findBookingById: jest.fn().mockResolvedValue(booking()),
+        touchHandle: jest.fn().mockResolvedValue(undefined),
+        findSupportRequestByKey: jest.fn(async ({ idempotencyKey }: { idempotencyKey: string }) => store.get(`key:${idempotencyKey}`) ?? null),
+        persistSupportRequest: jest.fn(async (input: { requestId: string; idempotencyKey: string }) => {
+          if (store.has(`key:${input.idempotencyKey}`)) return 'duplicate' as const;
+          const row: SupportRequestRecord = { requestId: input.requestId, status: 'proposed' };
+          store.set(`key:${input.idempotencyKey}`, row);
+          store.set(`id:${input.requestId}`, row);
+          return row;
+        }),
+        findSupportRequestById: jest.fn(async ({ requestId }: { requestId: string }) => store.get(`id:${requestId}`) ?? null),
+        transitionSupportRequest: jest.fn(async ({ requestId, from, set }: { requestId: string; from: readonly SupportRequestStatus[]; set: Record<string, unknown> }) => {
+          const row = store.get(`id:${requestId}`);
+          if (!row || !from.includes(row.status)) return null;
+          row.status = set.status as SupportRequestStatus;
+          return row;
+        }),
+        store,
+        ...overrides,
+      };
+    }
+
+    it('registers a PROPOSED request for a live handle with the booking_action grant, idempotently', async () => {
+      const deps = requestDeps();
+      const input = { handle, actionKind: 'request_pickup_change', customerRequest: 'Please move my pickup to 9am', language: 'en', idempotencyKey: 'action:64f000000000000000000001:request_pickup_change', binding };
+      const first = await proposeBookingSupportRequest(input, config, deps);
+      expect(first).toMatchObject({ status: 'proposed' });
+      expect('requestId' in first && /^bsr_[a-f0-9]{24}$/.test(first.requestId)).toBe(true);
+      expect(deps.findHandle).toHaveBeenCalledWith(expect.objectContaining({ tool: 'booking_action' }));
+      expect(deps.persistSupportRequest).toHaveBeenCalledWith(expect.objectContaining({ bookingId, bookingReference: 'EEO-ABC123-01-9F8E7D6C', actionKind: 'request_pickup_change' }));
+      const again = await proposeBookingSupportRequest(input, config, deps);
+      expect(again).toEqual({ requestId: (first as { requestId: string }).requestId, status: 'duplicate' });
+      expect(deps.persistSupportRequest).toHaveBeenCalledTimes(1);
+    });
+
+    it('fails closed without a valid handle grant and on unsupported kinds', async () => {
+      const deps = requestDeps({ findHandle: jest.fn().mockResolvedValue(null) });
+      expect(await proposeBookingSupportRequest({ handle, actionKind: 'request_cancellation', customerRequest: 'cancel', language: 'en', idempotencyKey: 'action:64f000000000000000000002:request_cancellation', binding }, config, deps)).toEqual({ code: 'IDENTITY_REQUIRED', message: 'Booking identity is unavailable.' });
+      expect(await proposeBookingSupportRequest({ handle, actionKind: 'delete_booking', customerRequest: 'x', language: 'en', idempotencyKey: 'action:64f000000000000000000003:delete', binding }, config, requestDeps())).toMatchObject({ code: 'INVALID_INPUT' });
+      expect(deps.persistSupportRequest).not.toHaveBeenCalled();
+    });
+
+    it('confirms exactly once (later confirms are duplicates), withdraws idempotently, and refuses cross-binding ids', async () => {
+      const deps = requestDeps();
+      const proposed = await proposeBookingSupportRequest({ handle, actionKind: 'resend_voucher', customerRequest: 'I never got my voucher', language: 'en', idempotencyKey: 'action:64f000000000000000000004:resend_voucher', binding }, config, deps) as { requestId: string };
+      expect(await confirmBookingSupportRequest({ requestId: proposed.requestId, idempotencyKey: 'k:confirm', approvedBy: 'owner@example.test', binding }, config, deps)).toEqual({ requestId: proposed.requestId, status: 'received' });
+      expect(await confirmBookingSupportRequest({ requestId: proposed.requestId, idempotencyKey: 'k:confirm', approvedBy: 'owner@example.test', binding }, config, deps)).toEqual({ requestId: proposed.requestId, status: 'duplicate' });
+      expect(await withdrawBookingSupportRequest({ requestId: proposed.requestId, reason: 'rejected', binding }, config, deps)).toEqual({ requestId: proposed.requestId, status: 'withdrawn' });
+      expect(await withdrawBookingSupportRequest({ requestId: proposed.requestId, reason: 'rejected', binding }, config, deps)).toEqual({ requestId: proposed.requestId, status: 'withdrawn' });
+      expect(await confirmBookingSupportRequest({ requestId: proposed.requestId, idempotencyKey: 'k:confirm', approvedBy: 'owner@example.test', binding }, config, deps)).toEqual({ requestId: proposed.requestId, status: 'withdrawn' });
+      expect(await confirmBookingSupportRequest({ requestId: 'bsr_000000000000000000000000', idempotencyKey: 'k', approvedBy: 'x', binding }, config, deps)).toEqual({ code: 'NOT_FOUND', message: 'Request not found.' });
+      expect(await confirmBookingSupportRequest({ requestId: proposed.requestId, idempotencyKey: 'k', approvedBy: 'x', binding: { ...binding, workspaceKey: 'other' } }, config, deps)).toMatchObject({ code: 'INVALID_INPUT' });
+    });
+
+    it('never withdraws a request operations already started', async () => {
+      const deps = requestDeps();
+      const proposed = await proposeBookingSupportRequest({ handle, actionKind: 'request_human_callback', customerRequest: 'call me', language: 'en', idempotencyKey: 'action:64f000000000000000000005:request_human_callback', binding }, config, deps) as { requestId: string };
+      await confirmBookingSupportRequest({ requestId: proposed.requestId, idempotencyKey: 'k', approvedBy: 'x', binding }, config, deps);
+      deps.store.get(`id:${proposed.requestId}`)!.status = 'in_progress' as SupportRequestStatus;
+      expect(await withdrawBookingSupportRequest({ requestId: proposed.requestId, reason: 'late', binding }, config, deps)).toMatchObject({ code: 'INVALID_STATE' });
+    });
+  });
 });
+

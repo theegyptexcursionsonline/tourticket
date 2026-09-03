@@ -11,6 +11,7 @@ jest.mock('@/lib/models/Booking', () => ({ __esModule: true, default: {} }));
 jest.mock('@/lib/models/Tour', () => ({ __esModule: true, default: {} }));
 jest.mock('@/lib/models/user', () => ({ __esModule: true, default: {} }));
 jest.mock('@/lib/models/SupportIdentityHandle', () => ({ __esModule: true, default: {} }));
+jest.mock('@/lib/models/BookingSupportRequest', () => ({ __esModule: true, default: {}, BOOKING_SUPPORT_ACTION_KINDS: ['request_pickup_change', 'request_booking_change', 'request_cancellation', 'request_human_callback', 'resend_voucher'], BOOKING_SUPPORT_REQUEST_STATUSES: ['proposed', 'received', 'withdrawn', 'in_progress', 'resolved'] }));
 jest.mock('@/lib/security/distributedAbuseLimit', () => ({
   consumeAbuseLimit: jest.fn().mockResolvedValue({
     allowed: true,
@@ -120,7 +121,7 @@ describe('private EEO booking-support MCP route', () => {
       server: { name: 'eeo-booking-support', version: '1.0.0' },
       workspaceKey: 'eeo',
       tenantId: 'default',
-      bookingData: 'read-only',
+      bookingData: 'read-only; ops requests via FoxesConnect approval (never booking mutations)',
       driverToolAvailable: false,
     });
     expect(body.tools).toEqual([
@@ -128,6 +129,9 @@ describe('private EEO booking-support MCP route', () => {
       'get_booking_support_summary',
       'get_pickup_support_status',
       'revoke_booking_identity',
+      'propose_booking_support_request',
+      'confirm_booking_support_request',
+      'withdraw_booking_support_request',
     ]);
     expect(JSON.stringify(body)).not.toContain(token);
     expect(response.headers.get('cache-control')).toBe('private, no-store');
@@ -165,6 +169,20 @@ describe('private EEO booking-support MCP route', () => {
         serverInfo: { name: 'eeo-booking-support', version: '1.0.0' },
       },
     });
+  });
+
+  it('lists the read tools plus the three idempotent ops-request tools with truthful annotations', async () => {
+    const { POST } = await import('@/app/api/mcp/support/route');
+    const response = await POST(postRequest(`Bearer ${token}`, { jsonrpc: '2.0', id: 2, method: 'tools/list', params: {} }));
+    const body = await response.json();
+    expect(response.status).toBe(200);
+    const tools = body.result.tools as Array<{ name: string; annotations?: Record<string, boolean> }>;
+    const names = tools.map((tool) => tool.name);
+    expect(names).toEqual(expect.arrayContaining(['verify_booking_identity', 'get_booking_support_summary', 'get_pickup_support_status', 'revoke_booking_identity', 'propose_booking_support_request', 'confirm_booking_support_request', 'withdraw_booking_support_request']));
+    for (const name of ['propose_booking_support_request', 'confirm_booking_support_request', 'withdraw_booking_support_request']) {
+      expect(tools.find((tool) => tool.name === name)?.annotations).toMatchObject({ readOnlyHint: false, destructiveHint: false, idempotentHint: true });
+    }
+    expect(tools.find((tool) => tool.name === 'get_booking_support_summary')?.annotations).toMatchObject({ readOnlyHint: true });
   });
 
   it('blocks MCP POST before protocol handling when service authentication fails', async () => {

@@ -6,6 +6,7 @@ import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import logoSm from "@/public/EEO-logo-sm.png";
 import {
+  ClipboardList,
   LayoutDashboard,
   Map,
   Compass,
@@ -39,6 +40,7 @@ const navItems = [
   { href: "/admin/hero-settings", label: "Hero Settings", icon: ImageIcon, permissions: ["manageContent"] },
   { href: "/admin/bookings", label: "Bookings", icon: FileText, permissions: ["manageBookings"] },
   { href: "/admin/manifests", label: "Manifest", icon: ListPlus, permissions: ["manageBookings"] },
+  { href: "/admin/support-requests", label: "Support Requests", icon: ClipboardList, permissions: ["manageBookings"] },
   { href: "/admin/discounts", label: "Discounts", icon: Percent, permissions: ["manageDiscounts"] },
   { href: "/admin/reviews", label: "Reviews", icon: MessageSquare, permissions: ["manageContent"] },
   { href: "/admin/reports", label: "Reports", icon: TrendingUp, permissions: ["manageReports"] },
