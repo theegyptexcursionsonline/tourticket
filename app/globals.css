@@ -289,7 +289,7 @@ html[data-storefront-theme="dark"] body.storefront-theme .es-review-background-c
   color: #94a3b8 !important;
 }
 /* dark-theme:generated:start — built by `pnpm theme:generate`; do not hand-edit */
-/* 315 light utilities darkened, 37 deliberately preserved. */
+/* 307 light utilities darkened, 37 deliberately preserved. */
 
 html[data-storefront-theme="dark"] body.storefront-theme :where([class~="from-gray-100"], [class~="from-slate-100"]):not([class~="bg-clip-text"]) {
   --tw-gradient-from: #1e293b var(--tw-gradient-from-position) !important;
@@ -520,7 +520,7 @@ html[data-storefront-theme="dark"] body.storefront-theme :where([class~="to-indi
   --tw-gradient-to: rgb(17 24 39 / 0.2) var(--tw-gradient-to-position) !important;
 }
 
-html[data-storefront-theme="dark"] body.storefront-theme :where([class~="to-blue-50/30"], [class~="to-indigo-50/30"], [class~="to-pink-200/30"], [class~="to-purple-50/30"], [class~="to-red-50/30"], [class~="to-slate-50/30"]):not([class~="bg-clip-text"]) {
+html[data-storefront-theme="dark"] body.storefront-theme :where([class~="to-blue-50/30"], [class~="to-indigo-50/30"], [class~="to-pink-200/30"], [class~="to-purple-50/30"], [class~="to-red-50/30"]):not([class~="bg-clip-text"]) {
   --tw-gradient-to: rgb(17 24 39 / 0.3) var(--tw-gradient-to-position) !important;
 }
 
@@ -732,10 +732,6 @@ html[data-storefront-theme="dark"] body.storefront-theme :where([class~="bg-oran
   background-color: #2a1c12 !important;
 }
 
-html[data-storefront-theme="dark"] body.storefront-theme :where([class~="bg-pink-50"]) {
-  background-color: #2a1424 !important;
-}
-
 html[data-storefront-theme="dark"] body.storefront-theme :where([class~="bg-purple-100"]) {
   background-color: #301f48 !important;
 }
@@ -776,7 +772,7 @@ html[data-storefront-theme="dark"] body.storefront-theme :where([class~="bg-yell
   background-color: #282413 !important;
 }
 
-html[data-storefront-theme="dark"] body.storefront-theme :where([class~="border-gray-100"], [class~="border-gray-100/50"], [class~="border-gray-200"], [class~="border-gray-200/50"], [class~="border-gray-300"], [class~="border-gray-50"], [class~="border-slate-100"], [class~="border-slate-200"], [class~="border-slate-200/50"], [class~="border-slate-200/60"], [class~="border-slate-200/80"], [class~="border-slate-300"], [class~="border-stone-200"], [class~="border-stone-300"]) {
+html[data-storefront-theme="dark"] body.storefront-theme :where([class~="border-gray-100"], [class~="border-gray-100/50"], [class~="border-gray-200"], [class~="border-gray-200/50"], [class~="border-gray-300"], [class~="border-gray-50"], [class~="border-slate-100"], [class~="border-slate-200"], [class~="border-slate-200/50"], [class~="border-slate-200/60"], [class~="border-slate-300"], [class~="border-stone-200"], [class~="border-stone-300"]) {
   border-color: #334155 !important;
 }
 
@@ -816,12 +812,8 @@ html[data-storefront-theme="dark"] body.storefront-theme :where([class~="text-in
   color: #a5b4fc !important;
 }
 
-html[data-storefront-theme="dark"] body.storefront-theme :where([class~="text-orange-700"], [class~="text-orange-800"], [class~="text-orange-900"]) {
+html[data-storefront-theme="dark"] body.storefront-theme :where([class~="text-orange-700"], [class~="text-orange-800"]) {
   color: #fdba74 !important;
-}
-
-html[data-storefront-theme="dark"] body.storefront-theme :where([class~="text-pink-800"], [class~="text-pink-900"]) {
-  color: #f9a8d4 !important;
 }
 
 html[data-storefront-theme="dark"] body.storefront-theme :where([class~="text-purple-700"], [class~="text-purple-800"], [class~="text-purple-900"]) {
@@ -836,7 +828,7 @@ html[data-storefront-theme="dark"] body.storefront-theme :where([class~="text-ro
   color: #fda4af !important;
 }
 
-html[data-storefront-theme="dark"] body.storefront-theme :where([class~="text-sky-800"], [class~="text-sky-900"]) {
+html[data-storefront-theme="dark"] body.storefront-theme :where([class~="text-sky-900"]) {
   color: #7dd3fc !important;
 }
 
@@ -848,7 +840,7 @@ html[data-storefront-theme="dark"] body.storefront-theme :where([class~="text-vi
   color: #c4b5fd !important;
 }
 
-html[data-storefront-theme="dark"] body.storefront-theme :where([class~="text-yellow-800"], [class~="text-yellow-900"]) {
+html[data-storefront-theme="dark"] body.storefront-theme :where([class~="text-yellow-800"]) {
   color: #fde047 !important;
 }
 

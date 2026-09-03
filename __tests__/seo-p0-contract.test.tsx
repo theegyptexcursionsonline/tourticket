@@ -317,7 +317,6 @@ describe('P0 truthful structured data', () => {
     for (const file of [
       'app/[locale]/HomePageServer.tsx',
       'app/[locale]/[slug]/TourDetailClientPage.tsx',
-      'components/TourDetailPage.tsx',
     ]) {
       expect(read(file)).not.toContain('ReviewsStructuredData');
     }

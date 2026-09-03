@@ -7,7 +7,6 @@ describe('15-16 August tour authoring regressions', () => {
   const form = read('components/TourForm.tsx');
   const sidebar = read('components/BookingSidebar.tsx');
   const pages = read('app/admin/pages/page.tsx');
-  const detail = read('components/TourDetailPage.tsx');
   const clientDetail = read('app/[locale]/[slug]/TourDetailClientPage.tsx');
   const model = read('lib/models/Tour.ts');
 
@@ -36,7 +35,6 @@ describe('15-16 August tour authoring regressions', () => {
   });
 
   it('lets the explicit max group size override stale legacy group data', () => {
-    expect(detail).toContain('max: tour.maxGroupSize || tour.groupSize?.max || 20');
     expect(clientDetail).toContain('max: tour.maxGroupSize || tour.groupSize?.max || 20');
   });
 

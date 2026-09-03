@@ -27,7 +27,6 @@ describe('storefront assistant contract', () => {
   });
 
   it.each([
-    'components/TourDetailPage.tsx',
     'app/[locale]/[slug]/TourDetailClientPage.tsx',
     'app/[locale]/contact/ContactClientPage.tsx',
   ])('%s conversational entry points stay on hosted AI Search', (file) => {

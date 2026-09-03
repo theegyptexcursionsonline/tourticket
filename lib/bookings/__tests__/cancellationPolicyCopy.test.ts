@@ -15,7 +15,6 @@ const publicPolicyFiles = [
   'app/[locale]/categories/[slug]/CategoryPageClient.tsx',
   'app/[locale]/destinations/[slug]/DestinationPageClient.tsx',
   'app/[locale]/[slug]/TourDetailClientPage.tsx',
-  'components/TourDetailPage.tsx',
   'components/BookingSidebar.tsx',
   'components/MobileBookingDrawer.tsx',
   'lib/data/tours.ts',
