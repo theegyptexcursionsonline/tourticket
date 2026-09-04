@@ -38,11 +38,13 @@ jest.mock('@/lib/dbConnect', () => (...args: unknown[]) => mockDbConnect(...args
 
 const mockFindOne = jest.fn();
 const mockCreate = jest.fn();
+const mockExists = jest.fn();
 jest.mock('@/lib/models/user', () => ({
   __esModule: true,
   default: {
     findOne: (...args: unknown[]) => mockFindOne(...args),
     create: (...args: unknown[]) => mockCreate(...args),
+    exists: (...args: unknown[]) => mockExists(...args),
   },
 }));
 
@@ -61,6 +63,11 @@ jest.mock('bcryptjs', () => ({
 const mockSignToken = jest.fn();
 jest.mock('@/lib/jwt', () => ({
   signToken: (...args: unknown[]) => mockSignToken(...args),
+}));
+
+const mockAssertJwtSecretConfigured = jest.fn();
+jest.mock('@/lib/auth/jwtConfiguration', () => ({
+  assertJwtSecretConfigured: (...args: unknown[]) => mockAssertJwtSecretConfigured(...args),
 }));
 
 const mockLimits = jest.fn();
@@ -92,7 +99,7 @@ jest.mock('@/lib/auth/customerSession', () => ({
   formatCustomerForClient: (...args: unknown[]) => mockFormatUser(...args),
 }));
 
-import { POST as login } from '@/app/api/auth/login/route';
+import { HEAD as loginReadiness, POST as login } from '@/app/api/auth/login/route';
 import { POST as signup } from '@/app/api/auth/signup/route';
 import { GET as me } from '@/app/api/auth/me/route';
 import { POST as logout } from '@/app/api/auth/logout/route';
@@ -131,11 +138,63 @@ beforeEach(() => {
   mockLimits.mockResolvedValue({ allowed: true, retryAfterSeconds: 60 });
   mockDefaultPermissions.mockReturnValue(['read:own']);
   mockSignToken.mockResolvedValue('signed-token');
+  mockExists.mockResolvedValue({ _id: 'customer-1' });
   mockCompare.mockResolvedValue(true);
   mockGenSalt.mockResolvedValue('salt');
   mockHash.mockResolvedValue('password-hash');
   mockWelcomeRecommendations.mockResolvedValue([]);
   mockSendWelcomeEmail.mockResolvedValue(undefined);
+});
+
+describe('HEAD /api/auth/login', () => {
+  it('returns 204 only when token configuration, database, and a password customer are ready', async () => {
+    const response = await loginReadiness();
+
+    expect(response.status).toBe(204);
+    expect(mockAssertJwtSecretConfigured).toHaveBeenCalledTimes(1);
+    expect(mockDbConnect).toHaveBeenCalledTimes(1);
+    expect(mockExists).toHaveBeenCalledWith({
+      role: 'customer',
+      isActive: true,
+      password: { $type: 'string' },
+    });
+    expect(response.headers.get('Cache-Control')).toBe('no-store');
+  });
+
+  it('fails closed when no active password-backed customer exists', async () => {
+    mockExists.mockResolvedValue(null);
+
+    const response = await loginReadiness();
+
+    expect(response.status).toBe(503);
+  });
+
+  it('fails closed without querying customer records when token configuration is invalid', async () => {
+    mockAssertJwtSecretConfigured.mockImplementation(() => {
+      throw new Error('missing secret');
+    });
+    const consoleError = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+
+    const response = await loginReadiness();
+
+    expect(response.status).toBe(503);
+    expect(mockDbConnect).not.toHaveBeenCalled();
+    expect(mockExists).not.toHaveBeenCalled();
+    expect(consoleError).toHaveBeenCalledWith('Customer sign-in readiness check failed');
+    consoleError.mockRestore();
+  });
+
+  it('fails closed on a database error without exposing the provider error', async () => {
+    mockDbConnect.mockRejectedValue(new Error('private database detail'));
+    const consoleError = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+
+    const response = await loginReadiness();
+
+    expect(response.status).toBe(503);
+    expect(await response.json()).toBeNull();
+    expect(consoleError).toHaveBeenCalledWith('Customer sign-in readiness check failed');
+    consoleError.mockRestore();
+  });
 });
 
 describe('POST /api/auth/login', () => {

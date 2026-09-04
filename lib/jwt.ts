@@ -1,4 +1,5 @@
 import { SignJWT, jwtVerify } from 'jose';
+import { assertJwtSecretConfigured } from '@/lib/auth/jwtConfiguration';
 
 const issuer = 'urn:tourticket:issuer';
 const audience = 'urn:tourticket:audience';
@@ -17,7 +18,7 @@ function getSecretBuffer() {
       '[JWT] JWT_SECRET is missing or shorter than 32 characters. Using fallback development secret. Set JWT_SECRET in your environment variables.';
 
     if (process.env.NODE_ENV === 'production') {
-      throw new Error('JWT_SECRET must be configured with at least 32 characters in production.');
+      assertJwtSecretConfigured();
     } else {
       console.warn(warningMessage);
     }
