@@ -130,7 +130,7 @@ export default function DestinationManager({ initialDestinations }: { initialDes
   const [duplicatingDestinationId, setDuplicatingDestinationId] = useState<string | null>(null);
   const [editingDestination, setEditingDestination] = useState<IDestination | null>(null);
   const [activeTab, setActiveTab] = useState('basic');
-  const [listView, setListView] = useState<'active' | 'trash'>('active');
+  const [listView, setListView] = useState<'published' | 'draft' | 'trash'>('published');
   const [editorFilter, setEditorFilter] = useState(() =>
     typeof window === 'undefined' ? '' : new URLSearchParams(window.location.search).get('editor') || '',
   );
@@ -725,7 +725,9 @@ setTimeout(() => router.refresh(), 0);
   );
   const normalizedEditorFilter = editorFilter.trim().toLowerCase();
   const visibleDestinations = initialDestinations.filter((destination) => {
-    const inSelectedLifecycle = listView === 'trash' ? Boolean(destination.archivedAt) : !destination.archivedAt;
+    const inSelectedLifecycle = listView === 'trash'
+      ? Boolean(destination.archivedAt)
+      : !destination.archivedAt && (listView === 'published' ? destination.isPublished : !destination.isPublished);
     if (!inSelectedLifecycle) return false;
     if (!normalizedEditorFilter) return true;
     const actors = [destination.updatedBy, destination.createdBy]
@@ -735,7 +737,9 @@ setTimeout(() => router.refresh(), 0);
       .toLowerCase();
     return actors.includes(normalizedEditorFilter);
   });
-  const activeDestinationCount = initialDestinations.filter((destination) => !destination.archivedAt).length;
+  const publishedDestinationCount = initialDestinations.filter((destination) => !destination.archivedAt && destination.isPublished).length;
+  const draftDestinationCount = initialDestinations.filter((destination) => !destination.archivedAt && !destination.isPublished).length;
+  const activeDestinationCount = publishedDestinationCount + draftDestinationCount;
   const trashDestinationCount = initialDestinations.length - activeDestinationCount;
 
   const toggleCuratedTour = (field: 'bestDealTourIds' | 'topTourIds', tourId: string) => {
@@ -796,11 +800,20 @@ setTimeout(() => router.refresh(), 0);
         <button
           type="button"
           role="tab"
-          aria-selected={listView === 'active'}
-          onClick={() => setListView('active')}
-          className={`rounded-lg px-4 py-2 text-sm font-semibold ${listView === 'active' ? 'bg-indigo-600 text-white' : 'bg-white text-slate-700 border border-slate-200'}`}
+          aria-selected={listView === 'published'}
+          onClick={() => setListView('published')}
+          className={`rounded-lg px-4 py-2 text-sm font-semibold ${listView === 'published' ? 'bg-indigo-600 text-white' : 'bg-white text-slate-700 border border-slate-200'}`}
         >
-          Active ({activeDestinationCount})
+          Published ({publishedDestinationCount})
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={listView === 'draft'}
+          onClick={() => setListView('draft')}
+          className={`rounded-lg px-4 py-2 text-sm font-semibold ${listView === 'draft' ? 'bg-amber-500 text-white' : 'bg-white text-slate-700 border border-slate-200'}`}
+        >
+          Draft ({draftDestinationCount})
         </button>
         <button
           type="button"
@@ -1005,7 +1018,7 @@ setTimeout(() => router.refresh(), 0);
                   ? 'Destinations moved to Trash will appear here and can be restored to Draft.'
                   : 'Create your first destination to start organizing your tours by location.'}
               </p>
-              {listView === 'active' && (
+              {listView !== 'trash' && (
                 <button
                   onClick={openPanelForCreate}
                   className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200"

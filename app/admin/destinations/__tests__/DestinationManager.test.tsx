@@ -145,11 +145,15 @@ describe('DestinationManager', () => {
       expect(screen.getByText('active destinations')).toBeInTheDocument()
     })
 
-    it('should render all destination cards', async () => {
+    it('should separate published destinations from drafts', async () => {
+      const user = userEvent.setup()
       await renderManager()
 
       expect(screen.getByText('Cairo')).toBeInTheDocument()
+      expect(screen.queryByText('Luxor')).not.toBeInTheDocument()
+      await user.click(screen.getByRole('tab', { name: /draft \(1\)/i }))
       expect(screen.getByText('Luxor')).toBeInTheDocument()
+      expect(screen.queryByText('Cairo')).not.toBeInTheDocument()
     })
 
     it('should show add destination button', async () => {
@@ -186,9 +190,11 @@ describe('DestinationManager', () => {
     })
 
     it('should show published/draft status', async () => {
+      const user = userEvent.setup()
       await renderManager()
 
       expect(screen.getByText('Published')).toBeInTheDocument()
+      await user.click(screen.getByRole('tab', { name: /draft \(1\)/i }))
       expect(screen.getByText('Draft')).toBeInTheDocument()
     })
 
@@ -214,6 +220,7 @@ describe('DestinationManager', () => {
         'noopener,noreferrer',
       )
 
+      await user.click(screen.getByRole('tab', { name: /draft \(1\)/i }))
       const draftPreview = screen.getByRole('button', { name: 'Preview Luxor unavailable until published' })
       expect(draftPreview).toBeDisabled()
       await user.click(draftPreview)
