@@ -99,7 +99,8 @@ jest.mock('@/lib/auth/customerSession', () => ({
   formatCustomerForClient: (...args: unknown[]) => mockFormatUser(...args),
 }));
 
-import { HEAD as loginReadiness, POST as login } from '@/app/api/auth/login/route';
+import { POST as login } from '@/app/api/auth/login/route';
+import { GET as loginReadiness } from '@/app/api/auth/login/readiness/route';
 import { POST as signup } from '@/app/api/auth/signup/route';
 import { GET as me } from '@/app/api/auth/me/route';
 import { POST as logout } from '@/app/api/auth/logout/route';
@@ -146,7 +147,7 @@ beforeEach(() => {
   mockSendWelcomeEmail.mockResolvedValue(undefined);
 });
 
-describe('HEAD /api/auth/login', () => {
+describe('GET /api/auth/login/readiness', () => {
   it('returns 204 only when token configuration, database, and a password customer are ready', async () => {
     const response = await loginReadiness();
 
