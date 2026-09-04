@@ -15,7 +15,7 @@ const SignupClient: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { signup } = useAuth();
+  const { signup, sessionError } = useAuth();
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -52,6 +52,12 @@ const SignupClient: React.FC = () => {
               {t('logIn')}
             </Link>
           </p>
+
+          {sessionError && (
+            <p role="alert" className="mb-6 rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+              {sessionError}
+            </p>
+          )}
 
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* First + Last Name */}

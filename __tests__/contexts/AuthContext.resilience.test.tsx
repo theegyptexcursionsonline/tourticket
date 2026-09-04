@@ -48,7 +48,7 @@ const platformCustomer = {
 
 let lastError = '';
 function Harness() {
-  const { login, signup, logout, isAuthenticated, user } = useAuth();
+  const { login, signup, logout, isAuthenticated, user, sessionError } = useAuth();
   const run = (fn: () => Promise<void>) => async () => {
     try {
       await fn();
@@ -61,6 +61,7 @@ function Harness() {
       <span data-testid="authed">{String(isAuthenticated)}</span>
       <span data-testid="email">{user?.email ?? ''}</span>
       <span data-testid="provider">{user?.authProvider ?? ''}</span>
+      <span data-testid="session-error">{sessionError ?? ''}</span>
       <button onClick={run(() => login('traveller@example.com', 'correct-horse'))}>login</button>
       <button
         onClick={run(() =>
@@ -192,6 +193,15 @@ describe('session restore and sign-out', () => {
 
     expect(screen.getByTestId('authed').textContent).toBe('true');
     expect(screen.getByTestId('provider').textContent).toBe('jwt');
+  });
+
+  it('keeps a failed session read distinct from a confirmed signed-out state', async () => {
+    mockPlatformSession.mockRejectedValue(new Error('upstream unavailable'));
+
+    await mount();
+
+    expect(screen.getByTestId('authed').textContent).toBe('false');
+    expect(screen.getByTestId('session-error').textContent).toContain('could not check your session');
   });
 
   it('signs out by clearing the platform session', async () => {

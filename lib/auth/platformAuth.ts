@@ -80,9 +80,18 @@ export function platformSignup(input: {
   return post('/api/auth/signup', input);
 }
 
+export class PlatformSessionUnavailableError extends Error {
+  constructor() {
+    super('The customer session service is temporarily unavailable.');
+    this.name = 'PlatformSessionUnavailableError';
+  }
+}
+
 /**
  * Restore a platform session from the httpOnly cookie.
- * Returns `null` when there is no session; throws nothing.
+ * Returns `null` only when the server confirms that there is no session.
+ * Transport, server and malformed-success failures remain failures so callers
+ * never turn an outage into an apparently signed-out customer.
  */
 export async function platformSession(): Promise<PlatformUser | null> {
   try {
@@ -91,11 +100,15 @@ export async function platformSession(): Promise<PlatformUser | null> {
       credentials: 'same-origin',
       headers: { Accept: 'application/json' },
     });
-    if (!response.ok) return null;
+    if (response.status === 401) return null;
+    if (!response.ok) throw new PlatformSessionUnavailableError();
     const data = await readJson(response);
-    return (data.user as PlatformUser | undefined) ?? null;
-  } catch {
-    return null;
+    const user = data.user as PlatformUser | undefined;
+    if (!user?.id || !user.email) throw new PlatformSessionUnavailableError();
+    return user;
+  } catch (error) {
+    if (error instanceof PlatformSessionUnavailableError) throw error;
+    throw new PlatformSessionUnavailableError();
   }
 }
 

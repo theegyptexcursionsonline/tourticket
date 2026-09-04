@@ -41,6 +41,7 @@ interface AuthContextType {
   user: User | null;
   token: string | null;
   isLoading: boolean;
+  sessionError: string | null;
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<void>;
   signup: (data: SignupData) => Promise<void>;
@@ -69,6 +70,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [sessionError, setSessionError] = useState<string | null>(null);
   const router = useRouter();
   const pathname = usePathname();
 
@@ -126,6 +128,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       try {
         const existing = await platformSession();
         if (cancelled) return;
+        setSessionError(null);
         if (existing) {
           adoptPlatformSession(existing);
         } else {
@@ -133,7 +136,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           setToken(null);
         }
       } catch {
-        // Nothing to restore — the customer is simply signed out.
+        if (!cancelled) {
+          setSessionError('We could not check your session. Please try again in a few minutes.');
+        }
       } finally {
         if (!cancelled) setIsLoading(false);
       }
@@ -147,8 +152,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   // --- Refresh user data ---
   const refreshUser = async () => {
     if (!user) return;
-    const existing = await platformSession();
-    if (existing) adoptPlatformSession(existing, token || undefined);
+    try {
+      const existing = await platformSession();
+      setSessionError(null);
+      if (existing) adoptPlatformSession(existing, token || undefined);
+    } catch (error) {
+      setSessionError('We could not refresh your account. Please try again in a few minutes.');
+      throw error;
+    }
   };
 
   // --- Login with Email/Password ---
@@ -157,6 +168,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       const result = await platformLogin(email, password);
       if (result.ok && result.user) {
+        setSessionError(null);
         adoptPlatformSession(result.user, result.token);
         return;
       }
@@ -184,6 +196,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         password: data.password,
       });
       if (result.ok && result.user) {
+        setSessionError(null);
         // The route sets the session cookie, so creating the account also
         // signs the customer in — straight on to checkout.
         adoptPlatformSession(result.user, result.token);
@@ -205,6 +218,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     setUser(null);
     setToken(null);
+    setSessionError(null);
     router.push('/login');
   };
 
@@ -213,6 +227,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     user,
     token,
     isLoading,
+    sessionError,
     isAuthenticated: !!token && !!user,
     login,
     signup,

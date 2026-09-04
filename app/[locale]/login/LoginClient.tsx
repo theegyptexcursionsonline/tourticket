@@ -11,7 +11,7 @@ import { safeRelativeRedirect } from '@/lib/security/safeRedirect';
 
 export default function LoginClient() {
   const t = useTranslations('loginPage');
-  const { user, login, isLoading: authLoading, isAuthenticated } = useAuth();
+  const { user, login, isLoading: authLoading, isAuthenticated, sessionError } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectTarget = safeRelativeRedirect(searchParams.get('redirect'));
@@ -74,6 +74,12 @@ export default function LoginClient() {
               {t('signUp')}
             </Link>
           </p>
+
+          {sessionError && (
+            <p role="alert" className="mb-6 rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+              {sessionError}
+            </p>
+          )}
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
