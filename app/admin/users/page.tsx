@@ -28,7 +28,7 @@ interface UserStats {
   averageBookingsPerUser: number;
 }
 
-// Firebase UIDs and other non-human names are long alphanumeric strings
+// Legacy machine identifiers and other non-human names are long alphanumeric strings.
 const looksLikeUid = (name: string) => /^[a-zA-Z0-9]{20,}$/.test(name.replace(/\s/g, ''));
 
 const StatCard = ({ icon: Icon, title, value, subtitle, color = "slate" }: {
@@ -113,7 +113,7 @@ const UsersPage = () => {
     // Prefer firstName + lastName
     if (user.firstName && user.lastName) return `${user.firstName} ${user.lastName}`;
     if (user.firstName) return user.firstName;
-    // Use name only if it doesn't look like a Firebase UID
+    // Use name only if it does not look like a legacy machine identifier.
     if (user.name && !looksLikeUid(user.name)) return user.name;
     // Fallback to email prefix
     return user.email.split('@')[0];
@@ -122,9 +122,9 @@ const UsersPage = () => {
   const getAuthBadge = (provider?: string) => {
     switch (provider) {
       case 'google':
-        return { label: 'Google', className: 'bg-blue-50 text-blue-700 border-blue-200' };
+        return { label: 'Legacy identity', className: 'bg-slate-50 text-slate-600 border-slate-200' };
       case 'firebase':
-        return { label: 'Firebase', className: 'bg-amber-50 text-amber-700 border-amber-200' };
+        return { label: 'Legacy identity', className: 'bg-slate-50 text-slate-600 border-slate-200' };
       case 'jwt':
         return { label: 'Email', className: 'bg-green-50 text-green-700 border-green-200' };
       default:

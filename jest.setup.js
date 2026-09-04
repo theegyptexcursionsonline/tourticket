@@ -5,7 +5,7 @@ import { TextDecoder, TextEncoder } from 'node:util'
 if (!globalThis.TextEncoder) globalThis.TextEncoder = TextEncoder
 if (!globalThis.TextDecoder) globalThis.TextDecoder = TextDecoder
 
-// Polyfill web APIs for jsdom (required by Firebase, streaming libs, etc.)
+// Polyfill web APIs for jsdom (required by streaming and browser libraries).
 if (!globalThis.fetch) {
   globalThis.fetch = jest.fn(() =>
     Promise.resolve({ ok: true, json: () => Promise.resolve({}), text: () => Promise.resolve('') })
@@ -45,36 +45,6 @@ if (!globalThis.TransformStream) {
     }
   }
 }
-
-// Mock Firebase (prevents ReferenceError from firebase/auth in jsdom)
-jest.mock('firebase/app', () => ({
-  initializeApp: jest.fn(() => ({})),
-  getApp: jest.fn(() => ({})),
-  getApps: jest.fn(() => []),
-}))
-jest.mock('firebase/auth', () => ({
-  getAuth: jest.fn(() => ({})),
-  onAuthStateChanged: jest.fn((auth, cb) => { cb(null); return jest.fn() }),
-  signInWithEmailAndPassword: jest.fn(),
-  signOut: jest.fn(),
-  createUserWithEmailAndPassword: jest.fn(),
-  GoogleAuthProvider: jest.fn(),
-  signInWithPopup: jest.fn(),
-}))
-jest.mock('firebase-admin/app', () => ({
-  cert: jest.fn((value) => value),
-  getApps: jest.fn(() => []),
-  initializeApp: jest.fn(() => ({})),
-}))
-jest.mock('firebase-admin/auth', () => ({
-  getAuth: jest.fn(() => ({
-    verifyIdToken: jest.fn().mockRejectedValue(new Error('Unauthenticated test request')),
-    getUser: jest.fn(),
-    updateUser: jest.fn(),
-    deleteUser: jest.fn(),
-  })),
-}))
-jest.mock('firebase-admin/firestore', () => ({ getFirestore: jest.fn(() => ({})) }))
 
 // AI SDK v7 is ESM-only. Component tests exercise our rendering contract, not
 // the provider transport implementation, so keep the transport deterministic.

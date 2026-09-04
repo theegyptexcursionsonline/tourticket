@@ -1,27 +1,19 @@
-/**
- * POST /api/auth/reset-password — platform-owned account recovery.
- *
- * This is the path that must keep working when the external identity provider
- * does not. Without it, a customer whose password lives only with that
- * provider is locked out of their own account for the duration of an outage.
- *
- * Every unusable link — unknown, replayed, expired, or belonging to a
- * deactivated account — must produce one identical response.
- */
-
 jest.mock('next/server', () => {
   class MockNextResponse {
     status: number;
-    _body: unknown;
+    private readonly body: unknown;
     headers: Map<string, string>;
+
     constructor(body: unknown, init?: { status?: number; headers?: Record<string, string> }) {
-      this._body = body;
+      this.body = body;
       this.status = init?.status || 200;
       this.headers = new Map(Object.entries(init?.headers || {}));
     }
+
     async json() {
-      return this._body;
+      return this.body;
     }
+
     static json(body: unknown, init?: { status?: number; headers?: Record<string, string> }) {
       return new MockNextResponse(body, init);
     }
@@ -29,17 +21,17 @@ jest.mock('next/server', () => {
   return { NextResponse: MockNextResponse };
 });
 
-jest.mock('@/lib/dbConnect', () => jest.fn().mockResolvedValue(undefined));
+jest.mock('@/lib/dbConnect', () => ({ __esModule: true, default: jest.fn().mockResolvedValue(undefined) }));
 
-const mockFindOne = jest.fn();
+const mockFindOneAndUpdate = jest.fn();
 jest.mock('@/lib/models/user', () => ({
   __esModule: true,
-  default: { findOne: (...a: unknown[]) => mockFindOne(...a) },
+  default: { findOneAndUpdate: (...args: unknown[]) => mockFindOneAndUpdate(...args) },
 }));
 
 const mockLimits = jest.fn();
 jest.mock('@/lib/security/distributedAbuseLimit', () => ({
-  enforcePublicActionLimits: (...a: unknown[]) => mockLimits(...a),
+  enforcePublicActionLimits: (...args: unknown[]) => mockLimits(...args),
 }));
 
 jest.mock('@/lib/security/publicInput', () => {
@@ -48,208 +40,172 @@ jest.mock('@/lib/security/publicInput', () => {
   }
   return {
     PublicInputError,
-    readBoundedJson: async (request: { _body: unknown }) => request._body,
+    readBoundedJson: async (request: { body: unknown }) => request.body,
   };
 });
 
+const mockGenSalt = jest.fn();
+const mockHash = jest.fn();
 jest.mock('bcryptjs', () => ({
   __esModule: true,
   default: {
-    genSalt: jest.fn().mockResolvedValue('salt'),
-    hash: jest.fn().mockImplementation(async (value: string) => `hashed:${value}`),
+    genSalt: (...args: unknown[]) => mockGenSalt(...args),
+    hash: (...args: unknown[]) => mockHash(...args),
   },
 }));
 
 import { POST } from '@/app/api/auth/reset-password/route';
 import { createResetToken, hashResetToken } from '@/lib/auth/passwordReset';
 
-const VALID_PASSWORD = 'a-good-password-1';
+const validPassword = 'a-good-password-1';
+const invalidLink = 'This reset link is invalid or has expired. Request a new link and try again.';
 
-function requestWith(body: unknown) {
-  return { _body: body } as never;
-}
-
-interface UserDoc {
-  isActive: boolean;
-  password?: string;
-  adminLoginAttempts?: number;
-  adminLockUntil?: Date;
-  requirePasswordChange?: boolean;
-  passwordResetTokenHash?: string;
-  passwordResetExpires?: Date;
-  save: jest.Mock;
-}
-
-function userDoc(overrides: Partial<UserDoc> = {}): UserDoc {
-  return {
-    isActive: true,
-    password: 'old',
-    adminLoginAttempts: 4,
-    adminLockUntil: new Date(Date.now() + 60_000),
-    requirePasswordChange: true,
-    save: jest.fn().mockResolvedValue(undefined),
-    ...overrides,
-  };
-}
-
-function selectable(doc: UserDoc | null) {
-  return { select: jest.fn().mockResolvedValue(doc) };
+function request(body: unknown) {
+  return { body } as never;
 }
 
 beforeEach(() => {
   jest.clearAllMocks();
   mockLimits.mockResolvedValue({ allowed: true });
+  mockGenSalt.mockResolvedValue('salt');
+  mockHash.mockResolvedValue('new-password-hash');
+  mockFindOneAndUpdate.mockResolvedValue({ _id: 'customer-1' });
 });
 
-describe('input validation', () => {
+describe('POST /api/auth/reset-password', () => {
   it.each([
-    ['a missing token', { password: VALID_PASSWORD, confirmPassword: VALID_PASSWORD }],
-    ['a malformed token', { token: 'nope', password: VALID_PASSWORD, confirmPassword: VALID_PASSWORD }],
-  ])('rejects %s without touching the database', async (_label, body) => {
-    const response = await POST(requestWith(body));
+    ['a missing token', { password: validPassword, confirmPassword: validPassword }],
+    ['a malformed token', { token: 'nope', password: validPassword, confirmPassword: validPassword }],
+  ])('rejects %s before hashing or querying', async (_label, body) => {
+    const response = await POST(request(body));
     expect(response.status).toBe(400);
-    expect(mockFindOne).not.toHaveBeenCalled();
+    expect(mockHash).not.toHaveBeenCalled();
+    expect(mockFindOneAndUpdate).not.toHaveBeenCalled();
   });
 
-  it('enforces the password rules before any lookup', async () => {
+  it('enforces password strength and matching confirmation before storage', async () => {
     const { token } = createResetToken();
-    const response = await POST(requestWith({ token, password: 'short', confirmPassword: 'short' }));
-    expect(response.status).toBe(400);
-    expect((await response.json()).error).toContain('at least 8');
-    expect(mockFindOne).not.toHaveBeenCalled();
+    const weak = await POST(request({ token, password: 'short', confirmPassword: 'short' }));
+    expect(weak.status).toBe(400);
+    expect((await weak.json()).error).toContain('at least 8');
+
+    const mismatch = await POST(request({
+      token,
+      password: validPassword,
+      confirmPassword: 'something-else-1',
+    }));
+    expect(mismatch.status).toBe(400);
+    expect((await mismatch.json()).error).toBe('Passwords do not match.');
+    expect(mockFindOneAndUpdate).not.toHaveBeenCalled();
   });
 
-  it('requires the confirmation to match', async () => {
-    const { token } = createResetToken();
-    const response = await POST(
-      requestWith({ token, password: VALID_PASSWORD, confirmPassword: 'something-else-1' }),
-    );
-    expect(response.status).toBe(400);
-    expect((await response.json()).error).toBe('Passwords do not match.');
-  });
-});
-
-describe('token handling', () => {
-  it('looks the account up by the token HASH, never the token', async () => {
+  it('atomically consumes the hash while setting the platform credential and preserving the customer record', async () => {
     const issued = createResetToken();
-    mockFindOne.mockReturnValueOnce(
-      selectable(userDoc({ passwordResetTokenHash: issued.tokenHash, passwordResetExpires: issued.expiresAt })),
-    );
 
-    await POST(requestWith({ token: issued.token, password: VALID_PASSWORD, confirmPassword: VALID_PASSWORD }));
-
-    expect(mockFindOne).toHaveBeenCalledWith({ passwordResetTokenHash: hashResetToken(issued.token) });
-    const queried = JSON.stringify(mockFindOne.mock.calls[0]);
-    expect(queried).not.toContain(issued.token);
-  });
-
-  it('resets the password, consumes the link and clears any lockout', async () => {
-    const issued = createResetToken();
-    const doc = userDoc({ passwordResetTokenHash: issued.tokenHash, passwordResetExpires: issued.expiresAt });
-    mockFindOne.mockReturnValueOnce(selectable(doc));
-
-    const response = await POST(
-      requestWith({ token: issued.token, password: VALID_PASSWORD, confirmPassword: VALID_PASSWORD }),
-    );
+    const response = await POST(request({
+      token: issued.token,
+      password: validPassword,
+      confirmPassword: validPassword,
+    }));
 
     expect(response.status).toBe(200);
-    expect(doc.password).toBe(`hashed:${VALID_PASSWORD}`);
-    // Single use.
-    expect(doc.passwordResetTokenHash).toBeUndefined();
-    expect(doc.passwordResetExpires).toBeUndefined();
-    // Otherwise the customer resets their password and still cannot sign in.
-    expect(doc.adminLoginAttempts).toBe(0);
-    expect(doc.adminLockUntil).toBeUndefined();
-    expect(doc.requirePasswordChange).toBe(false);
-    expect(doc.save).toHaveBeenCalled();
+    expect(mockHash).toHaveBeenCalledWith(validPassword, 'salt');
+    expect(mockFindOneAndUpdate).toHaveBeenCalledWith(
+      {
+        passwordResetTokenHash: hashResetToken(issued.token),
+        passwordResetExpires: { $gt: expect.any(Date) },
+        isActive: { $ne: false },
+      },
+      {
+        $set: {
+          password: 'new-password-hash',
+          isGuestProfile: false,
+          authProvider: 'jwt',
+          emailVerified: true,
+          adminLoginAttempts: 0,
+          requirePasswordChange: false,
+        },
+        $unset: {
+          passwordResetTokenHash: '',
+          passwordResetExpires: '',
+          adminLockUntil: '',
+        },
+      },
+      { new: true, runValidators: false },
+    );
+    expect(JSON.stringify(mockFindOneAndUpdate.mock.calls[0])).not.toContain(issued.token);
   });
 
-  it.each([
-    ['an unknown or already-used link', null],
-    ['an expired link', 'expired'],
-    ['a deactivated account', 'inactive'],
-    ['a stored hash that does not match', 'mismatch'],
-  ])('answers identically for %s', async (_label, mode) => {
+  it('permits exactly one winner when the same link is submitted concurrently', async () => {
     const issued = createResetToken();
-    let doc: UserDoc | null = null;
-    if (mode === 'expired') {
-      doc = userDoc({
-        passwordResetTokenHash: issued.tokenHash,
-        passwordResetExpires: new Date(Date.now() - 1_000),
-      });
-    } else if (mode === 'inactive') {
-      doc = userDoc({
-        isActive: false,
-        passwordResetTokenHash: issued.tokenHash,
-        passwordResetExpires: issued.expiresAt,
-      });
-    } else if (mode === 'mismatch') {
-      doc = userDoc({
-        passwordResetTokenHash: createResetToken().tokenHash,
-        passwordResetExpires: issued.expiresAt,
-      });
-    }
-    mockFindOne.mockReturnValueOnce(selectable(doc));
+    mockFindOneAndUpdate
+      .mockResolvedValueOnce({ _id: 'customer-1' })
+      .mockResolvedValueOnce(null);
 
-    const response = await POST(
-      requestWith({ token: issued.token, password: VALID_PASSWORD, confirmPassword: VALID_PASSWORD }),
-    );
+    const responses = await Promise.all([
+      POST(request({ token: issued.token, password: validPassword, confirmPassword: validPassword })),
+      POST(request({ token: issued.token, password: validPassword, confirmPassword: validPassword })),
+    ]);
+
+    expect(responses.map((response) => response.status).sort()).toEqual([200, 400]);
+    expect((await responses.find((response) => response.status === 400)!.json()).error).toBe(invalidLink);
+  });
+
+  it('answers identically for an unknown, expired, deactivated, or already-used link', async () => {
+    const issued = createResetToken();
+    mockFindOneAndUpdate.mockResolvedValue(null);
+
+    const response = await POST(request({
+      token: issued.token,
+      password: validPassword,
+      confirmPassword: validPassword,
+    }));
 
     expect(response.status).toBe(400);
-    expect((await response.json()).error).toBe(
-      'This reset link is invalid or has expired. Request a new link and try again.',
-    );
-    if (doc) expect(doc.save).not.toHaveBeenCalled();
+    expect((await response.json()).error).toBe(invalidLink);
   });
-});
 
-describe('abuse limits and failure handling', () => {
-  it('buckets on the token hash, never on an email', async () => {
+  it('enforces the distributed limit before hashing or storage', async () => {
     const issued = createResetToken();
-    mockFindOne.mockReturnValueOnce(
-      selectable(userDoc({ passwordResetTokenHash: issued.tokenHash, passwordResetExpires: issued.expiresAt })),
-    );
+    mockLimits.mockResolvedValue({ allowed: false, retryAfterSeconds: 900 });
 
-    await POST(requestWith({ token: issued.token, password: VALID_PASSWORD, confirmPassword: VALID_PASSWORD }));
-
-    const options = mockLimits.mock.calls[0][0] as { action: string; subject: string };
-    expect(options.action).toBe('reset-password');
-    expect(options.subject).toBe(hashResetToken(issued.token).slice(0, 32));
-  });
-
-  it('returns 429 with Retry-After when limited, without a lookup', async () => {
-    mockLimits.mockResolvedValueOnce({ allowed: false, retryAfterSeconds: 900 });
-    const { token } = createResetToken();
-
-    const response = await POST(requestWith({ token, password: VALID_PASSWORD, confirmPassword: VALID_PASSWORD }));
+    const response = await POST(request({
+      token: issued.token,
+      password: validPassword,
+      confirmPassword: validPassword,
+    }));
 
     expect(response.status).toBe(429);
     expect(response.headers.get('Retry-After')).toBe('900');
-    expect(mockFindOne).not.toHaveBeenCalled();
+    expect(mockHash).not.toHaveBeenCalled();
+    expect(mockFindOneAndUpdate).not.toHaveBeenCalled();
   });
 
-  it('reports a storage failure as unavailable rather than as an invalid link', async () => {
-    // "Invalid link" would send the customer round the loop forever for a
-    // fault that is ours.
+  it('buckets on the token hash and never caches responses', async () => {
     const issued = createResetToken();
-    mockFindOne.mockImplementationOnce(() => {
-      throw new Error('connection lost');
+    const response = await POST(request({
+      token: issued.token,
+      password: validPassword,
+      confirmPassword: validPassword,
+    }));
+
+    expect(mockLimits.mock.calls[0][0]).toMatchObject({
+      action: 'reset-password',
+      subject: hashResetToken(issued.token).slice(0, 32),
     });
-
-    const response = await POST(
-      requestWith({ token: issued.token, password: VALID_PASSWORD, confirmPassword: VALID_PASSWORD }),
-    );
-    expect(response.status).toBe(503);
+    expect(response.headers.get('Cache-Control')).toContain('no-store');
   });
 
-  it('never caches a reset response', async () => {
+  it('reports a storage failure as unavailable rather than invalid-link user error', async () => {
     const issued = createResetToken();
-    mockFindOne.mockReturnValueOnce(
-      selectable(userDoc({ passwordResetTokenHash: issued.tokenHash, passwordResetExpires: issued.expiresAt })),
-    );
-    const response = await POST(
-      requestWith({ token: issued.token, password: VALID_PASSWORD, confirmPassword: VALID_PASSWORD }),
-    );
-    expect(response.headers.get('Cache-Control')).toContain('no-store');
+    mockFindOneAndUpdate.mockRejectedValue(new Error('connection lost'));
+
+    const response = await POST(request({
+      token: issued.token,
+      password: validPassword,
+      confirmPassword: validPassword,
+    }));
+
+    expect(response.status).toBe(503);
   });
 });

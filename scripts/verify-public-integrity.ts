@@ -32,8 +32,9 @@ async function main() {
   const { default: Blog } = await import('@/lib/models/Blog');
   const { default: BlogLike } = await import('@/lib/models/BlogLike');
   const { default: User } = await import('@/lib/models/user');
-  const { syncFirebaseUserToMongo } = await import('@/lib/firebase/authHelpers');
+  const { createResetToken } = await import('@/lib/auth/passwordReset');
   const { POST: signup } = await import('@/app/api/auth/signup/route');
+  const { POST: resetPassword } = await import('@/app/api/auth/reset-password/route');
   const { POST: likeBlog } = await import('@/app/api/blog/[slug]/like/route');
   const { NextRequest } = await import('next/server');
 
@@ -166,7 +167,7 @@ async function main() {
     }),
   }));
   assert.equal(unsafePasswordClaim.status, 409);
-  assert.equal((await unsafePasswordClaim.json()).code, 'EMAIL_VERIFICATION_REQUIRED');
+  assert.equal((await unsafePasswordClaim.json()).code, 'ACCOUNT_EXISTS');
   const unchangedLegacyGuest = await User.findById(legacyGuest._id).select('+password +firebaseUid');
   assert.equal(unchangedLegacyGuest?.phone, '+201111111111');
   assert.equal(unchangedLegacyGuest?.country, 'Egypt');
@@ -174,81 +175,45 @@ async function main() {
   assert.equal(unchangedLegacyGuest?.password, undefined);
   assert.equal(unchangedLegacyGuest?.firebaseUid, undefined);
 
-  await User.create({
-    firstName: 'Firebase',
-    lastName: 'Guest',
-    email: 'firebase-claim@example.com',
-    phone: '+202222222222',
-    country: 'Egypt',
-    role: 'customer',
-    permissions: [],
-    isActive: true,
-    isGuestProfile: true,
-  });
-  await assert.rejects(
-    syncFirebaseUserToMongo({
-      uid: 'unverified-firebase-uid',
-      email: 'firebase-claim@example.com',
-      displayName: 'Unverified User',
-      emailVerified: false,
-      providerData: [{ providerId: 'password' }],
-    }),
-    (error: unknown) => (error as { code?: string }).code === 'ACCOUNT_LINK_REQUIRED',
-  );
-  const stillUnverifiedGuest = await User.findOne({ email: 'firebase-claim@example.com' }).select('+firebaseUid');
-  assert.equal(stillUnverifiedGuest?.isGuestProfile, true);
-  assert.equal(stillUnverifiedGuest?.firebaseUid, undefined);
-  const firebaseReplayClaims = await Promise.all([
-    syncFirebaseUserToMongo({
-      uid: 'firebase-replay-uid',
-      email: 'firebase-claim@example.com',
-      displayName: 'Different Display Name',
-      emailVerified: true,
-      providerData: [{ providerId: 'password' }],
-    }),
-    syncFirebaseUserToMongo({
-      uid: 'firebase-replay-uid',
-      email: 'firebase-claim@example.com',
-      displayName: 'Different Display Name',
-      emailVerified: true,
-      providerData: [{ providerId: 'password' }],
-    }),
-  ]);
-  assert.equal(firebaseReplayClaims[0].user.id, firebaseReplayClaims[1].user.id);
-  const firebaseClaimedGuest = await User.findOne({ email: 'firebase-claim@example.com' }).select('+firebaseUid');
-  assert.equal(firebaseClaimedGuest?.firebaseUid, 'firebase-replay-uid');
-  assert.equal(firebaseClaimedGuest?.isGuestProfile, false);
-  assert.equal(firebaseClaimedGuest?.phone, '+202222222222');
+  const issuedReset = createResetToken();
+  legacyGuest.passwordResetTokenHash = issuedReset.tokenHash;
+  legacyGuest.passwordResetExpires = issuedReset.expiresAt;
+  await legacyGuest.save({ validateBeforeSave: false });
 
-  await User.create({
-    firstName: 'Race',
-    lastName: 'Guest',
-    email: 'firebase-race@example.com',
-    role: 'customer',
-    permissions: [],
-    isActive: true,
-    isGuestProfile: true,
+  const resetRequest = () => new NextRequest('http://localhost/api/auth/reset-password', {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      'user-agent': 'public-integrity-verifier',
+      'x-nf-client-connection-ip': '127.0.0.3',
+    },
+    body: JSON.stringify({
+      token: issuedReset.token,
+      password: 'RecoveredPassword123!',
+      confirmPassword: 'RecoveredPassword123!',
+    }),
   });
-  const competingFirebaseClaims = await Promise.allSettled([
-    syncFirebaseUserToMongo({
-      uid: 'firebase-race-a',
-      email: 'firebase-race@example.com',
-      emailVerified: true,
-      providerData: [{ providerId: 'password' }],
-    }),
-    syncFirebaseUserToMongo({
-      uid: 'firebase-race-b',
-      email: 'firebase-race@example.com',
-      emailVerified: true,
-      providerData: [{ providerId: 'password' }],
-    }),
+  const competingResetResults = await Promise.all([
+    resetPassword(resetRequest()),
+    resetPassword(resetRequest()),
   ]);
-  assert.equal(competingFirebaseClaims.filter((result) => result.status === 'fulfilled').length, 1);
-  assert.equal(competingFirebaseClaims.filter((result) => result.status === 'rejected').length, 1);
+  assert.deepEqual(
+    competingResetResults.map((response) => response.status).sort(),
+    [200, 400],
+  );
+
+  const recoveredGuest = await User.findById(legacyGuest._id).select('+password +firebaseUid');
+  assert.ok(recoveredGuest?.password);
+  assert.equal(recoveredGuest?.isGuestProfile, false);
+  assert.equal(recoveredGuest?.authProvider, 'jwt');
+  assert.equal(recoveredGuest?.emailVerified, true);
+  assert.equal(recoveredGuest?.phone, '+201111111111');
+  assert.equal(recoveredGuest?.country, 'Egypt');
+  assert.equal(recoveredGuest?.firebaseUid, undefined);
 
   await mongoose.connection.db!.dropDatabase();
   await closeConnection();
-  console.log('Public-integrity verification passed: limiter concurrency, consent ordering, suppression, idempotent likes, verified guest claims, and unverified-claim rejection.');
+  console.log('Public-integrity verification passed: limiter concurrency, consent ordering, suppression, idempotent likes, proof-gated guest recovery, and single-use reset claims.');
 }
 
 main().catch((error) => {

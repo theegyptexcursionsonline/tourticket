@@ -87,9 +87,9 @@ jest.mock('@/lib/auth/welcomeRecommendations', () => ({
 
 const mockAuthenticate = jest.fn();
 const mockFormatUser = jest.fn();
-jest.mock('@/lib/firebase/authHelpers', () => ({
-  authenticateFirebaseUser: (...args: unknown[]) => mockAuthenticate(...args),
-  formatUserForClient: (...args: unknown[]) => mockFormatUser(...args),
+jest.mock('@/lib/auth/customerSession', () => ({
+  authenticateCustomerSession: (...args: unknown[]) => mockAuthenticate(...args),
+  formatCustomerForClient: (...args: unknown[]) => mockFormatUser(...args),
 }));
 
 import { POST as login } from '@/app/api/auth/login/route';
@@ -152,12 +152,15 @@ describe('POST /api/auth/login', () => {
     expect(response.status).toBe(200);
     expect(mockFindOne).toHaveBeenCalledWith({ email: 'traveller@example.com' });
     expect(mockCompare).toHaveBeenCalledWith('correct-password', 'password-hash');
-    expect(mockSignToken).toHaveBeenCalledWith(expect.objectContaining({
-      sub: 'customer-1',
-      email: 'traveller@example.com',
-      role: 'customer',
-      scope: 'customer',
-    }));
+    expect(mockSignToken).toHaveBeenCalledWith(
+      expect.objectContaining({
+        sub: 'customer-1',
+        email: 'traveller@example.com',
+        role: 'customer',
+        scope: 'customer',
+      }),
+      { expiresIn: '7d' },
+    );
     expect(body).toMatchObject({ success: true, token: 'signed-token' });
     expect(response.cookies.set).toHaveBeenCalledWith('authToken', 'signed-token', expect.objectContaining({
       httpOnly: true,
@@ -178,6 +181,19 @@ describe('POST /api/auth/login', () => {
     expect(response.status).toBe(401);
     expect(await response.json()).toEqual({ error: 'Invalid credentials' });
     expect(mockCompare).toHaveBeenCalledTimes(1);
+    expect(mockSignToken).not.toHaveBeenCalled();
+  });
+
+  it('does not mint a storefront customer session for an administrator credential', async () => {
+    mockFindOne.mockReturnValue(selectable(userDoc({ role: 'admin' })));
+
+    const response = await login(requestWith({
+      email: 'administrator@example.com',
+      password: 'correct-password',
+    }));
+
+    expect(response.status).toBe(401);
+    expect(await response.json()).toEqual({ error: 'Invalid credentials' });
     expect(mockSignToken).not.toHaveBeenCalled();
   });
 
@@ -236,8 +252,12 @@ describe('POST /api/auth/signup', () => {
       role: 'customer',
       permissions: [],
       isGuestProfile: false,
+      authProvider: 'jwt',
     }));
-    expect(mockSignToken).toHaveBeenCalledWith(expect.objectContaining({ scope: 'customer' }));
+    expect(mockSignToken).toHaveBeenCalledWith(
+      expect.objectContaining({ scope: 'customer' }),
+      { expiresIn: '7d' },
+    );
     expect(body).toMatchObject({ success: true, token: 'signed-token' });
     expect(response.cookies.set).toHaveBeenCalledWith('authToken', 'signed-token', expect.objectContaining({
       httpOnly: true,

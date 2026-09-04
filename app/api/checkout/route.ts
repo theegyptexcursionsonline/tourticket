@@ -13,7 +13,7 @@ import { unitCount, unitCountLabel } from '@/lib/bookings/unitPricing';
 import { buildGoogleMapsLink, buildStaticMapImageUrl } from '@/lib/utils/mapImage';
 import { generateDeterministicBookingReference, generateUniqueBookingReference } from '@/lib/utils/bookingReference';
 import { PriceChangedError, secureCartPricing, type SecureCartItem } from '@/lib/checkout/serverCartPricing';
-import { authenticateFirebaseUser } from '@/lib/firebase/authHelpers';
+import { authenticateCustomerSession } from '@/lib/auth/customerSession';
 import { signToken } from '@/lib/jwt';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 import { buildQuoteBinding } from '@/lib/checkout/quoteBinding';
@@ -174,7 +174,7 @@ export async function POST(request: NextRequest) {
 
     const normalizedCustomerEmail = String(customer.email).trim().toLowerCase();
     // A previous passwordless guest profile may be reused for another guest
-    // checkout. Never attach a guest checkout to an arbitrary local/Firebase
+    // checkout. Never attach a guest checkout to an arbitrary existing
     // account merely because the email matches.
     const existingEmailUser = isGuest
       ? await User.findOne({ email: normalizedCustomerEmail })
@@ -408,7 +408,7 @@ export async function POST(request: NextRequest) {
         }
       }
     } else {
-      const authResult = await authenticateFirebaseUser(request);
+      const authResult = await authenticateCustomerSession(request);
       if (!authResult.success || !authResult.user) {
         return NextResponse.json(
           { success: false, message: authResult.error || 'Authentication required' },

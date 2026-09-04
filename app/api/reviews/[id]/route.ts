@@ -1,9 +1,7 @@
 import dbConnect from '@/lib/dbConnect';
 import Review from '@/lib/models/Review';
-import User from '@/lib/models/user';
 import { NextResponse, NextRequest } from 'next/server';
-import { verifyToken } from '@/lib/jwt';
-import { verifyFirebaseToken } from '@/lib/firebase/admin';
+import { authenticateCustomerSession } from '@/lib/auth/customerSession';
 import type { IReview } from '@/lib/models/Review';
 
 interface PopulatedReviewUser {
@@ -42,41 +40,13 @@ export async function GET(request: Request, { params }: { params: Promise<Params
 export async function PUT(request: NextRequest, { params }: { params: Promise<Params> }) {
   await dbConnect();
 
-  // Get token from request - Try Firebase first, fallback to JWT
-  const authHeader = request.headers.get('Authorization');
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
-  }
-
-  const token = authHeader.split(' ')[1];
-
   try {
     const { id } = await params;
-    let userId: string;
-
-    // Try Firebase authentication first
-    const firebaseResult = await verifyFirebaseToken(token);
-
-    if (firebaseResult.success && firebaseResult.uid) {
-      // Find user by Firebase UID
-      const user = await User.findOne({ firebaseUid: firebaseResult.uid, isActive: true });
-
-      if (!user) {
-        return NextResponse.json({ error: 'User not found' }, { status: 404 });
-      }
-
-      userId = String(user._id);
-    } else {
-      // Fallback to JWT (for backwards compatibility)
-      const payload = await verifyToken(token);
-      if (!payload || payload.scope !== 'customer' || !payload.sub) {
-        return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
-      }
-
-      const activeUser = await User.findOne({ _id: payload.sub, isActive: true }).select('_id').lean();
-      if (!activeUser) return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
-      userId = String(activeUser._id);
+    const authentication = await authenticateCustomerSession(request);
+    if (!authentication.success) {
+      return NextResponse.json({ error: authentication.error }, { status: authentication.statusCode });
     }
+    const userId = String(authentication.user._id);
 
     const body = await request.json();
     const { rating, comment, title } = body;
@@ -138,41 +108,13 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<Pa
 export async function DELETE(request: NextRequest, { params }: { params: Promise<Params> }) {
   await dbConnect();
 
-  // Get token from request - Try Firebase first, fallback to JWT
-  const authHeader = request.headers.get('Authorization');
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
-  }
-
-  const token = authHeader.split(' ')[1];
-
   try {
     const { id } = await params;
-    let userId: string;
-
-    // Try Firebase authentication first
-    const firebaseResult = await verifyFirebaseToken(token);
-
-    if (firebaseResult.success && firebaseResult.uid) {
-      // Find user by Firebase UID
-      const user = await User.findOne({ firebaseUid: firebaseResult.uid, isActive: true });
-
-      if (!user) {
-        return NextResponse.json({ error: 'User not found' }, { status: 404 });
-      }
-
-      userId = String(user._id);
-    } else {
-      // Fallback to JWT (for backwards compatibility)
-      const payload = await verifyToken(token);
-      if (!payload || payload.scope !== 'customer' || !payload.sub) {
-        return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
-      }
-
-      const activeUser = await User.findOne({ _id: payload.sub, isActive: true }).select('_id').lean();
-      if (!activeUser) return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
-      userId = String(activeUser._id);
+    const authentication = await authenticateCustomerSession(request);
+    if (!authentication.success) {
+      return NextResponse.json({ error: authentication.error }, { status: authentication.statusCode });
     }
+    const userId = String(authentication.user._id);
 
     // Find the review and check ownership
     const review = await Review.findById(id);

@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
 import User from '@/lib/models/user';
 import { buildResetUrl, createResetToken } from '@/lib/auth/passwordReset';
-import { generateFirebasePasswordResetLink } from '@/lib/firebase/admin';
 import { sendPasswordResetEmail } from '@/lib/mailgun';
 import { enforcePublicActionLimits } from '@/lib/security/distributedAbuseLimit';
 import { normalizeEmail, PublicInputError, readBoundedJson } from '@/lib/security/publicInput';
@@ -29,11 +28,6 @@ function configuredBaseUrl(): string {
     throw new Error('password_reset_base_url_must_use_https');
   }
   return parsed.origin;
-}
-
-function firebaseErrorCode(error: unknown): string {
-  if (typeof error !== 'object' || error === null || !('code' in error)) return '';
-  return String((error as { code?: unknown }).code || '');
 }
 
 /**
@@ -80,31 +74,10 @@ export async function POST(request: NextRequest) {
     if (!process.env.MAILGUN_API_KEY || !process.env.MAILGUN_DOMAIN) {
       throw new Error('password_reset_delivery_not_configured');
     }
-    const continueUrl = `${configuredBaseUrl()}/login`;
-
-    let resetUrl: string;
-    try {
-      resetUrl = await generateFirebasePasswordResetLink(email, continueUrl);
-    } catch (error) {
-      const code = firebaseErrorCode(error);
-      if (code === 'auth/user-not-found' || code === 'auth/user-disabled') {
-        return noStoreJson({ success: true, message: GENERIC_MESSAGE }, 202);
-      }
-      // The provider cannot issue a link. Account recovery is the one path
-      // that must not depend on it — otherwise a provider outage locks every
-      // customer out of their own account for its duration. Fall back to a
-      // platform-owned token, which sets the bcrypt password `/api/auth/login`
-      // verifies, so a reset restores sign-in immediately.
-      console.error(
-        'Provider reset link unavailable, using platform recovery:',
-        error instanceof Error ? error.name : 'unknown_error',
-      );
-      const platformUrl = await issuePlatformResetUrl(email, configuredBaseUrl());
-      // No eligible account: answer exactly as for a known one.
-      if (!platformUrl) {
-        return noStoreJson({ success: true, message: GENERIC_MESSAGE }, 202);
-      }
-      resetUrl = platformUrl;
+    const resetUrl = await issuePlatformResetUrl(email, configuredBaseUrl());
+    // No eligible account: answer exactly as for a known one.
+    if (!resetUrl) {
+      return noStoreJson({ success: true, message: GENERIC_MESSAGE }, 202);
     }
 
     try {

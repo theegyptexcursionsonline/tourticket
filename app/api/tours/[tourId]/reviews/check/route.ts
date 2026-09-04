@@ -3,10 +3,8 @@ import dbConnect from '@/lib/dbConnect';
 import Booking from '@/lib/models/Booking';
 import Review from '@/lib/models/Review';
 import Tour from '@/lib/models/Tour';
-import User from '@/lib/models/user';
 import { NextResponse, NextRequest } from 'next/server';
-import { verifyToken } from '@/lib/jwt';
-import { verifyFirebaseToken } from '@/lib/firebase/admin';
+import { authenticateCustomerSession } from '@/lib/auth/customerSession';
 import mongoose from 'mongoose';
 
 interface Params {
@@ -28,37 +26,11 @@ export async function GET(
       return NextResponse.json({ hasReview: false });
     }
 
-    const authHeader = request.headers.get('Authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json({ hasReview: false });
+    const authentication = await authenticateCustomerSession(request);
+    if (!authentication.success) {
+      return NextResponse.json({ hasReview: false, canReview: false, reason: 'authentication_required' });
     }
-
-    const token = authHeader.split(' ')[1];
-    let userId: string;
-
-    // Try Firebase authentication first
-    const firebaseResult = await verifyFirebaseToken(token);
-
-    if (firebaseResult.success && firebaseResult.uid) {
-      // Find user by Firebase UID
-      const user = await User.findOne({ firebaseUid: firebaseResult.uid, isActive: true });
-
-      if (!user) {
-        return NextResponse.json({ hasReview: false });
-      }
-
-      userId = String(user._id);
-    } else {
-      // Fallback to JWT (for backwards compatibility)
-      const payload = await verifyToken(token);
-      if (!payload || payload.scope !== 'customer' || !payload.sub) {
-        return NextResponse.json({ hasReview: false });
-      }
-
-      const activeUser = await User.findOne({ _id: payload.sub, isActive: true }).select('_id').lean();
-      if (!activeUser) return NextResponse.json({ hasReview: false });
-      userId = String(activeUser._id);
-    }
+    const userId = String(authentication.user._id);
 
     const existingReview = await Review.findOne({
       tour: new mongoose.Types.ObjectId(tourId),

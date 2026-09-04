@@ -32,7 +32,6 @@ describe('public integrity route regressions', () => {
       'app/api/auth/login/route.ts',
       'app/api/auth/signup/route.ts',
       'app/api/auth/forgot-password/route.ts',
-      'app/api/auth/firebase/login-check/route.ts',
       'app/api/booking/verify/[reference]/route.ts',
       'app/api/contact/route.ts',
       'app/api/subscribe/route.ts',
@@ -94,15 +93,48 @@ describe('public integrity route regressions', () => {
     expect(route).not.toContain('totalPrice');
   });
 
-  it('requires verified ownership before a checkout guest can be claimed', () => {
-    const firebase = source('lib/firebase/authHelpers.ts');
+  it('requires a platform reset email before a checkout guest becomes an account', () => {
     const passwordSignup = source('app/api/auth/signup/route.ts');
+    const passwordReset = source('app/api/auth/reset-password/route.ts');
+    const forgotPassword = source('app/api/auth/forgot-password/route.ts');
 
-    expect(firebase).toContain('firebaseUser.emailVerified !== true');
-    expect(firebase).toContain('guestProfileClaimFilter(email, user._id)');
-    expect(passwordSignup).toContain("'EMAIL_VERIFICATION_REQUIRED'");
-    expect(passwordSignup).not.toContain('guestProfileClaimFilter(');
     expect(passwordSignup).not.toContain('findOneAndUpdate(');
+    expect(passwordSignup).toContain('Forgot password?');
+    expect(passwordReset).toContain('isGuestProfile: false');
+    expect(passwordReset).toContain("authProvider: 'jwt'");
+    expect(passwordReset).toContain('emailVerified: true');
+    expect(passwordReset).toContain('findOneAndUpdate');
+    expect(forgotPassword).toContain('issuePlatformResetUrl');
+    expect(forgotPassword).not.toContain('Firebase');
+  });
+
+  it('ships no Firebase SDK, runtime helper, or customer synchronization route', () => {
+    const pkg = JSON.parse(source('package.json')) as { dependencies?: Record<string, string> };
+    expect(pkg.dependencies).not.toHaveProperty('firebase');
+    expect(pkg.dependencies).not.toHaveProperty('firebase-admin');
+    expect(fs.existsSync(path.join(process.cwd(), 'lib/firebase/admin.ts'))).toBe(false);
+    expect(fs.existsSync(path.join(process.cwd(), 'lib/firebase/config.ts'))).toBe(false);
+    expect(fs.existsSync(path.join(process.cwd(), 'app/api/auth/firebase/sync/route.ts'))).toBe(false);
+    const csp = source('next.config.ts');
+    expect(csp).not.toContain('firebaseio.com');
+    expect(csp).not.toContain('firebaseapp.com');
+  });
+
+  it('does not offer a dead federated sign-in control on any storefront auth surface', () => {
+    for (const file of [
+      'app/[locale]/login/LoginClient.tsx',
+      'app/[locale]/signup/SignupClient.tsx',
+      'components/AuthModal.tsx',
+      'components/auth/LoginModal.tsx',
+      'components/auth/SignupModal.tsx',
+    ]) {
+      const component = source(file);
+      expect(component).not.toContain('loginWithGoogle');
+      expect(component).not.toMatch(/continue with google|sign in with google|sign up with google/i);
+    }
+    const context = source('contexts/AuthContext.tsx');
+    expect(context).not.toContain('loginWithGoogle');
+    expect(context).not.toContain('firebaseUser');
   });
 
   it('does not allow browser connections to arbitrary HTTPS or WebSocket origins', () => {

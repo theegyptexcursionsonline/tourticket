@@ -61,11 +61,11 @@ export interface IUser extends Document {
   phone?: string;
   country?: string;
   password?: string; // Password is required for creation, but shouldn't be sent to client
-  firebaseUid?: string; // Firebase user ID for Firebase Auth users
-  authProvider?: 'firebase' | 'jwt' | 'google'; // Authentication provider
+  firebaseUid?: string; // Legacy provider identifier; retained only for non-destructive record compatibility.
+  authProvider?: 'firebase' | 'jwt' | 'google'; // Historical marker. New and recovered accounts use the platform JWT store.
   isGuestProfile: boolean; // Passwordless booking profile, safe to claim only through strict auth flows
-  photoURL?: string; // Profile photo URL (from Google or Firebase)
-  emailVerified?: boolean; // Email verification status (from Firebase)
+  photoURL?: string; // Optional profile photo URL retained from legacy records.
+  emailVerified?: boolean; // Email ownership verification status.
   createdAt: Date;
   role: AdminRole;
   permissions: AdminPermission[];
@@ -139,7 +139,7 @@ const UserSchema: Schema<IUser> = new Schema({
   },
   password: {
     type: String,
-    required: false, // Optional - Firebase users won't have passwords
+    required: false, // Legacy and checkout-created guest records may be passwordless until recovery.
     minlength: 8,
     select: false, // Do not send password field in query results by default
   },

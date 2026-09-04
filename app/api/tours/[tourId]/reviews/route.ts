@@ -3,10 +3,8 @@ import dbConnect from '@/lib/dbConnect';
 import Booking from '@/lib/models/Booking';
 import Review from '@/lib/models/Review';
 import Tour from '@/lib/models/Tour';
-import User from '@/lib/models/user';
 import { NextResponse, NextRequest } from 'next/server';
-import { verifyToken } from '@/lib/jwt';
-import { verifyFirebaseToken } from '@/lib/firebase/admin';
+import { authenticateCustomerSession } from '@/lib/auth/customerSession';
 import mongoose from 'mongoose';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 import type { IReview } from '@/lib/models/Review';
@@ -41,48 +39,12 @@ export async function POST(
       return NextResponse.json({ error: 'Invalid Tour ID' }, { status: 400 });
     }
 
-    // Get auth token - Try Firebase first, fallback to JWT
-    const authHeader = request.headers.get('Authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+    const authentication = await authenticateCustomerSession(request);
+    if (!authentication.success) {
+      return NextResponse.json({ error: authentication.error }, { status: authentication.statusCode });
     }
-
-    const token = authHeader.split(' ')[1];
-    let userId: string;
-    let user;
-
-    // Try Firebase authentication first
-    const firebaseResult = await verifyFirebaseToken(token);
-
-    if (firebaseResult.success && firebaseResult.uid) {
-      // Find user by Firebase UID
-      user = await User.findOne({ firebaseUid: firebaseResult.uid, isActive: true });
-
-      if (!user) {
-        return NextResponse.json({ error: 'User not found' }, { status: 404 });
-      }
-
-      userId = String(user._id);
-    } else {
-      // Fallback to JWT (for backwards compatibility)
-      const payload = await verifyToken(token);
-      if (!payload || payload.scope !== 'customer' || !payload.sub) {
-        return NextResponse.json({ error: 'Invalid authentication token' }, { status: 401 });
-      }
-
-      userId = payload.sub as string;
-
-      // Validate userId
-      if (!mongoose.Types.ObjectId.isValid(userId)) {
-        return NextResponse.json({ error: 'Invalid User ID' }, { status: 400 });
-      }
-
-      // Get user info
-      user = await User.findOne({ _id: userId, isActive: true });
-      if (!user) {
-        return NextResponse.json({ error: 'User not found' }, { status: 404 });
-      }
-    }
+    const user = authentication.user;
+    const userId = String(user._id);
 
     // Check if tour exists
     const tour = await Tour.findOne({ _id: tourId, ...DEFAULT_TENANT_FILTER });

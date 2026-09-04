@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
     const user = await User.findOne({ email: normalizedEmail })
       .select('+password +adminLoginAttempts +adminLockUntil');
 
-    if (!user || !user.password) {
+    if (!user || !user.password || user.role !== 'customer') {
       await bcrypt.compare(password, DUMMY_PASSWORD_HASH);
       return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
     }
@@ -89,16 +89,19 @@ export async function POST(request: NextRequest) {
     };
 
     // --- Generate JWT ---
-    const token = await signToken({
-      sub: String(user._id), // Convert ObjectId to string
-      email: user.email,
-      given_name: user.firstName,
-      family_name: user.lastName,
-      iat: Math.floor(Date.now() / 1000),
-      role: effectiveRole,
-      permissions: assignedPermissions,
-      scope: 'customer',
-    });
+    const token = await signToken(
+      {
+        sub: String(user._id), // Convert ObjectId to string
+        email: user.email,
+        given_name: user.firstName,
+        family_name: user.lastName,
+        iat: Math.floor(Date.now() / 1000),
+        role: effectiveRole,
+        permissions: assignedPermissions,
+        scope: 'customer',
+      },
+      { expiresIn: '7d' },
+    );
 
     // --- Success Response ---
     const response = NextResponse.json({

@@ -13,7 +13,6 @@ import {
   PublicInputError,
   readBoundedJson,
 } from '@/lib/security/publicInput';
-import { isClaimableGuestProfile } from '@/lib/auth/guestProfileClaim';
 import { contentPath } from '@/lib/content/contentUrl';
 import { loadWelcomeTourRecommendations } from '@/lib/auth/welcomeRecommendations';
 
@@ -54,19 +53,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Select hidden identity fields because a profile is claimable only when
-    // both authentication identifiers are absent.
-    const existingUser = await User.findOne({ email }).select('+password +firebaseUid');
+    const existingUser = await User.findOne({ email }).select('_id');
 
     let newUser;
     if (existingUser) {
       // A password signup proves only knowledge of an email address. It must
-      // never claim a checkout-created guest profile. Verified Firebase sign-
-      // in is the supported ownership-proof path for those records.
+      // never claim an existing record. The platform reset email is the
+      // ownership-proof path for both legacy and checkout-created profiles.
       return NextResponse.json(
         {
-          code: isClaimableGuestProfile(existingUser) ? 'EMAIL_VERIFICATION_REQUIRED' : 'ACCOUNT_EXISTS',
-          error: 'An account with this email already exists. Sign in with a verified email to continue.',
+          code: 'ACCOUNT_EXISTS',
+          error: 'An account with this email already exists. Sign in or use “Forgot password?” to continue.',
         },
         { status: 409 },
       );
@@ -82,6 +79,7 @@ export async function POST(request: NextRequest) {
           role: 'customer',
           permissions: [],
           isGuestProfile: false,
+          authProvider: 'jwt',
         });
       } catch (error: unknown) {
         if ((error as { code?: number | string }).code === 11000) {
@@ -113,16 +111,19 @@ export async function POST(request: NextRequest) {
     };
 
     // Generate JWT (keep existing)
-    const token = await signToken({
-      sub: String(newUser._id),
-      email: newUser.email,
-      given_name: newUser.firstName,
-      family_name: newUser.lastName,
-      iat: Math.floor(Date.now() / 1000),
-      role: effectiveRole,
-      permissions: assignedPermissions,
-      scope: 'customer',
-    });
+    const token = await signToken(
+      {
+        sub: String(newUser._id),
+        email: newUser.email,
+        given_name: newUser.firstName,
+        family_name: newUser.lastName,
+        iat: Math.floor(Date.now() / 1000),
+        role: effectiveRole,
+        permissions: assignedPermissions,
+        scope: 'customer',
+      },
+      { expiresIn: '7d' },
+    );
 
     // 🆕 Send Welcome Email with real recommended tours
     try {

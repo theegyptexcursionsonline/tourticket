@@ -11,6 +11,7 @@ import {
   platformSignup,
   type PlatformUser,
 } from '@/lib/auth/platformAuth';
+import { PLATFORM_SESSION_SENTINEL } from '@/lib/auth/customerSessionToken';
 
 // --- Interfaces ---
 interface User {
@@ -24,7 +25,7 @@ interface User {
   photoURL?: string;
   role?: string;
   permissions?: string[];
-  authProvider?: 'firebase' | 'jwt' | 'google';
+  authProvider?: 'jwt';
   emailVerified?: boolean;
   createdAt?: string;
 }
@@ -38,16 +39,11 @@ interface SignupData {
 
 interface AuthContextType {
   user: User | null;
-  /** Always null: no federated provider is wired. Retained so consumers keep compiling. */
-  firebaseUser: null;
   token: string | null;
   isLoading: boolean;
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<void>;
   signup: (data: SignupData) => Promise<void>;
-  loginWithGoogle: () => Promise<void>;
-  /** False while no federated provider is configured — the UI hides the control rather than offering a dead one. */
-  googleSignInAvailable: boolean;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
 }
@@ -97,7 +93,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setUser(normalizedUser);
     // The session itself lives in an httpOnly cookie. This value only drives
     // `isAuthenticated` in the client; it is never the authority for access.
-    setToken(sessionToken || 'platform-session');
+    setToken(sessionToken || PLATFORM_SESSION_SENTINEL);
   };
 
   // --- Restore an existing platform session ---
@@ -159,18 +155,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const login = async (email: string, password: string): Promise<void> => {
     setIsLoading(true);
     try {
-      // Same-origin preflight applies the platform's durable Mongo abuse
-      // limits before the credential check.
-      const loginCheck = await fetch('/api/auth/firebase/login-check', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
-      });
-      if (!loginCheck.ok) {
-        const result = await loginCheck.json().catch(() => ({}));
-        throw new Error(result.error || customerAuthMessage('provider_unavailable', 'login'));
-      }
-
       const result = await platformLogin(email, password);
       if (result.ok && result.user) {
         adoptPlatformSession(result.user, result.token);
@@ -214,14 +198,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  // --- Login with Google ---
-  const loginWithGoogle = async (): Promise<void> => {
-    // No federated provider is configured. The control is hidden rather than
-    // offered, and this exists so any remaining caller fails honestly instead
-    // of silently doing nothing.
-    throw new Error(customerAuthMessage('provider_unavailable', 'google'));
-  };
-
   // --- Logout Function ---
   const logout = async () => {
     // Clearing the platform session is the whole of sign-out now.
@@ -235,14 +211,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   // --- Context Value ---
   const value: AuthContextType = {
     user,
-    firebaseUser: null,
     token,
     isLoading,
     isAuthenticated: !!token && !!user,
     login,
     signup,
-    loginWithGoogle,
-    googleSignInAvailable: false,
     logout,
     refreshUser,
   };

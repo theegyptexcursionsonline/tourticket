@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
 import User from '@/lib/models/user';
-import { authenticateFirebaseUser } from '@/lib/firebase/authHelpers';
+import { authenticateCustomerSession } from '@/lib/auth/customerSession';
 import { normalizeStoredCartPricingFields, type PriceSource } from '@/lib/cart/authoritativeCart';
 
 interface CartAddOnInput {
@@ -104,7 +104,7 @@ const toStoredCartItem = (item: CartItemInput, addedAt: string | Date = new Date
  */
 export async function GET(request: NextRequest) {
   try {
-    const authResult = await authenticateFirebaseUser(request);
+    const authResult = await authenticateCustomerSession(request);
 
     if (!authResult.success) {
       return NextResponse.json(
@@ -143,7 +143,7 @@ export async function GET(request: NextRequest) {
  */
 export async function PUT(request: NextRequest) {
   try {
-    const authResult = await authenticateFirebaseUser(request);
+    const authResult = await authenticateCustomerSession(request);
 
     if (!authResult.success) {
       return NextResponse.json(
@@ -201,7 +201,7 @@ export async function PUT(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    const authResult = await authenticateFirebaseUser(request);
+    const authResult = await authenticateCustomerSession(request);
 
     if (!authResult.success) {
       return NextResponse.json(
@@ -283,7 +283,7 @@ export async function POST(request: NextRequest) {
  */
 export async function DELETE(request: NextRequest) {
   try {
-    const authResult = await authenticateFirebaseUser(request);
+    const authResult = await authenticateCustomerSession(request);
 
     if (!authResult.success) {
       return NextResponse.json(

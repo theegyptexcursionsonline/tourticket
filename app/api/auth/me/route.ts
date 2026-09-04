@@ -1,15 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { authenticateFirebaseUser, formatUserForClient } from '@/lib/firebase/authHelpers';
+import { authenticateCustomerSession, formatCustomerForClient } from '@/lib/auth/customerSession';
 
 /**
  * GET /api/auth/me
  * Get current user information
- * Verifies Firebase ID token and returns user data from MongoDB
+ * Verifies the platform-owned customer session and returns MongoDB user data.
  */
 export async function GET(request: NextRequest) {
   try {
-    // Authenticate Firebase user
-    const authResult = await authenticateFirebaseUser(request);
+    const authResult = await authenticateCustomerSession(request);
 
     if (!authResult.success) {
       return NextResponse.json(
@@ -19,7 +18,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Format user data for response
-    const userData = formatUserForClient(authResult.user);
+    const userData = formatCustomerForClient(authResult.user);
 
     return NextResponse.json({
       success: true,

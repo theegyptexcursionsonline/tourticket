@@ -9,8 +9,6 @@ import {
   hashResetToken,
   passwordRuleMessage,
   RESET_TOKEN_PATTERN,
-  resetTokenExpired,
-  resetTokenMatches,
 } from '@/lib/auth/passwordReset';
 
 export const dynamic = 'force-dynamic';
@@ -19,12 +17,10 @@ export const dynamic = 'force-dynamic';
  * POST /api/auth/reset-password
  *
  * Completes a platform-owned password reset. This is the recovery path that
- * keeps working when the external identity provider does not — without it, a
- * customer whose password lives only with that provider stays locked out for
- * the duration of an outage.
- *
  * Sets the platform's own bcrypt password, which is what `/api/auth/login`
- * verifies, so a successful reset restores sign-in immediately.
+ * verifies, so a successful reset restores sign-in immediately. Completing
+ * the email challenge also converts a checkout guest profile into a normal
+ * customer account without changing or deleting its bookings.
  */
 
 const INVALID_LINK = 'This reset link is invalid or has expired. Request a new link and try again.';
@@ -79,31 +75,37 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const user = await User.findOne({ passwordResetTokenHash: tokenHash }).select(
-      '+passwordResetTokenHash +passwordResetExpires +password +adminLoginAttempts +adminLockUntil',
+    const passwordHash = await bcrypt.hash(password, await bcrypt.genSalt(10));
+    const user = await User.findOneAndUpdate(
+      {
+        passwordResetTokenHash: tokenHash,
+        passwordResetExpires: { $gt: new Date() },
+        isActive: { $ne: false },
+      },
+      {
+        $set: {
+          password: passwordHash,
+          isGuestProfile: false,
+          authProvider: 'jwt',
+          emailVerified: true,
+          adminLoginAttempts: 0,
+          requirePasswordChange: false,
+        },
+        $unset: {
+          passwordResetTokenHash: '',
+          passwordResetExpires: '',
+          adminLockUntil: '',
+        },
+      },
+      { new: true, runValidators: false },
     );
 
-    // One response for every unusable link — unknown, already used, expired or
-    // belonging to a deactivated account — so nothing can be inferred from it.
-    if (
-      !user ||
-      user.isActive === false ||
-      !resetTokenMatches(token, user.passwordResetTokenHash) ||
-      resetTokenExpired(user.passwordResetExpires)
-    ) {
+    // The token hash is claimed and removed in the same database mutation as
+    // the password update. Concurrent retries therefore have one winner; an
+    // unknown, expired, already-used or deactivated link gets the same reply.
+    if (!user) {
       return noStoreJson({ success: false, error: INVALID_LINK }, 400);
     }
-
-    user.password = await bcrypt.hash(password, await bcrypt.genSalt(10));
-    // The link is single use: consume it before anything can replay it.
-    user.passwordResetTokenHash = undefined;
-    user.passwordResetExpires = undefined;
-    // A successful recovery clears a lockout — otherwise the customer resets
-    // their password and still cannot sign in.
-    user.adminLoginAttempts = 0;
-    user.adminLockUntil = undefined;
-    user.requirePasswordChange = false;
-    await user.save({ validateBeforeSave: false });
 
     return noStoreJson(
       { success: true, message: 'Your password has been updated. You can sign in now.' },

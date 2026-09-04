@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
-import { authenticateCustomerBearer } from '@/lib/auth/customerAuth';
+import { authenticateCustomerSession } from '@/lib/auth/customerSession';
 import { getServerStripe } from '@/lib/stripe/server';
 import { BookingRefundError, requestBookingRefund } from '@/lib/bookings/refunds';
 import { sendBookingRefundNotification } from '@/lib/bookings/refundNotifications';
@@ -10,9 +10,9 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const authentication = await authenticateCustomerBearer(request);
+    const authentication = await authenticateCustomerSession(request);
     if (!authentication.success) {
-      return NextResponse.json({ success: false, error: authentication.error }, { status: authentication.status });
+      return NextResponse.json({ success: false, error: authentication.error }, { status: authentication.statusCode });
     }
     await dbConnect();
     const { id } = await params;

@@ -47,11 +47,8 @@ const platformCustomer = {
 };
 
 let lastError = '';
-let googleAvailable: boolean | undefined;
-
 function Harness() {
-  const { login, signup, logout, loginWithGoogle, isAuthenticated, user, googleSignInAvailable } = useAuth();
-  googleAvailable = googleSignInAvailable;
+  const { login, signup, logout, isAuthenticated, user } = useAuth();
   const run = (fn: () => Promise<void>) => async () => {
     try {
       await fn();
@@ -77,7 +74,6 @@ function Harness() {
       >
         signup
       </button>
-      <button onClick={run(() => loginWithGoogle())}>google</button>
       <button onClick={run(() => logout())}>logout</button>
     </div>
   );
@@ -102,10 +98,7 @@ async function click(name: string) {
 beforeEach(() => {
   jest.clearAllMocks();
   lastError = '';
-  googleAvailable = undefined;
   mockPlatformSession.mockResolvedValue(null);
-  // The same-origin preflight that applies the platform's abuse limits.
-  global.fetch = jest.fn().mockResolvedValue({ ok: true, status: 204, json: async () => ({}) }) as unknown as typeof fetch;
 });
 
 describe('sign-in', () => {
@@ -144,18 +137,6 @@ describe('sign-in', () => {
     await click('login');
 
     expect(lastError).toBe('Too many login attempts. Try again later.');
-  });
-
-  it('stops before the credential check when the abuse preflight refuses', async () => {
-    global.fetch = jest
-      .fn()
-      .mockResolvedValue({ ok: false, status: 429, json: async () => ({ error: 'Too many attempts.' }) }) as unknown as typeof fetch;
-
-    await mount();
-    await click('login');
-
-    expect(mockPlatformLogin).not.toHaveBeenCalled();
-    expect(lastError).toBe('Too many attempts.');
   });
 
   it('never leaks provider vocabulary when the platform is unreachable', async () => {
@@ -199,20 +180,6 @@ describe('sign-up', () => {
     await click('signup');
 
     expect(lastError).toContain('already exists');
-    expect(lastError.toLowerCase()).not.toContain('firebase');
-  });
-});
-
-describe('federated sign-in', () => {
-  it('is declared unavailable so the UI hides the control instead of offering a dead one', async () => {
-    await mount();
-    expect(googleAvailable).toBe(false);
-  });
-
-  it('fails honestly and points at the method that works', async () => {
-    await mount();
-    await click('google');
-    expect(lastError).toContain('email and password');
     expect(lastError.toLowerCase()).not.toContain('firebase');
   });
 });

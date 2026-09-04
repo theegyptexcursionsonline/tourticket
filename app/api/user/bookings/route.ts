@@ -5,7 +5,7 @@ import Tour from '@/lib/models/Tour';
 import Destination from '@/lib/models/Destination';
 import mongoose from 'mongoose';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
-import { authenticateCustomerBearer } from '@/lib/auth/customerAuth';
+import { authenticateCustomerSession } from '@/lib/auth/customerSession';
 import type { PopulatedBookingTour } from '@/lib/types/populatedBooking';
 
 export async function GET(request: NextRequest) {
@@ -13,15 +13,9 @@ export async function GET(request: NextRequest) {
     // 1. Connect to database
     await dbConnect();
 
-    // 2. Get and validate the JWT from the Authorization header
-    const authHeader = request.headers.get('Authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Not authenticated: No token provided' }, { status: 401 });
-    }
-
-    const authentication = await authenticateCustomerBearer(request);
+    const authentication = await authenticateCustomerSession(request);
     if (!authentication.success) {
-      return NextResponse.json({ error: authentication.error }, { status: authentication.status });
+      return NextResponse.json({ error: authentication.error }, { status: authentication.statusCode });
     }
     const user = authentication.user;
     const userId = String(user._id);
@@ -31,8 +25,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid user ID format' }, { status: 400 });
     }
 
-    // 5. Find the user in database (if not already found via Firebase)
-    // authenticateCustomerBearer already revalidated the active database user.
+    // authenticateCustomerSession already revalidated the active customer.
 
     // 7. Fetch bookings count first
     const bookingQuery = { user: userId, ...DEFAULT_TENANT_FILTER };

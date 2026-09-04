@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
 import User from '@/lib/models/user';
-import { authenticateFirebaseUser, formatUserForClient } from '@/lib/firebase/authHelpers';
+import { authenticateCustomerSession, formatCustomerForClient } from '@/lib/auth/customerSession';
 
 /**
  * PUT /api/user/profile
@@ -11,8 +11,7 @@ export async function PUT(request: NextRequest) {
   try {
     await dbConnect();
 
-    // Authenticate Firebase user
-    const authResult = await authenticateFirebaseUser(request);
+    const authResult = await authenticateCustomerSession(request);
 
     if (!authResult.success) {
       return NextResponse.json(
@@ -57,7 +56,7 @@ export async function PUT(request: NextRequest) {
       {
         new: true,
         runValidators: true,
-        select: '-password -firebaseUid' // Exclude sensitive fields
+        select: '-password -firebaseUid' // Preserve but never expose the legacy identity field.
       }
     );
 
@@ -96,8 +95,7 @@ export async function GET(request: NextRequest) {
   try {
     await dbConnect();
 
-    // Authenticate Firebase user
-    const authResult = await authenticateFirebaseUser(request);
+    const authResult = await authenticateCustomerSession(request);
 
     if (!authResult.success) {
       return NextResponse.json(
@@ -107,7 +105,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Format user data for response
-    const userData = formatUserForClient(authResult.user);
+    const userData = formatCustomerForClient(authResult.user);
 
     // Add computed name field
     const userWithName = {

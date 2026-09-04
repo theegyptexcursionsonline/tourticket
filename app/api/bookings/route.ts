@@ -9,7 +9,7 @@ import User from '@/lib/models/user';
 import Destination from '@/lib/models/Destination';
 import { requireAdminAuth } from '@/lib/auth/adminAuth';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
-import { authenticateCustomerBearer } from '@/lib/auth/customerAuth';
+import { authenticateCustomerSession } from '@/lib/auth/customerSession';
 import type { PopulatedBookingTour, PopulatedBookingUser } from '@/lib/types/populatedBooking';
 
 export async function GET(request: NextRequest) {
@@ -38,16 +38,8 @@ export async function GET(request: NextRequest) {
         query.status = status;
       }
     } else {
-      const authHeader = request.headers.get('Authorization');
-      if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        return NextResponse.json(
-          { success: false, error: 'Authentication required' },
-          { status: 401 }
-        );
-      }
-
-      const authentication = await authenticateCustomerBearer(request);
-      if (!authentication.success) return NextResponse.json({ success: false, error: authentication.error }, { status: authentication.status });
+      const authentication = await authenticateCustomerSession(request);
+      if (!authentication.success) return NextResponse.json({ success: false, error: authentication.error }, { status: authentication.statusCode });
       query.user = authentication.user._id;
     }
 

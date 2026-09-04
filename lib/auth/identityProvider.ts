@@ -15,9 +15,9 @@
 // which provider is in front, and means a provider outage costs new sign-ins
 // but never existing sessions.
 
-export type IdentityProviderName = 'firebase' | 'workos' | 'platform';
+export type IdentityProviderName = 'workos' | 'platform';
 
-const KNOWN_PROVIDERS: readonly IdentityProviderName[] = ['firebase', 'workos', 'platform'];
+const KNOWN_PROVIDERS: readonly IdentityProviderName[] = ['workos', 'platform'];
 
 /**
  * The provider that should verify credentials, from
@@ -45,15 +45,6 @@ export function isWorkosConfigured(env: Record<string, string | undefined> = pro
   return Boolean(env.WORKOS_API_KEY && env.WORKOS_CLIENT_ID);
 }
 
-export function isFirebaseConfigured(env: Record<string, string | undefined> = process.env): boolean {
-  return Boolean(
-    env.NEXT_PUBLIC_FIREBASE_API_KEY &&
-      env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN &&
-      env.NEXT_PUBLIC_FIREBASE_PROJECT_ID &&
-      env.NEXT_PUBLIC_FIREBASE_APP_ID,
-  );
-}
-
 /**
  * The provider that will actually be attempted, after checking that the
  * selected one is configured. Selecting a provider whose configuration is
@@ -64,7 +55,6 @@ export function resolvedIdentityProvider(
 ): IdentityProviderName {
   const selected = activeIdentityProvider(env);
   if (selected === 'workos') return isWorkosConfigured(env) ? 'workos' : 'platform';
-  if (selected === 'firebase') return isFirebaseConfigured(env) ? 'firebase' : 'platform';
   return 'platform';
 }
 

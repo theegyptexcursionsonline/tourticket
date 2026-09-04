@@ -5,7 +5,7 @@ import Booking from '@/lib/models/Booking';
 import Tour from '@/lib/models/Tour';
 import User from '@/lib/models/user';
 import Destination from '@/lib/models/Destination';
-import { authenticateCustomerBearer } from '@/lib/auth/customerAuth';
+import { authenticateCustomerSession } from '@/lib/auth/customerSession';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 import type { PopulatedBookingTour, PopulatedBookingUser } from '@/lib/types/populatedBooking';
 
@@ -17,17 +17,8 @@ export async function GET(
   await dbConnect();
 
   try {
-    // Verify user authentication - Try Firebase first, fallback to JWT
-    const authHeader = request.headers.get('Authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { success: false, message: 'Authentication required' },
-        { status: 401 }
-      );
-    }
-
-    const authentication = await authenticateCustomerBearer(request);
-    if (!authentication.success) return NextResponse.json({ success: false, message: authentication.error }, { status: authentication.status });
+    const authentication = await authenticateCustomerSession(request);
+    if (!authentication.success) return NextResponse.json({ success: false, message: authentication.error }, { status: authentication.statusCode });
     const userId = String(authentication.user._id);
 
     const { id } = await params;

@@ -1,29 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
-import dbConnect from '@/lib/dbConnect';
 import User from '@/lib/models/user';
 import bcrypt from 'bcryptjs';
-import { authenticateCustomerBearer } from '@/lib/auth/customerAuth';
+import { authenticateCustomerSession } from '@/lib/auth/customerSession';
 
 export async function POST(request: NextRequest) {
   try {
-    await dbConnect();
-
-    // Verify authentication - Try Firebase first, fallback to JWT
-    const authHeader = request.headers.get('Authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Not authenticated: No token provided' }, { status: 401 });
-    }
-
-    const authentication = await authenticateCustomerBearer(request);
-    if (!authentication.success) return NextResponse.json({ error: authentication.error }, { status: authentication.status });
+    const authentication = await authenticateCustomerSession(request);
+    if (!authentication.success) return NextResponse.json({ error: authentication.error }, { status: authentication.statusCode });
     const userId = String(authentication.user._id);
     const user = await User.findOne({ _id: userId, isActive: true }).select('+password');
     if (!user) return NextResponse.json({ error: 'User not found' }, { status: 401 });
-    if (user.authProvider === 'firebase' || user.authProvider === 'google') {
+    if (!user.password) {
       return NextResponse.json({
-        error: 'Password changes for Firebase/Google users must be done through Firebase. Please use the "Forgot Password" option on the login page.',
-        firebaseUser: true
-      }, { status: 400 });
+        code: 'PASSWORD_SETUP_REQUIRED',
+        error: 'Set your password through “Forgot password?” before changing it here.',
+      }, { status: 409 });
     }
 
     // Parse request body

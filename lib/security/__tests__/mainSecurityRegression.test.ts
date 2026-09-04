@@ -12,10 +12,26 @@ describe('main storefront security regressions', () => {
     expect(receipt).not.toContain('user: String(payload.sub)');
   });
 
-  it('does not trust browser identity fields during Firebase synchronization', () => {
-    const route = source('app/api/auth/firebase/sync/route.ts');
-    expect(route).toContain('getFirebaseUser(verifyResult.uid)');
-    expect(route).not.toContain('const { uid, email, displayName, photoURL, emailVerified');
+  it('uses one platform customer-session authority across account and checkout routes', () => {
+    for (const file of [
+      'app/api/auth/me/route.ts',
+      'app/api/bookings/route.ts',
+      'app/api/bookings/[id]/route.ts',
+      'app/api/bookings/[id]/cancel/route.ts',
+      'app/api/user/cart/route.ts',
+      'app/api/user/wishlist/route.ts',
+      'app/api/user/profile/route.ts',
+      'app/api/user/bookings/route.ts',
+      'app/api/checkout/route.ts',
+      'app/api/user/change-password/route.ts',
+      'app/api/tours/[tourId]/reviews/route.ts',
+      'app/api/tours/[tourId]/reviews/check/route.ts',
+      'app/api/reviews/[id]/route.ts',
+    ]) {
+      const route = source(file);
+      expect(route).toContain('authenticateCustomerSession');
+      expect(route).not.toContain('verifyFirebaseToken');
+    }
   });
 
   it('keeps public catalogue APIs published and default-tenant scoped', () => {
