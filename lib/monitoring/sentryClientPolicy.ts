@@ -12,6 +12,12 @@ export const SENTRY_CLIENT_SAMPLE_RATES = Object.freeze({
   errorReplay: 0.1,
 });
 
+// Embedded Foxes products are separate security origins. Safari throws when
+// rrweb probes a cross-origin frame during replay serialization, even though
+// the frame cannot contribute readable content. Keep every iframe opaque in
+// recordings: the host DOM remains observable without crossing that boundary.
+export const SENTRY_REPLAY_BLOCK_SELECTOR = 'iframe';
+
 /**
  * Firebase Analytics and Installations retry independently of customer auth.
  * When the provider project is unavailable they can emit the same background

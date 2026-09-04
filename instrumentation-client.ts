@@ -5,6 +5,7 @@
 import * as Sentry from "@sentry/nextjs";
 import {
   SENTRY_CLIENT_SAMPLE_RATES,
+  SENTRY_REPLAY_BLOCK_SELECTOR,
   clientTraceSampleRate,
   filterClientSentryEvent,
 } from "@/lib/monitoring/sentryClientPolicy";
@@ -14,7 +15,7 @@ Sentry.init({
 
   // Add optional integrations for additional features
   integrations: [
-    Sentry.replayIntegration(),
+    Sentry.replayIntegration({ block: [SENTRY_REPLAY_BLOCK_SELECTOR] }),
   ],
 
   // Keep full local observability, while bounding both admin and high-volume

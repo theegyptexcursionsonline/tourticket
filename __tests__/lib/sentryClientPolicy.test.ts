@@ -1,5 +1,6 @@
 import {
   SENTRY_CLIENT_SAMPLE_RATES,
+  SENTRY_REPLAY_BLOCK_SELECTOR,
   clientTraceSampleRate,
   filterClientSentryEvent,
   isBackgroundProviderNoise,
@@ -45,5 +46,9 @@ describe('client Sentry volume policy', () => {
     expect(clientTraceSampleRate('/admin/bookings', 'production')).toBe(SENTRY_CLIENT_SAMPLE_RATES.adminTrace);
     expect(SENTRY_CLIENT_SAMPLE_RATES.sessionReplay).toBeLessThan(SENTRY_CLIENT_SAMPLE_RATES.errorReplay);
     expect(SENTRY_CLIENT_SAMPLE_RATES.errorReplay).toBeLessThan(1);
+  });
+
+  it('keeps cross-origin embeds opaque to session replay', () => {
+    expect(SENTRY_REPLAY_BLOCK_SELECTOR).toBe('iframe');
   });
 });
