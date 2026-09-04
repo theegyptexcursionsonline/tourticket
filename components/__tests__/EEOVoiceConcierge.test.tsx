@@ -84,7 +84,7 @@ describe('EEOVoiceConcierge', () => {
     expect(document.getElementById(SCRIPT_ID)).not.toBeNull();
   });
 
-  it.each(['/en/checkout', '/en/tour/giza-day-trip', '/ar/admin', '/en/offer/cairo', '/en/cart'])(
+  it.each(['/en/checkout', '/en/tour/giza-day-trip', '/ar/admin', '/en/offer/cairo', '/en/cart', '/en/assistants'])(
     'stays off funnel and account surfaces (%s)',
     (path) => {
       pathname = path;

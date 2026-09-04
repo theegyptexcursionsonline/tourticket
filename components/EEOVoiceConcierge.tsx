@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import { useLocale } from 'next-intl';
+import { isOpenBlockingModal } from '@/lib/ui/modalVisibility';
 
 const VOICE_ORIGIN = process.env.NEXT_PUBLIC_FOXES_VOICE_ORIGIN || 'https://voice.foxestechnology.com';
 const WIDGET_ID = process.env.NEXT_PUBLIC_FOXES_VOICE_WIDGET_ID || '694c1a7a27cc23227da2ccdb';
@@ -27,6 +28,7 @@ const HIDDEN_ROUTES = [
   '/tour',
   '/tools',
   '/cart',
+  '/assistants',
 ];
 
 // A tour can render at the site root, so the path cannot identify one; the
@@ -59,7 +61,7 @@ export default function EEOVoiceConcierge() {
 
       const hasOpenAppDialog = Array.from(
         document.querySelectorAll<HTMLElement>('[role="dialog"][aria-modal="true"]'),
-      ).some((dialog) => !dialog.closest('.gm-style') && dialog.getClientRects().length > 0);
+      ).some(isOpenBlockingModal);
       const onTourPage = Boolean(document.querySelector(TOUR_PAGE_SELECTOR));
       const suppressed = hasOpenAppDialog || onTourPage;
       frame.style.visibility = suppressed ? 'hidden' : '';

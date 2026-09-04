@@ -289,7 +289,7 @@ html[data-storefront-theme="dark"] body.storefront-theme .es-review-background-c
   color: #94a3b8 !important;
 }
 /* dark-theme:generated:start — built by `pnpm theme:generate`; do not hand-edit */
-/* 307 light utilities darkened, 37 deliberately preserved. */
+/* 311 light utilities darkened, 37 deliberately preserved. */
 
 html[data-storefront-theme="dark"] body.storefront-theme :where([class~="from-gray-100"], [class~="from-slate-100"]):not([class~="bg-clip-text"]) {
   --tw-gradient-from: #1e293b var(--tw-gradient-from-position) !important;
@@ -656,6 +656,10 @@ html[data-storefront-theme="dark"] body.storefront-theme :where([class~="bg-indi
   background-color: rgb(17 24 39 / 0.7) !important;
 }
 
+html[data-storefront-theme="dark"] body.storefront-theme :where([class~="bg-white/75"]) {
+  background-color: rgb(17 24 39 / 0.75) !important;
+}
+
 html[data-storefront-theme="dark"] body.storefront-theme :where([class~="bg-amber-50/80"], [class~="bg-emerald-50/80"], [class~="bg-gray-100/80"], [class~="bg-gray-50/80"], [class~="bg-purple-50/80"], [class~="bg-rose-200/80"], [class~="bg-slate-100/80"], [class~="bg-slate-50/80"], [class~="bg-white/80"]) {
   background-color: rgb(17 24 39 / 0.8) !important;
 }
@@ -772,7 +776,7 @@ html[data-storefront-theme="dark"] body.storefront-theme :where([class~="bg-yell
   background-color: #282413 !important;
 }
 
-html[data-storefront-theme="dark"] body.storefront-theme :where([class~="border-gray-100"], [class~="border-gray-100/50"], [class~="border-gray-200"], [class~="border-gray-200/50"], [class~="border-gray-300"], [class~="border-gray-50"], [class~="border-slate-100"], [class~="border-slate-200"], [class~="border-slate-200/50"], [class~="border-slate-200/60"], [class~="border-slate-300"], [class~="border-stone-200"], [class~="border-stone-300"]) {
+html[data-storefront-theme="dark"] body.storefront-theme :where([class~="border-gray-100"], [class~="border-gray-100/50"], [class~="border-gray-200"], [class~="border-gray-200/50"], [class~="border-gray-300"], [class~="border-gray-50"], [class~="border-slate-100"], [class~="border-slate-200"], [class~="border-slate-200/50"], [class~="border-slate-200/60"], [class~="border-slate-200/80"], [class~="border-slate-300"], [class~="border-stone-200"], [class~="border-stone-300"]) {
   border-color: #334155 !important;
 }
 
@@ -788,7 +792,7 @@ html[data-storefront-theme="dark"] body.storefront-theme :where([class~="placeho
   color: #94a3b8 !important;
 }
 
-html[data-storefront-theme="dark"] body.storefront-theme :where([class~="ring-gray-200"], [class~="ring-slate-100"], [class~="ring-slate-200"], [class~="ring-slate-300"], [class~="ring-stone-100"]) {
+html[data-storefront-theme="dark"] body.storefront-theme :where([class~="ring-gray-200"], [class~="ring-slate-100"], [class~="ring-slate-200"], [class~="ring-slate-200/70"], [class~="ring-slate-300"], [class~="ring-stone-100"]) {
   --tw-ring-color: #334155 !important;
 }
 
@@ -861,6 +865,10 @@ html[data-storefront-theme="dark"] body.storefront-theme :where([class~="disable
 }
 
 html[data-storefront-theme="dark"] body.storefront-theme :where([class~="hover:bg-gray-100"], [class~="hover:bg-slate-100"]):hover {
+  background-color: #1e293b !important;
+}
+
+html[data-storefront-theme="dark"] body.storefront-theme :where([class~="disabled:bg-slate-200"]):disabled {
   background-color: #1e293b !important;
 }
 

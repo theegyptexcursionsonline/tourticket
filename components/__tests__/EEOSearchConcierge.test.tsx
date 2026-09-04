@@ -264,6 +264,33 @@ describe('EEOSearchConcierge', () => {
     dialog.remove();
   });
 
+  it('does not treat a closed off-canvas booking drawer as an open modal', async () => {
+    render(<EEOSearchConcierge />);
+
+    const host = document.createElement('div');
+    host.id = 'foxes-launcher-host';
+    document.body.appendChild(host);
+
+    const bookingDrawer = document.createElement('div');
+    bookingDrawer.id = 'foxes-v2-sidebar';
+    bookingDrawer.setAttribute('role', 'dialog');
+    bookingDrawer.setAttribute('aria-modal', 'true');
+    bookingDrawer.setAttribute('aria-hidden', 'true');
+    bookingDrawer.setAttribute('inert', '');
+    bookingDrawer.getClientRects = visibleRects;
+    document.body.appendChild(bookingDrawer);
+
+    await waitFor(() => expect(host.hidden).toBe(false));
+
+    bookingDrawer.removeAttribute('inert');
+    bookingDrawer.setAttribute('aria-hidden', 'false');
+    await waitFor(() => expect(host.hidden).toBe(true));
+
+    bookingDrawer.setAttribute('aria-hidden', 'true');
+    bookingDrawer.setAttribute('inert', '');
+    await waitFor(() => expect(host.hidden).toBe(false));
+  });
+
   it('re-syncs when a modal is revealed by an attribute change alone', async () => {
     render(<EEOSearchConcierge />);
 

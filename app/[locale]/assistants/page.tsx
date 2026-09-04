@@ -3,10 +3,11 @@ import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import AssistantsClient from './AssistantsClient';
 
-// Direct-access verification surface for the conversational assistants; kept
-// out of navigation and search indexes until launch.
+// Customer-facing showcase for the three hosted travel assistants. It remains
+// out of search indexes while Booking is intentionally in no-payment preview.
 export const metadata: Metadata = {
-  title: 'Assistants | Egypt Excursions Online',
+  title: 'Travel Assistants | Egypt Excursions Online',
+  description: 'Search Egypt tours with AI, open the voice concierge, or preview the guided booking assistant.',
   robots: { index: false, follow: false },
 };
 

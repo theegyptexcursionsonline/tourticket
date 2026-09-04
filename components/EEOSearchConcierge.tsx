@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import { useLocale } from 'next-intl';
 import { shouldRenderAISearchWidgetForHost } from '@/lib/aiSearchWidgetHosts';
+import { isOpenBlockingModal } from '@/lib/ui/modalVisibility';
 
 const SEARCH_ORIGIN = process.env.NEXT_PUBLIC_FOXES_SEARCH_ORIGIN || 'https://search.foxestechnology.com';
 const WIDGET_ID = process.env.NEXT_PUBLIC_FOXES_SEARCH_WIDGET_ID || 'wgt_6JW5umlfasNQfJywtFPs6g';
@@ -100,7 +101,7 @@ export default function EEOSearchConcierge() {
       // for as long as a tour map had a stage card open.
       const hasOpenAppDialog = Array.from(
         document.querySelectorAll<HTMLElement>('[role="dialog"][aria-modal="true"]'),
-      ).some((dialog) => !dialog.closest('.gm-style') && dialog.getClientRects().length > 0);
+      ).some(isOpenBlockingModal);
       // FoxesConnect is a separate support surface, mounted by its embed script
       // outside React. Its iframe intentionally remains in the DOM while closed
       // but is removed from hit-testing with display:none. Keep Search hidden for
