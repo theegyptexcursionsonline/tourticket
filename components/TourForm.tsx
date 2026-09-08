@@ -2687,6 +2687,7 @@ const addItineraryItem = () => {
                                                     {/* Option Header */}
                                                     <button 
                                                         type="button" 
+                                                        aria-expanded={expandedOptionIndex === index}
                                                         onClick={() => toggleBookingOption(index)} 
                                                         className="bg-slate-50 w-full text-left px-6 py-4 border-b border-slate-200 flex items-center justify-between transition-colors hover:bg-slate-100"
                                                     >
