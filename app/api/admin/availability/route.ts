@@ -81,25 +81,9 @@ export async function GET(request: NextRequest) {
     if (tourId) {
       const tourDoc = await Tour.findOne({ _id: tourId, ...DEFAULT_TENANT_FILTER }).select('title bookingOptions');
       if (tourDoc) {
-        // Ensure bookingOptions[].id exists (needed for option-level stop-sale)
-        let changed = false;
-        if (Array.isArray(tourDoc.bookingOptions)) {
-          tourDoc.bookingOptions = tourDoc.bookingOptions.map((opt) => {
-            if (!opt) return opt;
-            if (!opt.id) {
-              changed = true;
-              return {
-                ...opt,
-                id: globalThis.crypto?.randomUUID?.() || `opt-${Date.now()}-${Math.random().toString(16).slice(2)}`,
-              };
-            }
-            return opt;
-          });
-        }
-        if (changed) await tourDoc.save();
-
+        // Reading availability must preserve the existing legacy option aliases.
         const optionIds: string[] = Array.isArray(tourDoc.bookingOptions)
-          ? tourDoc.bookingOptions.map((o) => o?.id).filter((id): id is string => typeof id === 'string')
+          ? tourDoc.bookingOptions.map((option, index) => String(option.id || (option as { _id?: unknown })._id || `option-${index}`))
           : [];
 
         // Initialize all days of month to "none" so UI can rely on presence
