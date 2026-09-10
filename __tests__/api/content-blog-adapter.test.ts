@@ -40,6 +40,11 @@ jest.mock('@/lib/content/receiverIndexReadiness', () => ({
 
 jest.mock('@/lib/auth/verifyContentEngine', () => ({
   verifyContentEngine: jest.fn().mockReturnValue(null),
+  authenticateContentEngineMutation: jest.fn().mockReturnValue({
+    ok: true,
+    credential: { grantId: 'test', targets: [] },
+  }),
+  verifyContentEngineMutationTarget: jest.fn().mockReturnValue(null),
   verifyContentEngineTenant: jest.fn(),
 }));
 
@@ -69,15 +74,26 @@ jest.mock('@/lib/models/ContentPublishReceipt', () => ({
 
 import { POST, PUT } from '@/app/api/admin/content/blog/route';
 import { GET } from '@/app/api/admin/content/blog/[slug]/route';
-import { verifyContentEngineTenant } from '@/lib/auth/verifyContentEngine';
+import {
+  verifyContentEngineMutationTarget,
+  verifyContentEngineTenant,
+} from '@/lib/auth/verifyContentEngine';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 import { createReceiptStore, type ReceiptStore } from '@/__mocks__/contentPublishReceiptStore';
 
 const tenantVerifier = verifyContentEngineTenant as jest.MockedFunction<
   typeof verifyContentEngineTenant
 >;
+const targetVerifier = verifyContentEngineMutationTarget as jest.MockedFunction<
+  typeof verifyContentEngineMutationTarget
+>;
 const IDEMPOTENCY_KEY = '9f7d2c8a-1234-4c5d-8e9f-000000000001';
-const DEFAULT_HEADERS = { 'Idempotency-Key': IDEMPOTENCY_KEY };
+const DEFAULT_HEADERS = {
+  'Idempotency-Key': IDEMPOTENCY_KEY,
+  'X-Content-Engine-Receiver-Type': 'blog',
+  'X-Content-Engine-Tenant': 'default',
+  'X-Content-Engine-Locale': 'en',
+};
 
 const validPayload = {
   title: 'Red Sea Snorkeling Guide',
@@ -132,10 +148,21 @@ beforeEach(() => {
   blogCreate.mockReset();
   receiverIndexesReady.mockReset().mockResolvedValue(true);
   tenantVerifier.mockReset().mockImplementation(tenantResult);
+  targetVerifier.mockClear();
   mockReceiptStore.current = createReceiptStore();
 });
 
 describe('POST /api/admin/content/blog', () => {
+  it('stops before database and receipt work when the target contract fails', async () => {
+    targetVerifier.mockReturnValueOnce({ status: 422 } as never);
+    const response = await POST(request({ payload: validPayload }));
+
+    expect(response.status).toBe(422);
+    expect(mockDbConnect).not.toHaveBeenCalled();
+    expect(blogCreate).not.toHaveBeenCalled();
+    expect(mockReceiptStore.current!.receipts).toHaveLength(0);
+  });
+
   it('rejects non-object bodies and non-string required fields', async () => {
     const nullBody = await POST({
       json: async () => null,
@@ -223,6 +250,10 @@ describe('POST /api/admin/content/blog', () => {
         contentEnginePublishReceiptId: expect.any(String),
       }),
     );
+    expect(await response.json()).toEqual(expect.objectContaining({
+      status: 'published',
+      requiresManualPublish: false,
+    }));
   });
 
   it('filters unsupported translations and builds the locale-correct live URL', async () => {

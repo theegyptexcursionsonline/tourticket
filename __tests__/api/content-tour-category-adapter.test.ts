@@ -33,6 +33,11 @@ jest.mock('@/lib/content/receiverIndexReadiness', () => ({
 
 jest.mock('@/lib/auth/verifyContentEngine', () => ({
   verifyContentEngine: jest.fn().mockReturnValue(null),
+  authenticateContentEngineMutation: jest.fn().mockReturnValue({
+    ok: true,
+    credential: { grantId: 'test', targets: [] },
+  }),
+  verifyContentEngineMutationTarget: jest.fn().mockReturnValue(null),
   verifyContentEngineTenant: jest.fn(),
 }));
 
@@ -73,14 +78,25 @@ import { POST as postCategory, PUT as putCategory } from '@/app/api/admin/conten
 import { GET as getCategory } from '@/app/api/admin/content/category/[slug]/route';
 import { POST as postTour } from '@/app/api/admin/content/tour/route';
 import { GET as getTour } from '@/app/api/admin/content/tour/[slug]/route';
-import { verifyContentEngineTenant } from '@/lib/auth/verifyContentEngine';
+import {
+  verifyContentEngineMutationTarget,
+  verifyContentEngineTenant,
+} from '@/lib/auth/verifyContentEngine';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 import { createReceiptStore, type ReceiptStore } from '@/__mocks__/contentPublishReceiptStore';
 
 const tenantVerifier = verifyContentEngineTenant as jest.MockedFunction<
   typeof verifyContentEngineTenant
 >;
-const HEADERS = { 'Idempotency-Key': '9f7d2c8a-1234-4c5d-8e9f-000000000003' };
+const targetVerifier = verifyContentEngineMutationTarget as jest.MockedFunction<
+  typeof verifyContentEngineMutationTarget
+>;
+const HEADERS = {
+  'Idempotency-Key': '9f7d2c8a-1234-4c5d-8e9f-000000000003',
+  'X-Content-Engine-Receiver-Type': 'category',
+  'X-Content-Engine-Tenant': 'default',
+  'X-Content-Engine-Locale': 'en',
+};
 const validCategory = {
   name: 'Family Adventures',
   slug: 'family-adventures',
@@ -139,6 +155,7 @@ beforeEach(() => {
   tourCreate.mockReset();
   receiverIndexesReady.mockReset().mockResolvedValue(true);
   tenantVerifier.mockReset().mockImplementation(tenantResult);
+  targetVerifier.mockClear();
   mockReceiptStore.current = createReceiptStore();
 });
 
@@ -174,6 +191,16 @@ describe('POST /api/admin/content/tour', () => {
 });
 
 describe('POST /api/admin/content/category', () => {
+  it('stops before database and receipt work when the target contract fails', async () => {
+    targetVerifier.mockReturnValueOnce({ status: 422 } as never);
+    const response = await postCategory(request({ payload: validCategory }));
+
+    expect(response.status).toBe(422);
+    expect(mockDbConnect).not.toHaveBeenCalled();
+    expect(categoryCreate).not.toHaveBeenCalled();
+    expect(mockReceiptStore.current!.receipts).toHaveLength(0);
+  });
+
   it('rejects non-object bodies and non-string required fields', async () => {
     const nullBody = await postCategory({
       json: async () => null,
@@ -245,7 +272,11 @@ describe('POST /api/admin/content/category', () => {
         translations: { de: { name: 'Familie' } },
       }),
     );
-    expect(await response.json()).toEqual(expect.objectContaining({ droppedLocales: ['it'] }));
+    expect(await response.json()).toEqual(expect.objectContaining({
+      droppedLocales: ['it'],
+      status: 'published',
+      requiresManualPublish: false,
+    }));
   });
 
   it('replays one write and binds stale recovery to exact provenance', async () => {

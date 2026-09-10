@@ -1,6 +1,6 @@
 // app/api/admin/content/category/route.ts
 // Adapter route for the foxes-content-engine — category / landing page type.
-// Auth: Bearer token in Authorization header (CONTENT_ENGINE_API_KEY).
+// Auth: bearer token plus an exact receiver grant and target headers.
 // POST creates a new category; PUT updates an existing one by slug.
 // Reuses the existing Category model + the /{locale}/categories/{slug} page.
 
@@ -9,7 +9,8 @@ import { NextRequest, NextResponse } from "next/server";
 import dbConnect from "@/lib/dbConnect";
 import Category from "@/lib/models/Category";
 import {
-  verifyContentEngine,
+  authenticateContentEngineMutation,
+  verifyContentEngineMutationTarget,
   verifyContentEngineTenant,
 } from "@/lib/auth/verifyContentEngine";
 import { tenantFilter, tenantSlugFilter } from "@/lib/tenant/tenantScope";
@@ -121,8 +122,8 @@ function heroFrom(p: IncomingPayload): string | undefined {
 }
 
 async function POSTHandler(req: NextRequest) {
-  const authError = verifyContentEngine(req);
-  if (authError) return authError;
+  const authentication = authenticateContentEngineMutation(req);
+  if (!authentication.ok) return authentication.response;
 
   let body: IncomingBody;
   try {
@@ -140,6 +141,13 @@ async function POSTHandler(req: NextRequest) {
   if (!isTranslationEnvelope(body.translations)) {
     return NextResponse.json({ error: "translations must be an object map" }, { status: 400 });
   }
+
+  const targetError = verifyContentEngineMutationTarget(req, authentication.credential, {
+    receiverType: "category",
+    tenantId: body.tenantId,
+    locale: body.defaultLocale,
+  });
+  if (targetError) return targetError;
 
   const tenant = verifyContentEngineTenant(body.tenantId);
   if (!tenant.ok) return tenant.response;
@@ -240,6 +248,8 @@ async function POSTHandler(req: NextRequest) {
           slug: recovered.slug,
           liveUrl: liveUrlFor(recovered.slug, base.baseLocale),
           droppedLocales,
+          status: "published",
+          requiresManualPublish: false,
         };
         revalidateStorefrontContent();
         await completePublish(claim, 201, adopted);
@@ -282,6 +292,8 @@ async function POSTHandler(req: NextRequest) {
       slug: doc.slug,
       liveUrl: liveUrlFor(doc.slug, base.baseLocale),
       droppedLocales,
+      status: "published",
+      requiresManualPublish: false,
     };
     revalidateStorefrontContent();
     await completePublish(claim, 201, created);
@@ -312,8 +324,8 @@ async function POSTHandler(req: NextRequest) {
 }
 
 async function PUTHandler(req: NextRequest) {
-  const authError = verifyContentEngine(req);
-  if (authError) return authError;
+  const authentication = authenticateContentEngineMutation(req);
+  if (!authentication.ok) return authentication.response;
 
   let body: IncomingBody;
   try {
@@ -331,6 +343,13 @@ async function PUTHandler(req: NextRequest) {
   if (!isTranslationEnvelope(body.translations)) {
     return NextResponse.json({ error: "translations must be an object map" }, { status: 400 });
   }
+
+  const targetError = verifyContentEngineMutationTarget(req, authentication.credential, {
+    receiverType: "category",
+    tenantId: body.tenantId,
+    locale: body.defaultLocale,
+  });
+  if (targetError) return targetError;
 
   const tenant = verifyContentEngineTenant(body.tenantId);
   if (!tenant.ok) return tenant.response;
@@ -401,6 +420,8 @@ async function PUTHandler(req: NextRequest) {
       slug: existing.slug,
       liveUrl: liveUrlFor(existing.slug, base.baseLocale),
       droppedLocales,
+      status: "published",
+      requiresManualPublish: false,
     });
   } catch (err) {
     const duplicate =

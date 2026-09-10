@@ -1,6 +1,6 @@
 // app/api/admin/content/blog/route.ts
 // Adapter route for the foxes-content-engine.
-// Auth: Bearer token in Authorization header (CONTENT_ENGINE_API_KEY).
+// Auth: bearer token plus an exact receiver grant and target headers.
 // POST creates a new blog post; PUT updates an existing one by slug.
 
 import { withAdminAudit } from '@/lib/admin/adminAudit';
@@ -8,7 +8,8 @@ import { NextRequest, NextResponse } from "next/server";
 import dbConnect from "@/lib/dbConnect";
 import Blog from "@/lib/models/Blog";
 import {
-  verifyContentEngine,
+  authenticateContentEngineMutation,
+  verifyContentEngineMutationTarget,
   verifyContentEngineTenant,
 } from "@/lib/auth/verifyContentEngine";
 import { tenantSlugFilter } from "@/lib/tenant/tenantScope";
@@ -153,8 +154,8 @@ function validate(payload: IncomingPayload | undefined): string | null {
 }
 
 async function POSTHandler(req: NextRequest) {
-  const authError = verifyContentEngine(req);
-  if (authError) return authError;
+  const authentication = authenticateContentEngineMutation(req);
+  if (!authentication.ok) return authentication.response;
 
   let body: IncomingBody;
   try {
@@ -172,6 +173,13 @@ async function POSTHandler(req: NextRequest) {
   if (!isTranslationEnvelope(body.translations)) {
     return NextResponse.json({ error: "translations must be an object map" }, { status: 400 });
   }
+
+  const targetError = verifyContentEngineMutationTarget(req, authentication.credential, {
+    receiverType: "blog",
+    tenantId: body.tenantId,
+    locale: body.defaultLocale,
+  });
+  if (targetError) return targetError;
 
   const tenant = verifyContentEngineTenant(body.tenantId);
   if (!tenant.ok) return tenant.response;
@@ -274,6 +282,8 @@ async function POSTHandler(req: NextRequest) {
           slug: recovered.slug,
           liveUrl: liveUrlForBlog(recovered.slug, base.baseLocale),
           droppedLocales,
+          status: "published",
+          requiresManualPublish: false,
         };
         revalidateStorefrontContent();
         await completePublish(claim, 201, adopted);
@@ -316,6 +326,8 @@ async function POSTHandler(req: NextRequest) {
       slug: doc.slug,
       liveUrl: liveUrlForBlog(doc.slug, base.baseLocale),
       droppedLocales,
+      status: "published",
+      requiresManualPublish: false,
     };
 
     revalidateStorefrontContent();
@@ -354,8 +366,8 @@ async function POSTHandler(req: NextRequest) {
 }
 
 async function PUTHandler(req: NextRequest) {
-  const authError = verifyContentEngine(req);
-  if (authError) return authError;
+  const authentication = authenticateContentEngineMutation(req);
+  if (!authentication.ok) return authentication.response;
 
   let body: IncomingBody;
   try {
@@ -373,6 +385,13 @@ async function PUTHandler(req: NextRequest) {
   if (!isTranslationEnvelope(body.translations)) {
     return NextResponse.json({ error: "translations must be an object map" }, { status: 400 });
   }
+
+  const targetError = verifyContentEngineMutationTarget(req, authentication.credential, {
+    receiverType: "blog",
+    tenantId: body.tenantId,
+    locale: body.defaultLocale,
+  });
+  if (targetError) return targetError;
 
   const tenant = verifyContentEngineTenant(body.tenantId);
   if (!tenant.ok) return tenant.response;
@@ -446,6 +465,8 @@ async function PUTHandler(req: NextRequest) {
       slug: existing.slug,
       liveUrl: liveUrlForBlog(existing.slug, base.baseLocale),
       droppedLocales,
+      status: "published",
+      requiresManualPublish: false,
     });
   } catch (err) {
     const duplicate =

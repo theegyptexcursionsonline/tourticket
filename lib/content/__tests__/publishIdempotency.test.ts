@@ -146,15 +146,47 @@ describe('beginPublish', () => {
         requestHash: 'hash-1',
         state: 'completed',
         statusCode: 201,
-        response: { id: 'blog-1', slug: 'a-slug' },
+        response: {
+          id: 'blog-1',
+          slug: 'a-slug',
+          liveUrl: 'https://www.egypt-excursionsonline.com/en/blog/a-slug',
+        },
       }),
     );
 
     await expect(beginPublish(input)).resolves.toEqual({
       outcome: 'replay',
       status: 201,
-      body: { id: 'blog-1', slug: 'a-slug' },
+      body: {
+        id: 'blog-1',
+        slug: 'a-slug',
+        liveUrl: 'https://www.egypt-excursionsonline.com/en/blog/a-slug',
+        status: 'published',
+        requiresManualPublish: false,
+      },
     });
+  });
+
+  it('preserves an already explicit completed receiver receipt', async () => {
+    receiptCreate.mockRejectedValue(duplicateKeyError);
+    receiptFindOne.mockReturnValue(lean({
+      _id: 'receipt-1',
+      requestHash: 'hash-1',
+      state: 'completed',
+      statusCode: 201,
+      response: {
+        id: 'blog-1',
+        slug: 'a-slug',
+        liveUrl: 'https://www.egypt-excursionsonline.com/en/blog/a-slug',
+        status: 'published',
+        requiresManualPublish: false,
+      },
+    }));
+
+    await expect(beginPublish(input)).resolves.toEqual(expect.objectContaining({
+      outcome: 'replay',
+      body: expect.objectContaining({ status: 'published', requiresManualPublish: false }),
+    }));
   });
 
   it('returns 409 when the key is bound to a different body', async () => {

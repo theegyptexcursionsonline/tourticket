@@ -22,7 +22,10 @@ jest.mock('next/server', () => {
 jest.mock('@/lib/admin/adminAudit', () => ({ registerAdminAuditActor: jest.fn() }));
 
 import {
+  authenticateContentEngineMutation,
+  CONTENT_ENGINE_MUTATION_HEADERS,
   verifyContentEngine,
+  verifyContentEngineMutationTarget,
   verifyContentEngineTenant,
 } from '@/lib/auth/verifyContentEngine';
 import { registerAdminAuditActor } from '@/lib/admin/adminAudit';
@@ -31,15 +34,173 @@ const mockRegisterAdminAuditActor = registerAdminAuditActor as jest.MockedFuncti
   typeof registerAdminAuditActor
 >;
 
-function request(authorization: string | null) {
+function request(authorization: string | null, extraHeaders: Record<string, string> = {}) {
+  const headers = new Map(
+    Object.entries(extraHeaders).map(([name, value]) => [name.toLowerCase(), value]),
+  );
   return {
     headers: {
       get(name: string) {
-        return name.toLowerCase() === 'authorization' ? authorization : null;
+        return name.toLowerCase() === 'authorization'
+          ? authorization
+          : headers.get(name.toLowerCase()) ?? null;
       },
     },
   } as never;
 }
+
+const exactTargetHeaders = {
+  [CONTENT_ENGINE_MUTATION_HEADERS.receiverType]: 'blog',
+  [CONTENT_ENGINE_MUTATION_HEADERS.tenant]: 'default',
+  [CONTENT_ENGINE_MUTATION_HEADERS.locale]: 'en',
+};
+
+function registry(...grants: unknown[]) {
+  return JSON.stringify({ version: 1, grants });
+}
+
+function grant(
+  id: string,
+  secretEnv: string,
+  receiverType: 'blog' | 'destination' | 'category' = 'blog',
+) {
+  return {
+    id,
+    secretEnv,
+    targets: [{ receiverType, tenantId: 'default', locale: 'en' }],
+  };
+}
+
+describe('content engine mutation grants', () => {
+  const envNames = [
+    'CONTENT_ENGINE_API_KEY',
+    'CONTENT_ENGINE_API_KEY_NEXT',
+    'CONTENT_ENGINE_RECEIVER_GRANTS_JSON',
+  ] as const;
+  const prior = Object.fromEntries(envNames.map((name) => [name, process.env[name]]));
+
+  beforeEach(() => {
+    process.env.CONTENT_ENGINE_API_KEY = 'receiver-primary-secret';
+    process.env.CONTENT_ENGINE_API_KEY_NEXT = 'receiver-next-secret';
+    process.env.CONTENT_ENGINE_RECEIVER_GRANTS_JSON = registry(
+      grant('primary', 'CONTENT_ENGINE_API_KEY'),
+    );
+  });
+
+  afterEach(() => {
+    for (const name of envNames) {
+      const value = prior[name];
+      if (value === undefined) delete process.env[name];
+      else process.env[name] = value;
+    }
+  });
+
+  it('accepts the exact blog/default/en header, body and grant tuple', () => {
+    const authenticated = authenticateContentEngineMutation(
+      request('Bearer receiver-primary-secret', exactTargetHeaders),
+    );
+    expect(authenticated.ok).toBe(true);
+    if (!authenticated.ok) return;
+
+    expect(verifyContentEngineMutationTarget(
+      request('Bearer receiver-primary-secret', exactTargetHeaders),
+      authenticated.credential,
+      { receiverType: 'blog', tenantId: 'default', locale: 'en' },
+    )).toBeNull();
+  });
+
+  it('supports two distinct credentials for overlap during rotation', () => {
+    process.env.CONTENT_ENGINE_RECEIVER_GRANTS_JSON = registry(
+      grant('primary', 'CONTENT_ENGINE_API_KEY'),
+      grant('next', 'CONTENT_ENGINE_API_KEY_NEXT'),
+    );
+
+    expect(authenticateContentEngineMutation(request('Bearer receiver-primary-secret')).ok).toBe(true);
+    expect(authenticateContentEngineMutation(request('Bearer receiver-next-secret')).ok).toBe(true);
+    expect(verifyContentEngine(request('Bearer receiver-primary-secret'))).toBeNull();
+    expect(verifyContentEngine(request('Bearer receiver-next-secret'))).toBeNull();
+  });
+
+  it('keeps the legacy global credential unable to authorize an unbound mutation', async () => {
+    delete process.env.CONTENT_ENGINE_RECEIVER_GRANTS_JSON;
+    const denied = authenticateContentEngineMutation(request('Bearer receiver-primary-secret'));
+    expect(denied.ok).toBe(false);
+    if (!denied.ok) expect(denied.response.status).toBe(503);
+  });
+
+  it.each([
+    ['wrong route type', { receiverType: 'destination', tenantId: 'default', locale: 'en' }],
+    ['wrong tenant', { receiverType: 'blog', tenantId: 'network', locale: 'en' }],
+    ['wrong locale', { receiverType: 'blog', tenantId: 'default', locale: 'de' }],
+  ])('rejects %s when headers do not agree with the body', async (_label, bodyTarget) => {
+    const authenticated = authenticateContentEngineMutation(
+      request('Bearer receiver-primary-secret', exactTargetHeaders),
+    );
+    expect(authenticated.ok).toBe(true);
+    if (!authenticated.ok) return;
+
+    const denied = verifyContentEngineMutationTarget(
+      request('Bearer receiver-primary-secret', exactTargetHeaders),
+      authenticated.credential,
+      bodyTarget as never,
+    );
+    expect(denied?.status).toBe(422);
+  });
+
+  it('rejects a matching route/body/header tuple outside the credential grant', () => {
+    const destinationHeaders = {
+      ...exactTargetHeaders,
+      [CONTENT_ENGINE_MUTATION_HEADERS.receiverType]: 'destination',
+    };
+    const authenticated = authenticateContentEngineMutation(
+      request('Bearer receiver-primary-secret', destinationHeaders),
+    );
+    expect(authenticated.ok).toBe(true);
+    if (!authenticated.ok) return;
+
+    const denied = verifyContentEngineMutationTarget(
+      request('Bearer receiver-primary-secret', destinationHeaders),
+      authenticated.credential,
+      { receiverType: 'destination', tenantId: 'default', locale: 'en' },
+    );
+    expect(denied?.status).toBe(403);
+  });
+
+  it('requires all three target headers', () => {
+    const authenticated = authenticateContentEngineMutation(
+      request('Bearer receiver-primary-secret'),
+    );
+    expect(authenticated.ok).toBe(true);
+    if (!authenticated.ok) return;
+    expect(verifyContentEngineMutationTarget(
+      request('Bearer receiver-primary-secret'),
+      authenticated.credential,
+      { receiverType: 'blog', tenantId: 'default', locale: 'en' },
+    )?.status).toBe(422);
+  });
+
+  it.each([
+    ['invalid JSON', '{'],
+    ['empty grants', registry()],
+    ['extra registry key', JSON.stringify({ version: 1, grants: [], extra: true })],
+    ['duplicate grant id', registry(grant('same', 'CONTENT_ENGINE_API_KEY'), grant('same', 'CONTENT_ENGINE_API_KEY_NEXT'))],
+    ['duplicate secret env', registry(grant('one', 'CONTENT_ENGINE_API_KEY'), grant('two', 'CONTENT_ENGINE_API_KEY'))],
+    ['duplicate target', registry({ ...grant('one', 'CONTENT_ENGINE_API_KEY'), targets: [grant('x', 'CONTENT_ENGINE_API_KEY').targets[0], grant('x', 'CONTENT_ENGINE_API_KEY').targets[0]] })],
+    ['overbroad tenant', registry({ ...grant('one', 'CONTENT_ENGINE_API_KEY'), targets: [{ receiverType: 'blog', tenantId: '*', locale: 'en' }] })],
+    ['overbroad locale', registry({ ...grant('one', 'CONTENT_ENGINE_API_KEY'), targets: [{ receiverType: 'blog', tenantId: 'default', locale: '*' }] })],
+    ['unsupported receiver', registry({ ...grant('one', 'CONTENT_ENGINE_API_KEY'), targets: [{ receiverType: 'tour', tenantId: 'default', locale: 'en' }] })],
+  ])('fails closed for malformed or duplicate registry: %s', async (_label, value) => {
+    process.env.CONTENT_ENGINE_RECEIVER_GRANTS_JSON = value;
+    const denied = authenticateContentEngineMutation(request('Bearer receiver-primary-secret'));
+    expect(denied.ok).toBe(false);
+    if (!denied.ok) expect(denied.response.status).toBe(503);
+  });
+
+  it('fails closed on a malformed present registry for read-only recovery too', () => {
+    process.env.CONTENT_ENGINE_RECEIVER_GRANTS_JSON = '{';
+    expect(verifyContentEngine(request('Bearer receiver-primary-secret'))?.status).toBe(503);
+  });
+});
 
 describe('verifyContentEngine bearer boundary', () => {
   const priorKey = process.env.CONTENT_ENGINE_API_KEY;
