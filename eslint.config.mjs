@@ -15,6 +15,7 @@ const eslintConfig = [
       "**/test-results/**",
       "**/readiness-proof/**",
       "**/output/**",
+      "**/public/maplibre/**",
       "**/scripts/**",
       "**/__tests__/**",
       "**/*.config.{js,cjs,mjs,ts}",
