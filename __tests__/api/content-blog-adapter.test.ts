@@ -40,15 +40,24 @@ jest.mock('@/lib/content/receiverIndexReadiness', () => ({
 
 jest.mock('@/lib/auth/verifyContentEngine', () => ({
   verifyContentEngine: jest.fn().mockReturnValue(null),
+  authenticateContentEngineMutation: jest.fn().mockReturnValue({
+    ok: true,
+    credential: { grantId: 'test', targets: [] },
+  }),
+  verifyContentEngineMutationTarget: jest.fn().mockReturnValue(null),
   verifyContentEngineTenant: jest.fn(),
 }));
 
 const blogFindOne = jest.fn();
+const blogFindOneAndUpdate = jest.fn();
+const blogUpdateOne = jest.fn();
 const blogCreate = jest.fn();
 jest.mock('@/lib/models/Blog', () => ({
   __esModule: true,
   default: {
     findOne: (...args: unknown[]) => blogFindOne(...args),
+    findOneAndUpdate: (...args: unknown[]) => blogFindOneAndUpdate(...args),
+    updateOne: (...args: unknown[]) => blogUpdateOne(...args),
     create: (...args: unknown[]) => blogCreate(...args),
   },
 }));
@@ -69,15 +78,26 @@ jest.mock('@/lib/models/ContentPublishReceipt', () => ({
 
 import { POST, PUT } from '@/app/api/admin/content/blog/route';
 import { GET } from '@/app/api/admin/content/blog/[slug]/route';
-import { verifyContentEngineTenant } from '@/lib/auth/verifyContentEngine';
+import {
+  verifyContentEngineMutationTarget,
+  verifyContentEngineTenant,
+} from '@/lib/auth/verifyContentEngine';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 import { createReceiptStore, type ReceiptStore } from '@/__mocks__/contentPublishReceiptStore';
 
 const tenantVerifier = verifyContentEngineTenant as jest.MockedFunction<
   typeof verifyContentEngineTenant
 >;
+const targetVerifier = verifyContentEngineMutationTarget as jest.MockedFunction<
+  typeof verifyContentEngineMutationTarget
+>;
 const IDEMPOTENCY_KEY = '9f7d2c8a-1234-4c5d-8e9f-000000000001';
-const DEFAULT_HEADERS = { 'Idempotency-Key': IDEMPOTENCY_KEY };
+const DEFAULT_HEADERS = {
+  'Idempotency-Key': IDEMPOTENCY_KEY,
+  'X-Content-Engine-Receiver-Type': 'blog',
+  'X-Content-Engine-Tenant': 'default',
+  'X-Content-Engine-Locale': 'en',
+};
 
 const validPayload = {
   title: 'Red Sea Snorkeling Guide',
@@ -129,13 +149,26 @@ function lookupRequest(tenantId?: string) {
 beforeEach(() => {
   mockDbConnect.mockReset().mockResolvedValue({ connection: { db: {} } });
   blogFindOne.mockReset();
+  blogFindOneAndUpdate.mockReset();
+  blogUpdateOne.mockReset().mockResolvedValue({ modifiedCount: 1 });
   blogCreate.mockReset();
   receiverIndexesReady.mockReset().mockResolvedValue(true);
   tenantVerifier.mockReset().mockImplementation(tenantResult);
+  targetVerifier.mockClear();
   mockReceiptStore.current = createReceiptStore();
 });
 
 describe('POST /api/admin/content/blog', () => {
+  it('stops before database and receipt work when the target contract fails', async () => {
+    targetVerifier.mockReturnValueOnce({ status: 422 } as never);
+    const response = await POST(request({ payload: validPayload }));
+
+    expect(response.status).toBe(422);
+    expect(mockDbConnect).not.toHaveBeenCalled();
+    expect(blogCreate).not.toHaveBeenCalled();
+    expect(mockReceiptStore.current!.receipts).toHaveLength(0);
+  });
+
   it('rejects non-object bodies and non-string required fields', async () => {
     const nullBody = await POST({
       json: async () => null,
@@ -223,6 +256,10 @@ describe('POST /api/admin/content/blog', () => {
         contentEnginePublishReceiptId: expect.any(String),
       }),
     );
+    expect(await response.json()).toEqual(expect.objectContaining({
+      status: 'published',
+      requiresManualPublish: false,
+    }));
   });
 
   it('filters unsupported translations and builds the locale-correct live URL', async () => {
@@ -360,38 +397,183 @@ describe('PUT /api/admin/content/blog', () => {
     expect(mockDbConnect).not.toHaveBeenCalled();
   });
 
-  it('updates only an explicitly published default-site post', async () => {
-    const existing = {
-      tags: [],
-      save: jest.fn().mockResolvedValue(undefined),
+  it('requires a UUID and explicit expected revision before database work', async () => {
+    const missingKey = await PUT(request({ expectedRevision: 2, payload: validPayload }, {}));
+    const missingRevision = await PUT(request({ payload: validPayload }));
+
+    expect(missingKey.status).toBe(400);
+    expect(missingRevision.status).toBe(400);
+    expect(mockDbConnect).not.toHaveBeenCalled();
+    expect(blogFindOneAndUpdate).not.toHaveBeenCalled();
+  });
+
+  it('atomically updates the exact published tenant record at the expected revision', async () => {
+    blogFindOneAndUpdate.mockResolvedValue({
       _id: 'blog-1',
       slug: validPayload.slug,
-    } as Record<string, unknown> & { save: jest.Mock };
-    blogFindOne.mockResolvedValue(existing);
+      __v: 3,
+    });
 
     const response = await PUT(
       request({
+        expectedRevision: 2,
         payload: validPayload,
         translations: { ar: { title: 'عنوان' }, ru: { title: 'Заголовок' } },
       }),
     );
 
     expect(response.status).toBe(200);
-    expect(blogFindOne).toHaveBeenCalledWith({
-      slug: validPayload.slug,
-      ...DEFAULT_TENANT_FILTER,
-    });
-    expect(existing.translations).toEqual({ ar: { title: 'عنوان' } });
-    expect(await response.json()).toEqual(expect.objectContaining({ droppedLocales: ['ru'] }));
+    expect(targetVerifier).toHaveBeenLastCalledWith(
+      expect.anything(),
+      expect.anything(),
+      expect.objectContaining({ method: 'PUT', receiverType: 'blog' }),
+    );
+    expect(blogFindOneAndUpdate).toHaveBeenCalledWith(
+      {
+        slug: validPayload.slug,
+        ...DEFAULT_TENANT_FILTER,
+        status: 'published',
+        __v: 2,
+        contentEngineUpdateReceiptId: { $exists: false },
+      },
+      {
+        $set: expect.objectContaining({
+          title: validPayload.title,
+          translations: { ar: { title: 'عنوان' } },
+          contentEngineUpdateReceiptId: expect.any(String),
+        }),
+        $inc: { __v: 1 },
+      },
+      { new: true, runValidators: true, context: 'query' },
+    );
+    expect(await response.json()).toEqual(expect.objectContaining({ revision: 3, droppedLocales: ['ru'] }));
   });
 
   it('remains disabled until the exact receiver indexes are present', async () => {
     receiverIndexesReady.mockResolvedValue(false);
 
-    const response = await PUT(request({ payload: validPayload }));
+    const response = await PUT(request({ expectedRevision: 0, payload: validPayload }));
 
     expect(response.status).toBe(503);
     expect(blogFindOne).not.toHaveBeenCalled();
+  });
+
+  it('returns and replays a deterministic revision conflict without a content write', async () => {
+    const select = jest.fn().mockResolvedValue({
+      _id: 'blog-1',
+      slug: validPayload.slug,
+      status: 'published',
+      __v: 4,
+    });
+    blogFindOneAndUpdate.mockResolvedValue(null);
+    blogFindOne.mockReturnValue({ select });
+
+    const first = await PUT(request({ expectedRevision: 2, payload: validPayload }));
+    const replay = await PUT(request({ expectedRevision: 2, payload: validPayload }));
+
+    expect(first.status).toBe(409);
+    expect(replay.status).toBe(409);
+    expect(await replay.json()).toEqual({
+      error: 'Expected revision does not match the current blog revision',
+      expectedRevision: 2,
+      currentRevision: 4,
+    });
+    expect(blogFindOneAndUpdate).toHaveBeenCalledTimes(1);
+  });
+
+  it('returns 409 when the same update key is rebound to another body', async () => {
+    blogFindOneAndUpdate.mockResolvedValue({ _id: 'blog-1', slug: validPayload.slug, __v: 2 });
+    await PUT(request({ expectedRevision: 1, payload: validPayload }));
+
+    const response = await PUT(request({
+      expectedRevision: 1,
+      payload: { ...validPayload, title: 'A different valid title' },
+    }));
+
+    expect(response.status).toBe(409);
+    expect(blogFindOneAndUpdate).toHaveBeenCalledTimes(1);
+  });
+
+  it('returns 503 to a concurrent retry while only one update reaches the model', async () => {
+    let finishWrite: ((value: unknown) => void) | undefined;
+    blogFindOneAndUpdate.mockImplementation(() => new Promise((resolve) => {
+      finishWrite = resolve;
+    }));
+
+    const firstPromise = PUT(request({ expectedRevision: 1, payload: validPayload }));
+    while (!finishWrite) await Promise.resolve();
+    const concurrent = await PUT(request({ expectedRevision: 1, payload: validPayload }));
+    finishWrite({ _id: 'blog-1', slug: validPayload.slug, __v: 2 });
+    const first = await firstPromise;
+
+    expect(first.status).toBe(200);
+    expect(concurrent.status).toBe(503);
+    expect(blogFindOneAndUpdate).toHaveBeenCalledTimes(1);
+  });
+
+  it('adopts a response-loss update by exact receipt marker without a second write', async () => {
+    mockReceiptStore.current!.loseNextCompletion();
+    blogFindOneAndUpdate.mockResolvedValue({ _id: 'blog-1', slug: validPayload.slug, __v: 2 });
+
+    const interrupted = await PUT(request({ expectedRevision: 1, payload: validPayload }));
+    expect(interrupted.status).toBe(503);
+    const marker = blogFindOneAndUpdate.mock.calls[0]?.[1]?.$set?.contentEngineUpdateReceiptId;
+    mockReceiptStore.current!.expireClaims();
+    blogFindOne.mockResolvedValue({
+      _id: 'blog-1',
+      slug: validPayload.slug,
+      __v: 2,
+      contentEngineUpdateReceiptId: marker,
+    });
+
+    const recovered = await PUT(request({ expectedRevision: 1, payload: validPayload }));
+
+    expect(recovered.status).toBe(200);
+    expect(await recovered.json()).toEqual(expect.objectContaining({ revision: 2 }));
+    expect(blogFindOneAndUpdate).toHaveBeenCalledTimes(1);
+    expect(blogFindOne).toHaveBeenCalledWith({
+      ...DEFAULT_TENANT_FILTER,
+      contentEngineUpdateReceiptId: marker,
+    });
+    expect(blogUpdateOne).toHaveBeenCalledWith(
+      { _id: 'blog-1', contentEngineUpdateReceiptId: marker },
+      { $unset: { contentEngineUpdateReceiptId: 1 } },
+    );
+  });
+
+  it('replays a completed receipt and clears its marker after cleanup response loss', async () => {
+    blogFindOneAndUpdate.mockResolvedValue({ _id: 'blog-1', slug: validPayload.slug, __v: 2 });
+    blogUpdateOne
+      .mockResolvedValueOnce({ modifiedCount: 0 })
+      .mockResolvedValueOnce({ modifiedCount: 1 });
+
+    const interrupted = await PUT(request({ expectedRevision: 1, payload: validPayload }));
+    const replay = await PUT(request({ expectedRevision: 1, payload: validPayload }));
+
+    expect(interrupted.status).toBe(503);
+    expect(replay.status).toBe(200);
+    expect(await replay.json()).toEqual(expect.objectContaining({ revision: 2 }));
+    expect(blogFindOneAndUpdate).toHaveBeenCalledTimes(1);
+    expect(blogUpdateOne).toHaveBeenLastCalledWith(
+      {
+        ...DEFAULT_TENANT_FILTER,
+        contentEngineUpdateReceiptId: expect.any(String),
+      },
+      { $unset: { contentEngineUpdateReceiptId: 1 } },
+    );
+  });
+
+  it('releases a receipt after a pre-commit model failure so the exact retry can proceed', async () => {
+    blogFindOneAndUpdate
+      .mockRejectedValueOnce(new Error('write unavailable'))
+      .mockResolvedValueOnce({ _id: 'blog-1', slug: validPayload.slug, __v: 2 });
+
+    const failed = await PUT(request({ expectedRevision: 1, payload: validPayload }));
+    const retried = await PUT(request({ expectedRevision: 1, payload: validPayload }));
+
+    expect(failed.status).toBe(503);
+    expect(retried.status).toBe(200);
+    expect(blogFindOneAndUpdate).toHaveBeenCalledTimes(2);
   });
 });
 
@@ -410,6 +592,7 @@ describe('GET /api/admin/content/blog/[slug]', () => {
       slug: 'some-slug',
       title: 'Title',
       status: 'published',
+      __v: 7,
       updatedAt: new Date(0),
     });
     blogFindOne.mockReturnValue({ lean });
@@ -424,7 +607,7 @@ describe('GET /api/admin/content/blog/[slug]', () => {
       ...DEFAULT_TENANT_FILTER,
     });
     expect(await response.json()).toEqual(
-      expect.objectContaining({ tenantId: null, status: 'published' }),
+      expect.objectContaining({ tenantId: null, status: 'published', revision: 7 }),
     );
   });
 

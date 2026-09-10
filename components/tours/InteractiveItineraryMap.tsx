@@ -12,6 +12,7 @@ import {
 } from '@/lib/tours/itineraryMap';
 
 const OPENFREE_STYLE_URL = 'https://tiles.openfreemap.org/styles/bright';
+const MAPLIBRE_WORKER_URL = '/maplibre/maplibre-gl-worker.mjs';
 const MAP_LOAD_TIMEOUT_MS = 15000;
 const ROUTE_SOURCE_ID = 'eeo-itinerary-route';
 const ROUTE_CASING_LAYER_ID = 'eeo-itinerary-route-casing';
@@ -181,6 +182,7 @@ function InteractiveItineraryMap({
       setStyleLoaded(false);
       try {
         const maplibre = await import('maplibre-gl');
+        maplibre.setWorkerUrl(MAPLIBRE_WORKER_URL);
         const first = positionsRef.current[0];
         if (cancelled || !mapElementRef.current || !first) return;
 

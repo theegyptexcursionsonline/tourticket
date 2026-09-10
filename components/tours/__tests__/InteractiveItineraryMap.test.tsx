@@ -34,8 +34,12 @@ describe('InteractiveItineraryMap', () => {
       'utf8',
     );
     const packageJson = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'package.json'), 'utf8'));
-    expect(packageJson.dependencies['maplibre-gl']).toBe('5.24.0');
+    expect(packageJson.dependencies['maplibre-gl']).toBe('6.4.1');
     expect(source).toContain("import('maplibre-gl')");
+    expect(source).toContain("const MAPLIBRE_WORKER_URL = '/maplibre/maplibre-gl-worker.mjs';");
+    expect(source.indexOf('maplibre.setWorkerUrl(MAPLIBRE_WORKER_URL)')).toBeLessThan(
+      source.indexOf('new maplibre.Map'),
+    );
     expect(source).toContain('IntersectionObserver');
     expect(source).toContain("map.once('style.load'");
     expect(source).toContain('className="h-full w-full"');

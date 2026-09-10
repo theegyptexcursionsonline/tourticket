@@ -6,7 +6,8 @@ import { NextRequest, NextResponse } from "next/server";
 import dbConnect from "@/lib/dbConnect";
 import Destination from "@/lib/models/Destination";
 import {
-  verifyContentEngine,
+  authenticateContentEngineMutation,
+  verifyContentEngineMutationTarget,
   verifyContentEngineTenant,
 } from "@/lib/auth/verifyContentEngine";
 import { tenantFilter, tenantSlugFilter } from "@/lib/tenant/tenantScope";
@@ -122,8 +123,8 @@ function asStringArray(v: unknown, max = 10): string[] {
 }
 
 async function POSTHandler(req: NextRequest) {
-  const authError = verifyContentEngine(req);
-  if (authError) return authError;
+  const authentication = authenticateContentEngineMutation(req);
+  if (!authentication.ok) return authentication.response;
 
   let body: IncomingBody;
   try {
@@ -141,6 +142,14 @@ async function POSTHandler(req: NextRequest) {
   if (!isTranslationEnvelope(body.translations)) {
     return NextResponse.json({ error: "translations must be an object map" }, { status: 400 });
   }
+
+  const targetError = verifyContentEngineMutationTarget(req, authentication.credential, {
+    method: "POST",
+    receiverType: "destination",
+    tenantId: body.tenantId,
+    locale: body.defaultLocale,
+  });
+  if (targetError) return targetError;
 
   const tenant = verifyContentEngineTenant(body.tenantId);
   if (!tenant.ok) return tenant.response;
@@ -236,6 +245,8 @@ async function POSTHandler(req: NextRequest) {
           slug: recovered.slug,
           liveUrl: liveUrlFor(recovered.slug, base.baseLocale),
           droppedLocales,
+          status: "published",
+          requiresManualPublish: false,
         };
         revalidateStorefrontContent();
         await completePublish(claim, 201, adopted);
@@ -285,6 +296,8 @@ async function POSTHandler(req: NextRequest) {
       slug: doc.slug,
       liveUrl: liveUrlFor(doc.slug, base.baseLocale),
       droppedLocales,
+      status: "published",
+      requiresManualPublish: false,
     };
 
     revalidateStorefrontContent();
