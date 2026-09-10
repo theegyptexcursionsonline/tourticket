@@ -144,6 +144,7 @@ async function POSTHandler(req: NextRequest) {
   }
 
   const targetError = verifyContentEngineMutationTarget(req, authentication.credential, {
+    method: "POST",
     receiverType: "destination",
     tenantId: body.tenantId,
     locale: body.defaultLocale,

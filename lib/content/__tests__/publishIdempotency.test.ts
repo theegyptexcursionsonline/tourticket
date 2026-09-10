@@ -26,9 +26,11 @@ import {
   beginPublish,
   completePublish,
   hashPublishRequest,
+  readExpectedRevision,
   readIdempotencyKey,
   receiptTenantId,
   releasePublishClaim,
+  updateReceiptScope,
   type PublishClaim,
 } from '../publishIdempotency';
 
@@ -72,6 +74,27 @@ describe('readIdempotencyKey', () => {
       key: null,
       error: 'Idempotency-Key must be a valid UUID',
     });
+  });
+});
+
+describe('update receipt contract', () => {
+  it.each([0, 1, Number.MAX_SAFE_INTEGER])('accepts safe expected revision %p', (value) => {
+    expect(readExpectedRevision(value)).toEqual({ revision: value, error: null });
+  });
+
+  it.each([undefined, null, -1, 1.5, Number.MAX_SAFE_INTEGER + 1, '1']) (
+    'rejects invalid expected revision %p',
+    (value) => {
+      expect(readExpectedRevision(value)).toEqual({
+        revision: null,
+        error: 'expectedRevision must be a non-negative safe integer',
+      });
+    },
+  );
+
+  it('separates update receipts from create receipts', () => {
+    expect(updateReceiptScope('blog')).toBe('blog:update');
+    expect(updateReceiptScope('category')).toBe('category:update');
   });
 });
 
@@ -156,6 +179,7 @@ describe('beginPublish', () => {
 
     await expect(beginPublish(input)).resolves.toEqual({
       outcome: 'replay',
+      receiptId: 'receipt-1',
       status: 201,
       body: {
         id: 'blog-1',
@@ -227,11 +251,12 @@ describe('beginPublish', () => {
     receiptCreate.mockRejectedValue(duplicateKeyError);
     receiptFindOne
       .mockReturnValueOnce(lean({ _id: 'receipt-1', requestHash: 'hash-1', state: 'pending' }))
-      .mockReturnValueOnce(lean({ state: 'completed', statusCode: 201, response: { id: 'b1' } }));
+      .mockReturnValueOnce(lean({ _id: 'receipt-1', state: 'completed', statusCode: 201, response: { id: 'b1' } }));
     receiptFindOneAndUpdate.mockReturnValue(lean(null));
 
     await expect(beginPublish(input)).resolves.toEqual({
       outcome: 'replay',
+      receiptId: 'receipt-1',
       status: 201,
       body: { id: 'b1' },
     });

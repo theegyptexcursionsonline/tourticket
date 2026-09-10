@@ -30,6 +30,14 @@ describe('Content Engine receiver persistence contract', () => {
       );
     }
 
+    for (const updatableModelSource of [blog, category]) {
+      expect(updatableModelSource).toContain('contentEngineUpdateReceiptId: {');
+      expect(updatableModelSource).toContain(
+        'index({ contentEngineUpdateReceiptId: 1 }, { unique: true, sparse: true });',
+      );
+    }
+    expect(destination).not.toContain('contentEngineUpdateReceiptId');
+
     for (const field of ['region', 'gettingThere', 'gettingAround']) {
       expect(destination).toContain(`${field}: {`);
     }
@@ -56,6 +64,7 @@ describe('Content Engine receiver persistence contract', () => {
     expect(migration).toContain('ALLOW_REMOTE_CONTENT_INDEX_MIGRATION');
     expect(migration).toContain('--confirm-host');
     expect(migration).toContain('assertNoLogicalDefaultDuplicates');
+    expect(migration.match(/name: 'contentEngineUpdateReceiptId_1'/g)).toHaveLength(2);
     expect(migration).not.toContain('dropIndex(');
   });
 

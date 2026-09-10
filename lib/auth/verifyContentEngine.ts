@@ -1,6 +1,6 @@
 // lib/auth/verifyContentEngine.ts
 // Bearer-token auth for the foxes-content-engine adapter routes.
-// The engine pushes published drafts via POST /api/admin/content/:type
+// The engine creates and updates published content via /api/admin/content/:type
 // using a Bearer API key stored in CONTENT_ENGINE_API_KEY.
 
 import { NextRequest, NextResponse } from "next/server";
@@ -13,6 +13,7 @@ const RECEIVER_GRANTS_ENV = "CONTENT_ENGINE_RECEIVER_GRANTS_JSON";
 const SECRET_ENV_PATTERN = /^CONTENT_ENGINE_API_KEY(?:_[A-Z0-9]+)*$/;
 const GRANT_ID_PATTERN = /^[a-z0-9][a-z0-9_-]{0,63}$/;
 const MUTATION_RECEIVER_TYPES = ["blog", "destination", "category"] as const;
+const MUTATION_METHODS = ["POST", "PUT"] as const;
 
 export const CONTENT_ENGINE_MUTATION_HEADERS = {
   receiverType: "X-Content-Engine-Receiver-Type",
@@ -21,8 +22,10 @@ export const CONTENT_ENGINE_MUTATION_HEADERS = {
 } as const;
 
 export type ContentEngineMutationReceiverType = typeof MUTATION_RECEIVER_TYPES[number];
+export type ContentEngineMutationMethod = typeof MUTATION_METHODS[number];
 
 type ReceiverGrantTarget = {
+  method: ContentEngineMutationMethod;
   receiverType: ContentEngineMutationReceiverType;
   tenantId: typeof DEFAULT_CONTENT_TENANT;
   locale: "en";
@@ -60,7 +63,10 @@ function parseReceiverGrants():
     return { ok: false };
   }
   if (!isRecord(parsed) || !hasExactKeys(parsed, ["version", "grants"])) return { ok: false };
-  if (parsed.version !== 1 || !Array.isArray(parsed.grants) || parsed.grants.length < 1 || parsed.grants.length > 8) {
+  if ((parsed.version !== 1 && parsed.version !== 2)
+    || !Array.isArray(parsed.grants)
+    || parsed.grants.length < 1
+    || parsed.grants.length > 8) {
     return { ok: false };
   }
 
@@ -75,7 +81,7 @@ function parseReceiverGrants():
     if (
       typeof id !== "string" || !GRANT_ID_PATTERN.test(id) || ids.has(id)
       || typeof secretEnv !== "string" || !SECRET_ENV_PATTERN.test(secretEnv) || secretEnvs.has(secretEnv)
-      || !Array.isArray(targets) || targets.length < 1 || targets.length > MUTATION_RECEIVER_TYPES.length
+      || !Array.isArray(targets) || targets.length < 1 || targets.length > 8
     ) {
       return { ok: false };
     }
@@ -86,17 +92,29 @@ function parseReceiverGrants():
     const normalizedTargets: ReceiverGrantTarget[] = [];
     const targetKeys = new Set<string>();
     for (const target of targets) {
-      if (!isRecord(target) || !hasExactKeys(target, ["receiverType", "tenantId", "locale"])) return { ok: false };
+      const targetKeysForVersion = parsed.version === 1
+        ? ["receiverType", "tenantId", "locale"]
+        : ["method", "receiverType", "tenantId", "locale"];
+      if (!isRecord(target) || !hasExactKeys(target, targetKeysForVersion)) return { ok: false };
+      const method = parsed.version === 1 ? "POST" : target.method;
       if (
-        typeof target.receiverType !== "string"
+        typeof method !== "string"
+        || !MUTATION_METHODS.includes(method as ContentEngineMutationMethod)
+        || typeof target.receiverType !== "string"
         || !MUTATION_RECEIVER_TYPES.includes(target.receiverType as ContentEngineMutationReceiverType)
+        || (method === "PUT" && target.receiverType === "destination")
         || target.tenantId !== DEFAULT_CONTENT_TENANT
         || target.locale !== "en"
       ) {
         return { ok: false };
       }
-      const normalized = target as ReceiverGrantTarget;
-      const targetKey = `${normalized.receiverType}\u0000${normalized.tenantId}\u0000${normalized.locale}`;
+      const normalized: ReceiverGrantTarget = {
+        method: method as ContentEngineMutationMethod,
+        receiverType: target.receiverType as ContentEngineMutationReceiverType,
+        tenantId: DEFAULT_CONTENT_TENANT,
+        locale: "en",
+      };
+      const targetKey = `${normalized.method}\u0000${normalized.receiverType}\u0000${normalized.tenantId}\u0000${normalized.locale}`;
       if (targetKeys.has(targetKey)) return { ok: false };
       targetKeys.add(targetKey);
       normalizedTargets.push(normalized);
@@ -170,7 +188,12 @@ export function authenticateContentEngineMutation(
 export function verifyContentEngineMutationTarget(
   req: NextRequest,
   credential: VerifiedContentEngineMutationCredential,
-  bodyTarget: { receiverType: ContentEngineMutationReceiverType; tenantId: unknown; locale: unknown },
+  bodyTarget: {
+    method: ContentEngineMutationMethod;
+    receiverType: ContentEngineMutationReceiverType;
+    tenantId: unknown;
+    locale: unknown;
+  },
 ): NextResponse | null {
   const headerTarget = {
     receiverType: req.headers.get(CONTENT_ENGINE_MUTATION_HEADERS.receiverType),
@@ -182,6 +205,8 @@ export function verifyContentEngineMutationTarget(
     return NextResponse.json({ error: "Content engine receiver target headers are required" }, { status: 422 });
   }
   if (
+    (req.method && req.method.toUpperCase() !== bodyTarget.method)
+    ||
     headerTarget.receiverType !== bodyTarget.receiverType
     || headerTarget.tenantId !== bodyTarget.tenantId
     || headerTarget.locale !== bodyTarget.locale
@@ -190,7 +215,8 @@ export function verifyContentEngineMutationTarget(
   }
 
   const allowed = credential.targets.some((target) => (
-    target.receiverType === bodyTarget.receiverType
+    target.method === bodyTarget.method
+    && target.receiverType === bodyTarget.receiverType
     && target.tenantId === bodyTarget.tenantId
     && target.locale === bodyTarget.locale
   ));

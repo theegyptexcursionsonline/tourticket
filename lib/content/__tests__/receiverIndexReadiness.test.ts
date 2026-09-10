@@ -49,6 +49,7 @@ describe('contentReceiverIndexesReady', () => {
         blogs: [
           { key: { slug: 1, tenantId: 1 }, unique: true },
           { key: { contentEnginePublishReceiptId: 1 }, unique: true, sparse: true },
+          { key: { contentEngineUpdateReceiptId: 1 }, unique: true, sparse: true },
         ],
       },
     ],
@@ -69,6 +70,7 @@ describe('contentReceiverIndexesReady', () => {
           { key: { tenantId: 1, slug: 1 }, unique: true },
           { key: { tenantId: 1, name: 1 }, unique: true },
           { key: { contentEnginePublishReceiptId: 1 }, unique: true, sparse: true },
+          { key: { contentEngineUpdateReceiptId: 1 }, unique: true, sparse: true },
         ],
       },
     ],
@@ -94,6 +96,7 @@ describe('contentReceiverIndexesReady', () => {
               unique: true,
             },
             { key: { contentEnginePublishReceiptId: 1 }, unique: true, sparse: true },
+            { key: { contentEngineUpdateReceiptId: 1 }, unique: true, sparse: true },
           ],
         }),
       ),
@@ -107,6 +110,7 @@ describe('contentReceiverIndexesReady', () => {
           blogs: [
             { key: { slug: 1, tenantId: 1 }, unique: false },
             { key: { contentEnginePublishReceiptId: 1 }, unique: true, sparse: true },
+            { key: { contentEngineUpdateReceiptId: 1 }, unique: true, sparse: true },
           ],
         }),
       ),
@@ -123,6 +127,7 @@ describe('contentReceiverIndexesReady', () => {
             { key: { tenantId: 1, slug: 1 }, unique: true },
             { key: { tenantId: 1, name: 1 }, unique: true },
             { key: { contentEnginePublishReceiptId: 1 }, unique: true, sparse: true },
+            { key: { contentEngineUpdateReceiptId: 1 }, unique: true, sparse: true },
           ],
         }),
       ),
@@ -148,10 +153,29 @@ describe('contentReceiverIndexesReady', () => {
           blogs: [
             { key: { slug: 1, tenantId: 1 }, unique: true },
             { key: { contentEnginePublishReceiptId: 1 }, unique: true, sparse: true },
+            { key: { contentEngineUpdateReceiptId: 1 }, unique: true, sparse: true },
           ],
         }),
       ),
     ).resolves.toBe(false);
+  });
+
+  it('rejects a blog or category without the unique sparse update recovery marker', async () => {
+    const withoutUpdateMarker: Record<string, Index[]> = {
+      contentpublishreceipts: receiptIndexes,
+      blogs: [
+        { key: { slug: 1, tenantId: 1 }, unique: true },
+        { key: { contentEnginePublishReceiptId: 1 }, unique: true, sparse: true },
+      ],
+      categories: [
+        { key: { tenantId: 1, slug: 1 }, unique: true },
+        { key: { tenantId: 1, name: 1 }, unique: true },
+        { key: { contentEnginePublishReceiptId: 1 }, unique: true, sparse: true },
+      ],
+    };
+
+    await expect(contentReceiverIndexesReady('blog', database(withoutUpdateMarker))).resolves.toBe(false);
+    await expect(contentReceiverIndexesReady('category', database(withoutUpdateMarker))).resolves.toBe(false);
   });
 
   it('fails closed when the database or collection cannot be read', async () => {

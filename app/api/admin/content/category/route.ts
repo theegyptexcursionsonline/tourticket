@@ -23,8 +23,10 @@ import {
   beginPublish,
   completePublish,
   hashPublishRequest,
+  readExpectedRevision,
   readIdempotencyKey,
   releasePublishClaim,
+  updateReceiptScope,
   type PublishClaim,
 } from "@/lib/content/publishIdempotency";
 import { localizedContentPath } from "@/lib/content/contentUrl";
@@ -61,6 +63,7 @@ type IncomingPayload = {
 type IncomingBody = {
   tenantId?: string;
   defaultLocale?: string;
+  expectedRevision?: unknown;
   payload?: IncomingPayload;
   translations?: Record<string, Record<string, unknown>>;
 };
@@ -143,6 +146,7 @@ async function POSTHandler(req: NextRequest) {
   }
 
   const targetError = verifyContentEngineMutationTarget(req, authentication.credential, {
+    method: "POST",
     receiverType: "category",
     tenantId: body.tenantId,
     locale: body.defaultLocale,
@@ -345,6 +349,7 @@ async function PUTHandler(req: NextRequest) {
   }
 
   const targetError = verifyContentEngineMutationTarget(req, authentication.credential, {
+    method: "PUT",
     receiverType: "category",
     tenantId: body.tenantId,
     locale: body.defaultLocale,
@@ -361,6 +366,15 @@ async function PUTHandler(req: NextRequest) {
 
   const base = resolveBaseLocale(body.defaultLocale);
   if (!base.ok) return NextResponse.json({ error: base.error }, { status: 400 });
+
+  const { key: idempotencyKey, error: keyError } = readIdempotencyKey(
+    req.headers.get("idempotency-key"),
+  );
+  if (keyError) return NextResponse.json({ error: keyError }, { status: 400 });
+  const { revision: expectedRevision, error: revisionError } = readExpectedRevision(
+    body.expectedRevision,
+  );
+  if (revisionError) return NextResponse.json({ error: revisionError }, { status: 400 });
 
   let connection: Awaited<ReturnType<typeof dbConnect>>;
   try {
@@ -379,58 +393,174 @@ async function PUTHandler(req: NextRequest) {
     return NextResponse.json({ error: "Content receiver indexes are not ready" }, { status: 503 });
   }
 
-  try {
-    const existing = await Category.findOne(tenantSlugFilter(p.slug!, body.tenantId));
-    if (!existing) {
-      return NextResponse.json(
-        { error: `No category with slug "${p.slug}"` },
-        { status: 404 },
-      );
-    }
+  if (!idempotencyKey || expectedRevision === null) {
+    return NextResponse.json({ error: "Update contract is incomplete" }, { status: 400 });
+  }
 
-    existing.name = p.name!;
-    existing.description = p.description!;
-    if (p.longDescription) existing.longDescription = p.longDescription;
-    if (Array.isArray(p.highlights)) existing.highlights = asStringArray(p.highlights, 12);
-    if (Array.isArray(p.features)) existing.features = asStringArray(p.features, 12);
-    if (Array.isArray(p.keywords) || Array.isArray(p.tags)) {
-      existing.keywords = asStringArray(p.keywords ?? p.tags, 12);
+  let begun: Awaited<ReturnType<typeof beginPublish>>;
+  try {
+    begun = await beginPublish({
+      idempotencyKey,
+      tenantId: body.tenantId,
+      contentType: updateReceiptScope("category"),
+      requestHash: hashPublishRequest(body),
+    });
+  } catch (error) {
+    console.error("[content-receiver] update receipt claim failed", {
+      contentType: "category",
+      errorName: error instanceof Error ? error.name : "UnknownError",
+    });
+    return NextResponse.json({ error: "Content update is temporarily unavailable" }, { status: 503 });
+  }
+  if (begun.outcome === "replay") {
+    try {
+      await Category.updateOne(
+        {
+          ...tenantFilter(body.tenantId),
+          contentEngineUpdateReceiptId: begun.receiptId,
+        },
+        { $unset: { contentEngineUpdateReceiptId: 1 } },
+      );
+    } catch {
+      return NextResponse.json({ error: "Content update recovery is temporarily unavailable" }, { status: 503 });
     }
-    if (p.metaTitle) existing.metaTitle = p.metaTitle;
-    if (p.metaDescription) existing.metaDescription = p.metaDescription;
-    const hero = heroFrom(p);
-    if (hero) existing.heroImage = hero;
-    if (typeof p.featured === "boolean") existing.featured = p.featured;
-    if (typeof p.published === "boolean") existing.isPublished = p.published;
-    let droppedLocales: string[] = [];
-    if (body.translations) {
-      const filtered = filterSupportedTranslations(body.translations);
-      droppedLocales = filtered.droppedLocales;
-      existing.translations = withBaseLocaleBucket(
+    return NextResponse.json(begun.body, { status: begun.status });
+  }
+  if (begun.outcome === "error") {
+    return NextResponse.json({ error: begun.error }, { status: begun.status });
+  }
+  const claim: PublishClaim = begun;
+
+  const filtered = filterSupportedTranslations(body.translations);
+  const droppedLocales = filtered.droppedLocales;
+  const translations = body.translations
+    ? withBaseLocaleBucket(
         filtered.translations,
         base.baseLocale,
         baseLocaleBucket(p),
-      ) as typeof existing.translations;
+      )
+    : undefined;
+  const update = {
+    name: p.name,
+    description: p.description,
+    longDescription: p.longDescription,
+    highlights: asStringArray(p.highlights, 12),
+    features: asStringArray(p.features, 12),
+    keywords: asStringArray(p.keywords ?? p.tags, 12),
+    metaTitle: p.metaTitle,
+    metaDescription: p.metaDescription,
+    heroImage: heroFrom(p),
+    featured: p.featured,
+    isPublished: true,
+    ...(translations ? { translations } : {}),
+    contentEngineUpdateReceiptId: claim.receiptId,
+  };
+  const naturalFilter = tenantSlugFilter(p.slug!, body.tenantId);
+  let contentCommitted = false;
+
+  try {
+    if (claim.resumed) {
+      const recovered = await Category.findOne({
+        ...tenantFilter(body.tenantId),
+        contentEngineUpdateReceiptId: claim.receiptId,
+      });
+      if (recovered) {
+        contentCommitted = true;
+        const response = {
+          id: String(recovered._id),
+          slug: recovered.slug,
+          liveUrl: liveUrlFor(recovered.slug, base.baseLocale),
+          revision: recovered.__v,
+          droppedLocales,
+          status: "published",
+          requiresManualPublish: false,
+        };
+        await completePublish(claim, 200, response);
+        await Category.updateOne(
+          { _id: recovered._id, contentEngineUpdateReceiptId: claim.receiptId },
+          { $unset: { contentEngineUpdateReceiptId: 1 } },
+        );
+        return NextResponse.json(response);
+      }
     }
 
-    await existing.save();
-    revalidateStorefrontContent();
-    return NextResponse.json({
-      id: String(existing._id),
-      slug: existing.slug,
-      liveUrl: liveUrlFor(existing.slug, base.baseLocale),
+    const updated = await Category.findOneAndUpdate(
+      {
+        ...naturalFilter,
+        isPublished: true,
+        __v: expectedRevision,
+        contentEngineUpdateReceiptId: { $exists: false },
+      },
+      { $set: update, $inc: { __v: 1 } },
+      { new: true, runValidators: true, context: "query" },
+    );
+    if (!updated) {
+      const current = await Category.findOne(naturalFilter).select("+contentEngineUpdateReceiptId");
+      if (!current) {
+        const response = { error: `No category with slug "${p.slug}"` };
+        await completePublish(claim, 404, response);
+        return NextResponse.json(response, { status: 404 });
+      }
+      if (current.contentEngineUpdateReceiptId) {
+        await releasePublishClaim(claim);
+        return NextResponse.json(
+          { error: "Another update is awaiting durable receipt reconciliation" },
+          { status: 503 },
+        );
+      }
+      const response = {
+        error: current.isPublished
+          ? "Expected revision does not match the current category revision"
+          : "Only a published category may be updated",
+        expectedRevision,
+        currentRevision: current.__v,
+      };
+      await completePublish(claim, 409, response);
+      return NextResponse.json(response, { status: 409 });
+    }
+    contentCommitted = true;
+
+    const response = {
+      id: String(updated._id),
+      slug: updated.slug,
+      liveUrl: liveUrlFor(updated.slug, base.baseLocale),
+      revision: updated.__v,
       droppedLocales,
       status: "published",
       requiresManualPublish: false,
-    });
+    };
+    revalidateStorefrontContent();
+    await completePublish(claim, 200, response);
+    const cleared = await Category.updateOne(
+      { _id: updated._id, contentEngineUpdateReceiptId: claim.receiptId },
+      { $unset: { contentEngineUpdateReceiptId: 1 } },
+    );
+    if (cleared.modifiedCount !== 1) {
+      throw new Error("Content update recovery marker was not cleared");
+    }
+    return NextResponse.json(response);
   } catch (err) {
     const duplicate =
       Boolean(err) && typeof err === "object" && (err as { code?: number }).code === 11000;
     if (duplicate) {
-      return NextResponse.json({ error: "A category with this identity already exists" }, { status: 409 });
+      const response = { error: "A category with this identity already exists" };
+      try {
+        await completePublish(claim, 409, response);
+      } catch {
+        return NextResponse.json({ error: "Content update is temporarily unavailable" }, { status: 503 });
+      }
+      return NextResponse.json(response, { status: 409 });
+    }
+    if (!contentCommitted) {
+      try {
+        await releasePublishClaim(claim);
+      } catch {
+        // Preserve the original failure response; a stale claim remains safely retryable.
+      }
     }
     console.error("[content-receiver] update failed", {
       contentType: "category",
+      stage: contentCommitted ? "receipt-completion" : "content-write",
       errorName: err instanceof Error ? err.name : "UnknownError",
     });
     return NextResponse.json({ error: "Content update failed; retry shortly" }, { status: 503 });

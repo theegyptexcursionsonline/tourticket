@@ -42,6 +42,8 @@ jest.mock('@/lib/auth/verifyContentEngine', () => ({
 }));
 
 const categoryFindOne = jest.fn();
+const categoryFindOneAndUpdate = jest.fn();
+const categoryUpdateOne = jest.fn();
 const categoryCreate = jest.fn();
 const tourFindOne = jest.fn();
 const tourCreate = jest.fn();
@@ -49,6 +51,8 @@ jest.mock('@/lib/models/Category', () => ({
   __esModule: true,
   default: {
     findOne: (...args: unknown[]) => categoryFindOne(...args),
+    findOneAndUpdate: (...args: unknown[]) => categoryFindOneAndUpdate(...args),
+    updateOne: (...args: unknown[]) => categoryUpdateOne(...args),
     create: (...args: unknown[]) => categoryCreate(...args),
   },
 }));
@@ -150,6 +154,8 @@ function lookupRequest(tenantId?: string) {
 beforeEach(() => {
   mockDbConnect.mockClear();
   categoryFindOne.mockReset();
+  categoryFindOneAndUpdate.mockReset();
+  categoryUpdateOne.mockReset().mockResolvedValue({ modifiedCount: 1 });
   categoryCreate.mockReset();
   tourFindOne.mockReset();
   tourCreate.mockReset();
@@ -352,30 +358,115 @@ describe('PUT /api/admin/content/category', () => {
     expect(mockDbConnect).not.toHaveBeenCalled();
   });
 
-  it('updates only an explicitly published default category', async () => {
-    const existing = {
+  it('requires a UUID and explicit expected revision before database work', async () => {
+    const missingKey = await putCategory(request({ expectedRevision: 2, payload: validCategory }, {}));
+    const missingRevision = await putCategory(request({ payload: validCategory }));
+
+    expect(missingKey.status).toBe(400);
+    expect(missingRevision.status).toBe(400);
+    expect(mockDbConnect).not.toHaveBeenCalled();
+    expect(categoryFindOneAndUpdate).not.toHaveBeenCalled();
+  });
+
+  it('atomically updates the exact published tenant category at the expected revision', async () => {
+    categoryFindOneAndUpdate.mockResolvedValue({
       _id: 'category-1',
       slug: validCategory.slug,
-      save: jest.fn().mockResolvedValue(undefined),
-    } as Record<string, unknown> & { save: jest.Mock };
-    categoryFindOne.mockResolvedValue(existing);
+      __v: 6,
+    });
 
-    const response = await putCategory(request({ payload: validCategory }));
+    const response = await putCategory(request({ expectedRevision: 5, payload: validCategory }));
 
     expect(response.status).toBe(200);
-    expect(categoryFindOne).toHaveBeenCalledWith({
-      slug: validCategory.slug,
-      ...DEFAULT_TENANT_FILTER,
-    });
+    expect(targetVerifier).toHaveBeenLastCalledWith(
+      expect.anything(),
+      expect.anything(),
+      expect.objectContaining({ method: 'PUT', receiverType: 'category' }),
+    );
+    expect(categoryFindOneAndUpdate).toHaveBeenCalledWith(
+      {
+        slug: validCategory.slug,
+        ...DEFAULT_TENANT_FILTER,
+        isPublished: true,
+        __v: 5,
+        contentEngineUpdateReceiptId: { $exists: false },
+      },
+      {
+        $set: expect.objectContaining({
+          name: validCategory.name,
+          contentEngineUpdateReceiptId: expect.any(String),
+        }),
+        $inc: { __v: 1 },
+      },
+      { new: true, runValidators: true, context: 'query' },
+    );
+    expect(await response.json()).toEqual(expect.objectContaining({ revision: 6 }));
   });
 
   it('remains disabled until the exact receiver indexes are present', async () => {
     receiverIndexesReady.mockResolvedValue(false);
 
-    const response = await putCategory(request({ payload: validCategory }));
+    const response = await putCategory(request({ expectedRevision: 0, payload: validCategory }));
 
     expect(response.status).toBe(503);
     expect(categoryFindOne).not.toHaveBeenCalled();
+  });
+
+  it('returns and replays a deterministic category revision conflict', async () => {
+    categoryFindOneAndUpdate.mockResolvedValue(null);
+    categoryFindOne.mockReturnValue({
+      select: jest.fn().mockResolvedValue({
+        _id: 'category-1',
+        slug: validCategory.slug,
+        isPublished: true,
+        __v: 8,
+      }),
+    });
+
+    const first = await putCategory(request({ expectedRevision: 4, payload: validCategory }));
+    const replay = await putCategory(request({ expectedRevision: 4, payload: validCategory }));
+
+    expect(first.status).toBe(409);
+    expect(replay.status).toBe(409);
+    expect(await replay.json()).toEqual({
+      error: 'Expected revision does not match the current category revision',
+      expectedRevision: 4,
+      currentRevision: 8,
+    });
+    expect(categoryFindOneAndUpdate).toHaveBeenCalledTimes(1);
+  });
+
+  it('adopts a response-loss category update by exact receipt marker', async () => {
+    mockReceiptStore.current!.loseNextCompletion();
+    categoryFindOneAndUpdate.mockResolvedValue({
+      _id: 'category-1',
+      slug: validCategory.slug,
+      __v: 3,
+    });
+
+    const interrupted = await putCategory(request({ expectedRevision: 2, payload: validCategory }));
+    expect(interrupted.status).toBe(503);
+    const marker = categoryFindOneAndUpdate.mock.calls[0]?.[1]?.$set?.contentEngineUpdateReceiptId;
+    mockReceiptStore.current!.expireClaims();
+    categoryFindOne.mockResolvedValue({
+      _id: 'category-1',
+      slug: validCategory.slug,
+      __v: 3,
+      contentEngineUpdateReceiptId: marker,
+    });
+
+    const recovered = await putCategory(request({ expectedRevision: 2, payload: validCategory }));
+
+    expect(recovered.status).toBe(200);
+    expect(categoryFindOneAndUpdate).toHaveBeenCalledTimes(1);
+    expect(categoryFindOne).toHaveBeenCalledWith({
+      ...DEFAULT_TENANT_FILTER,
+      contentEngineUpdateReceiptId: marker,
+    });
+    expect(categoryUpdateOne).toHaveBeenCalledWith(
+      { _id: 'category-1', contentEngineUpdateReceiptId: marker },
+      { $unset: { contentEngineUpdateReceiptId: 1 } },
+    );
   });
 });
 
@@ -400,6 +491,7 @@ describe('receiver lookup routes', () => {
         slug: validCategory.slug,
         name: validCategory.name,
         isPublished: true,
+        __v: 9,
       }),
     });
     tourFindOne.mockReturnValue({
@@ -417,6 +509,8 @@ describe('receiver lookup routes', () => {
     const tourResponse = await getTour(lookupRequest('default'), {
       params: Promise.resolve({ slug: validTour.slug }),
     });
+
+    expect(await categoryResponse.json()).toEqual(expect.objectContaining({ revision: 9 }));
 
     expect(categoryResponse.status).toBe(200);
     expect(tourResponse.status).toBe(200);

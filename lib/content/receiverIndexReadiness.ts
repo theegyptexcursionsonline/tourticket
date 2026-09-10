@@ -50,6 +50,12 @@ const CONTENT_REQUIREMENTS: Record<SupportedReceiverContentType, IndexRequiremen
       unique: true,
       sparse: true,
     },
+    {
+      collection: 'blogs',
+      key: { contentEngineUpdateReceiptId: 1 },
+      unique: true,
+      sparse: true,
+    },
   ],
   destination: [
     { collection: 'destinations', key: { slug: 1, tenantId: 1 }, unique: true },
@@ -67,6 +73,12 @@ const CONTENT_REQUIREMENTS: Record<SupportedReceiverContentType, IndexRequiremen
     {
       collection: 'categories',
       key: { contentEnginePublishReceiptId: 1 },
+      unique: true,
+      sparse: true,
+    },
+    {
+      collection: 'categories',
+      key: { contentEngineUpdateReceiptId: 1 },
       unique: true,
       sparse: true,
     },

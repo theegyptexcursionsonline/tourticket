@@ -34,11 +34,16 @@ const mockRegisterAdminAuditActor = registerAdminAuditActor as jest.MockedFuncti
   typeof registerAdminAuditActor
 >;
 
-function request(authorization: string | null, extraHeaders: Record<string, string> = {}) {
+function request(
+  authorization: string | null,
+  extraHeaders: Record<string, string> = {},
+  method?: string,
+) {
   const headers = new Map(
     Object.entries(extraHeaders).map(([name, value]) => [name.toLowerCase(), value]),
   );
   return {
+    method,
     headers: {
       get(name: string) {
         return name.toLowerCase() === 'authorization'
@@ -59,6 +64,10 @@ function registry(...grants: unknown[]) {
   return JSON.stringify({ version: 1, grants });
 }
 
+function methodRegistry(...grants: unknown[]) {
+  return JSON.stringify({ version: 2, grants });
+}
+
 function grant(
   id: string,
   secretEnv: string,
@@ -68,6 +77,19 @@ function grant(
     id,
     secretEnv,
     targets: [{ receiverType, tenantId: 'default', locale: 'en' }],
+  };
+}
+
+function methodGrant(
+  id: string,
+  secretEnv: string,
+  method: 'POST' | 'PUT',
+  receiverType: 'blog' | 'destination' | 'category' = 'blog',
+) {
+  return {
+    id,
+    secretEnv,
+    targets: [{ method, receiverType, tenantId: 'default', locale: 'en' }],
   };
 }
 
@@ -105,8 +127,51 @@ describe('content engine mutation grants', () => {
     expect(verifyContentEngineMutationTarget(
       request('Bearer receiver-primary-secret', exactTargetHeaders),
       authenticated.credential,
-      { receiverType: 'blog', tenantId: 'default', locale: 'en' },
+      { method: 'POST', receiverType: 'blog', tenantId: 'default', locale: 'en' },
     )).toBeNull();
+  });
+
+  it('keeps version 1 grants POST-only and requires an explicit version 2 PUT grant', () => {
+    const v1 = authenticateContentEngineMutation(
+      request('Bearer receiver-primary-secret', exactTargetHeaders, 'PUT'),
+    );
+    expect(v1.ok).toBe(true);
+    if (!v1.ok) return;
+    expect(verifyContentEngineMutationTarget(
+      request('Bearer receiver-primary-secret', exactTargetHeaders, 'PUT'),
+      v1.credential,
+      { method: 'PUT', receiverType: 'blog', tenantId: 'default', locale: 'en' },
+    )?.status).toBe(403);
+
+    process.env.CONTENT_ENGINE_RECEIVER_GRANTS_JSON = methodRegistry(
+      methodGrant('primary', 'CONTENT_ENGINE_API_KEY', 'PUT'),
+    );
+    const v2 = authenticateContentEngineMutation(
+      request('Bearer receiver-primary-secret', exactTargetHeaders, 'PUT'),
+    );
+    expect(v2.ok).toBe(true);
+    if (!v2.ok) return;
+    expect(verifyContentEngineMutationTarget(
+      request('Bearer receiver-primary-secret', exactTargetHeaders, 'PUT'),
+      v2.credential,
+      { method: 'PUT', receiverType: 'blog', tenantId: 'default', locale: 'en' },
+    )).toBeNull();
+  });
+
+  it('rejects disagreement between the actual request method and route contract', () => {
+    process.env.CONTENT_ENGINE_RECEIVER_GRANTS_JSON = methodRegistry(
+      methodGrant('primary', 'CONTENT_ENGINE_API_KEY', 'PUT'),
+    );
+    const authenticated = authenticateContentEngineMutation(
+      request('Bearer receiver-primary-secret', exactTargetHeaders, 'POST'),
+    );
+    expect(authenticated.ok).toBe(true);
+    if (!authenticated.ok) return;
+    expect(verifyContentEngineMutationTarget(
+      request('Bearer receiver-primary-secret', exactTargetHeaders, 'POST'),
+      authenticated.credential,
+      { method: 'PUT', receiverType: 'blog', tenantId: 'default', locale: 'en' },
+    )?.status).toBe(422);
   });
 
   it('supports two distinct credentials for overlap during rotation', () => {
@@ -129,9 +194,9 @@ describe('content engine mutation grants', () => {
   });
 
   it.each([
-    ['wrong route type', { receiverType: 'destination', tenantId: 'default', locale: 'en' }],
-    ['wrong tenant', { receiverType: 'blog', tenantId: 'network', locale: 'en' }],
-    ['wrong locale', { receiverType: 'blog', tenantId: 'default', locale: 'de' }],
+    ['wrong route type', { method: 'POST', receiverType: 'destination', tenantId: 'default', locale: 'en' }],
+    ['wrong tenant', { method: 'POST', receiverType: 'blog', tenantId: 'network', locale: 'en' }],
+    ['wrong locale', { method: 'POST', receiverType: 'blog', tenantId: 'default', locale: 'de' }],
   ])('rejects %s when headers do not agree with the body', async (_label, bodyTarget) => {
     const authenticated = authenticateContentEngineMutation(
       request('Bearer receiver-primary-secret', exactTargetHeaders),
@@ -161,7 +226,7 @@ describe('content engine mutation grants', () => {
     const denied = verifyContentEngineMutationTarget(
       request('Bearer receiver-primary-secret', destinationHeaders),
       authenticated.credential,
-      { receiverType: 'destination', tenantId: 'default', locale: 'en' },
+      { method: 'POST', receiverType: 'destination', tenantId: 'default', locale: 'en' },
     );
     expect(denied?.status).toBe(403);
   });
@@ -175,7 +240,7 @@ describe('content engine mutation grants', () => {
     expect(verifyContentEngineMutationTarget(
       request('Bearer receiver-primary-secret'),
       authenticated.credential,
-      { receiverType: 'blog', tenantId: 'default', locale: 'en' },
+      { method: 'POST', receiverType: 'blog', tenantId: 'default', locale: 'en' },
     )?.status).toBe(422);
   });
 
@@ -189,6 +254,9 @@ describe('content engine mutation grants', () => {
     ['overbroad tenant', registry({ ...grant('one', 'CONTENT_ENGINE_API_KEY'), targets: [{ receiverType: 'blog', tenantId: '*', locale: 'en' }] })],
     ['overbroad locale', registry({ ...grant('one', 'CONTENT_ENGINE_API_KEY'), targets: [{ receiverType: 'blog', tenantId: 'default', locale: '*' }] })],
     ['unsupported receiver', registry({ ...grant('one', 'CONTENT_ENGINE_API_KEY'), targets: [{ receiverType: 'tour', tenantId: 'default', locale: 'en' }] })],
+    ['version 2 target without method', methodRegistry(grant('one', 'CONTENT_ENGINE_API_KEY'))],
+    ['unsupported method', methodRegistry({ ...methodGrant('one', 'CONTENT_ENGINE_API_KEY', 'PUT'), targets: [{ method: 'PATCH', receiverType: 'blog', tenantId: 'default', locale: 'en' }] })],
+    ['unsupported destination update', methodRegistry(methodGrant('one', 'CONTENT_ENGINE_API_KEY', 'PUT', 'destination'))],
   ])('fails closed for malformed or duplicate registry: %s', async (_label, value) => {
     process.env.CONTENT_ENGINE_RECEIVER_GRANTS_JSON = value;
     const denied = authenticateContentEngineMutation(request('Bearer receiver-primary-secret'));

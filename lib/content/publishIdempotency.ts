@@ -31,6 +31,23 @@ export function readIdempotencyKey(value: string | null | undefined): {
   return { key, error: null };
 }
 
+export function readExpectedRevision(value: unknown): {
+  revision: number | null;
+  error: string | null;
+} {
+  if (!Number.isSafeInteger(value) || (value as number) < 0) {
+    return {
+      revision: null,
+      error: 'expectedRevision must be a non-negative safe integer',
+    };
+  }
+  return { revision: value as number, error: null };
+}
+
+export function updateReceiptScope(contentType: 'blog' | 'category'): string {
+  return `${contentType}:update`;
+}
+
 // Order-independent serialization so a retry that re-serializes the same publish
 // with different key ordering still hashes identically.
 function stableStringify(value: unknown): string {
@@ -63,7 +80,7 @@ export type PublishClaim = {
 
 export type BeginPublishResult =
   | PublishClaim
-  | { outcome: 'replay'; status: number; body: Record<string, unknown> }
+  | { outcome: 'replay'; receiptId: string; status: number; body: Record<string, unknown> }
   | { outcome: 'error'; status: number; error: string };
 
 function isDuplicateKeyError(error: unknown): boolean {
@@ -71,9 +88,10 @@ function isDuplicateKeyError(error: unknown): boolean {
 }
 
 function replayOf(receipt: {
+  _id: unknown;
   statusCode?: number;
   response?: Record<string, unknown> | null;
-}, contentType: string): { outcome: 'replay'; status: number; body: Record<string, unknown> } {
+}, contentType: string): Extract<BeginPublishResult, { outcome: 'replay' }> {
   const body = receipt.response ?? {};
   const legacyPublishedReceipt =
     (contentType === 'blog' || contentType === 'destination' || contentType === 'category')
@@ -85,6 +103,7 @@ function replayOf(receipt: {
 
   return {
     outcome: 'replay',
+    receiptId: String(receipt._id),
     status: receipt.statusCode ?? 200,
     body: legacyPublishedReceipt
       ? { ...body, status: 'published', requiresManualPublish: false }
@@ -185,6 +204,7 @@ export async function beginPublish(input: {
   // claim. In-flight is transient, so 503 lets the engine retry with backoff
   // instead of burning its 4xx budget.
   const latest = await ContentPublishReceipt.findOne(selector).lean<{
+    _id: unknown;
     state: ContentPublishReceiptStateLike;
     statusCode?: number;
     response?: Record<string, unknown> | null;

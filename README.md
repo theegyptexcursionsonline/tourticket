@@ -56,10 +56,12 @@ Copy `.env.local` and provide values for the keys used in code, including:
   server-only `CONTENT_ENGINE_API_KEY*` secrets, and the strict versioned
   `CONTENT_ENGINE_RECEIVER_GRANTS_JSON` registry documented below. Every
   blog, destination and category mutation must bind its bearer key to the exact
-  route/body/header tuple `receiverType/default/en`. A legacy
+  HTTP method and route/body/header tuple `method/receiverType/default/en`. A legacy
   `CONTENT_ENGINE_API_KEY` without a matching registry grant cannot write.
   Publishing also requires an explicit published state, the receiver's exact
-  live indexes and a UUID `Idempotency-Key`; prepare and review indexes before
+  live indexes and a UUID `Idempotency-Key`; blog and category updates also
+  require the lookup response's integer `revision` as `expectedRevision` in the
+  request body. Prepare and review indexes before
   activation. Tour writes remain deliberately unsupported until the payload can
   express exact catalogue relationships, sellable pricing, booking options and
   availability.
@@ -77,20 +79,22 @@ Copy `.env.local` and provide values for the keys used in code, including:
 The tracked no-secret example is
 [`config/content-engine.env.example`](config/content-engine.env.example). The
 grant registry is a strict JSON object whose only fields are `version` and
-`grants`. A grant contains only `id`, `secretEnv` and `targets`; a target
-contains only `receiverType`, `tenantId` and `locale`:
+`grants`. A grant contains only `id`, `secretEnv` and `targets`; a version 2
+target contains only `method`, `receiverType`, `tenantId` and `locale`:
 
 ```json
 {
-  "version": 1,
+  "version": 2,
   "grants": [
     {
       "id": "primary",
       "secretEnv": "CONTENT_ENGINE_API_KEY",
       "targets": [
-        { "receiverType": "blog", "tenantId": "default", "locale": "en" },
-        { "receiverType": "destination", "tenantId": "default", "locale": "en" },
-        { "receiverType": "category", "tenantId": "default", "locale": "en" }
+        { "method": "POST", "receiverType": "blog", "tenantId": "default", "locale": "en" },
+        { "method": "PUT", "receiverType": "blog", "tenantId": "default", "locale": "en" },
+        { "method": "POST", "receiverType": "destination", "tenantId": "default", "locale": "en" },
+        { "method": "POST", "receiverType": "category", "tenantId": "default", "locale": "en" },
+        { "method": "PUT", "receiverType": "category", "tenantId": "default", "locale": "en" }
       ]
     }
   ]
@@ -102,15 +106,25 @@ values. IDs, secret variable names, resolved secrets and targets within a grant
 must be unique. Unknown fields, wildcards, unsupported receiver types,
 non-default tenants, non-English locales, empty grants and missing referenced
 secrets invalidate the entire registry. Distinct keys may carry the same target
-during rotation.
+during rotation. Version 1 registries remain valid for a rolling upgrade but
+authorize POST only; PUT stays disabled until its exact version 2 target exists.
 
 Every mutation also sends `X-Content-Engine-Receiver-Type`,
 `X-Content-Engine-Tenant` and `X-Content-Engine-Locale`. Their exact values must
-match the route and the body `tenantId`/`defaultLocale`. Missing or mismatched
-target data returns 422, an ungranted target returns 403, and an invalid registry
+match the request method, route and the body `tenantId`/`defaultLocale`. Missing
+or mismatched target data returns 422, an ungranted target returns 403, and an invalid registry
 returns 503 before database or receipt work. Successful receipts include
 `status: "published"` and `requiresManualPublish: false`. Completed legacy
 receipts are normalized on replay without repeating their content effect.
+
+`PUT /api/admin/content/blog` and `PUT /api/admin/content/category` preserve the
+slug as the record identity. The caller first reads the record's `revision` from
+the corresponding `GET .../[slug]?tenantId=default` lookup, then sends that value
+as `expectedRevision` with a persisted UUID `Idempotency-Key`. The receiver
+atomically compares and increments the revision, returns 409 for a stale revision
+or a key rebound to another body, and returns 503 while the same key is in flight.
+A retry after response loss replays the stored response without a second content
+write. Destination remains POST-only.
 
 For a compatible rollout, first bind the existing `CONTENT_ENGINE_API_KEY` in
 the registry, then switch the caller to send the three headers. To rotate, add a
@@ -120,6 +134,16 @@ can still authenticate lookup routes but cannot authorize an unbound mutation;
 during rotation, both registry keys authenticate those recovery lookups.
 Index inspection remains `pnpm content:migrate-tenant-index`; review its dry run
 and exact target before a separately authorized apply.
+
+For the update-contract rollout, prepare the two unique sparse update-marker
+indexes before deploying this receiver version; its readiness gate deliberately
+blocks both POST and PUT when those indexes are absent. Deploy the compatible
+code while retaining the current version 1 registry, verify existing POST
+behavior, then install the version 2 registry with the same POST targets plus
+the intended blog/category PUT targets. Switch the caller only after those
+receiver checks pass. Do not install version 2 before the compatible receiver
+code because the older parser rejects it. Roll back the caller first, then
+restore the version 1 registry if the update capability must be withdrawn.
 
 ### Run
 
