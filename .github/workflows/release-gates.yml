@@ -33,7 +33,9 @@ jobs:
       NODE_ENV: test
       NEXT_TELEMETRY_DISABLED: "1"
       MONGODB_URI: mongodb://127.0.0.1:27017/tourticket_ci
-      NEXT_PUBLIC_BASE_URL: http://127.0.0.1:3000
+      # Canonical and structured-data URLs must keep the public production
+      # origin. The API step below uses TEST_BASE_URL for its local server.
+      NEXT_PUBLIC_BASE_URL: https://egypt-excursionsonline.com
       JWT_SECRET: ci-only-jwt-secret-not-for-production-0123456789
       REVENUEPILOT_PRICING_API_ENABLED: "false"
       STRIPE_SECRET_KEY: sk_test_ci_placeholder
