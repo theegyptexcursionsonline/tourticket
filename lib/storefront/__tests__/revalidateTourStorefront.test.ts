@@ -1,7 +1,7 @@
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, revalidateTag } from 'next/cache';
 import { revalidateStorefrontContent } from '@/lib/storefront/revalidateTourStorefront';
 
-jest.mock('next/cache', () => ({ revalidatePath: jest.fn() }));
+jest.mock('next/cache', () => ({ revalidatePath: jest.fn(), revalidateTag: jest.fn() }));
 
 describe('storefront cache revalidation', () => {
   beforeEach(() => {
@@ -12,6 +12,8 @@ describe('storefront cache revalidation', () => {
     expect(revalidateStorefrontContent()).toBe(true);
     expect(revalidatePath).toHaveBeenCalledWith('/', 'layout');
     expect(revalidatePath).toHaveBeenCalledWith('/[locale]', 'layout');
+    expect(revalidateTag).toHaveBeenCalledWith('destination-pages', 'max');
+    expect(revalidateTag).toHaveBeenCalledWith('tours-index', 'max');
   });
 
   it('does not fail a completed content write when cache purging throws', () => {

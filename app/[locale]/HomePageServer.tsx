@@ -23,6 +23,12 @@ import { selectLocalizedTaxonomyEntries } from '@/lib/i18n/localizedCollections'
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 import type { Category as CategoryData, Destination as DestinationData, Tour as TourData } from '@/types';
 import { filterVisibleTaxonomyEntries } from '@/lib/utils/taxonomy';
+import { toDestinationTourPayload } from '@/lib/content/storefrontTourPayload';
+
+const withoutTranslations = <T extends Record<string, unknown>>(record: T) => {
+  const { translations: _translations, ...payload } = record;
+  return payload;
+};
 
 type FeaturedInterest = {
   _id: string;
@@ -92,13 +98,18 @@ async function getHomePageData(locale: string) {
         .lean(),
 
       // All categories for PopularInterest
-      Category.find({ isPublished: true, archivedAt: null, ...DEFAULT_TENANT_FILTER }).lean(),
+      Category.find({ isPublished: true, archivedAt: null, ...DEFAULT_TENANT_FILTER })
+        .select('name slug heroImage featured urlType parentPage translations')
+        .lean(),
 
       // Attraction pages for PopularInterest
-      AttractionPage.find({ isPublished: true, pageType: 'attraction', archivedAt: null, ...DEFAULT_TENANT_FILTER }).lean(),
+      AttractionPage.find({ isPublished: true, pageType: 'attraction', archivedAt: null, ...DEFAULT_TENANT_FILTER })
+        .select('title slug keywords featured heroImage urlType parentPage')
+        .lean(),
 
       // Category pages for PopularInterest
       AttractionPage.find({ isPublished: true, pageType: 'category', archivedAt: null, ...DEFAULT_TENANT_FILTER })
+        .select('slug pageType isPublished heroImage urlType parentPage categoryId')
         .populate('categoryId', 'name slug')
         .sort({ featured: -1, createdAt: -1 })
         .lean(),
@@ -271,7 +282,7 @@ async function getHomePageData(locale: string) {
       destinationsWithCounts as Record<string, unknown>[],
       locale,
       ['name', 'description', 'country', 'metaTitle', 'metaDescription']
-    ).map((dest: Record<string, unknown>) => ({
+    ).map((dest: Record<string, unknown>) => withoutTranslations({
       ...localizeEntityFields(dest, locale, ['name', 'description', 'country', 'metaTitle', 'metaDescription']),
       tourCount: tourCountByDestination.get(String(dest._id)) || 0,
     })).filter((destination) => destination.tourCount > 0);
@@ -301,14 +312,14 @@ async function getHomePageData(locale: string) {
           discountValue: offer.discountValue,
         };
       }
-      return localized;
+      return toDestinationTourPayload(localized);
     });
 
     const localizedCategories = selectLocalizedTaxonomyEntries(
       interestGridCategories as Record<string, unknown>[],
       locale,
       ['name', 'description', 'longDescription', 'highlights', 'features', 'metaTitle', 'metaDescription']
-    ).map((category: Record<string, unknown>) => ({
+    ).map((category: Record<string, unknown>) => withoutTranslations({
       ...localizeEntityFields(category, locale, [
         'name',
         'description',
@@ -321,29 +332,37 @@ async function getHomePageData(locale: string) {
       tourCount: tourCountByCategory.get(String(category._id)) || 0,
     })).filter((category) => category.tourCount > 0);
 
-    const localizedFeaturedInterests = featuredInterests.map((interest: Record<string, unknown>) =>
-      localizeEntityFields(interest, locale, ['name', 'description', 'metaTitle', 'metaDescription'])
-    );
+    const localizedFeaturedInterests = featuredInterests.map((interest: Record<string, unknown>) => {
+      const localized = localizeEntityFields(interest, locale, ['name']);
+      return {
+        _id: String(localized._id || ''),
+        type: localized.type,
+        name: localized.name,
+        slug: localized.slug,
+        products: localized.products,
+        featured: localized.featured,
+        image: localized.image,
+        urlType: localized.urlType,
+        parentPage: localized.parentPage,
+      };
+    });
 
-    const localizedCategoryPages = JSON.parse(JSON.stringify(categoryPages)).map((page: Record<string, unknown>) =>
-      localizeEntityFields(page, locale, [
-        'title',
-        'description',
-        'longDescription',
-        'gridTitle',
-        'gridSubtitle',
-        'highlights',
-        'features',
-        'metaTitle',
-        'metaDescription',
-      ])
-    );
+    const localizedCategoryPages = JSON.parse(JSON.stringify(categoryPages)).map((page: Record<string, unknown>) => ({
+      _id: String(page._id || ''),
+      slug: page.slug,
+      pageType: page.pageType,
+      isPublished: page.isPublished,
+      heroImage: page.heroImage,
+      urlType: page.urlType,
+      parentPage: page.parentPage,
+      categoryId: page.categoryId,
+    }));
 
     const localizedHeaderDestinations = selectLocalizedTaxonomyEntries(
       JSON.parse(JSON.stringify(headerDestinations)) as Record<string, unknown>[],
       locale,
       ['name', 'description', 'country', 'metaTitle', 'metaDescription']
-    ).map((dest: Record<string, unknown>) => ({
+    ).map((dest: Record<string, unknown>) => withoutTranslations({
       ...localizeEntityFields(dest, locale, ['name', 'description', 'country', 'metaTitle', 'metaDescription']),
       tourCount: tourCountByDestination.get(String(dest._id)) || 0,
     })).filter((destination) => destination.tourCount > 0);
@@ -352,7 +371,7 @@ async function getHomePageData(locale: string) {
       JSON.parse(JSON.stringify(headerCategories)) as Record<string, unknown>[],
       locale,
       ['name', 'description', 'longDescription', 'highlights', 'features', 'metaTitle', 'metaDescription']
-    ).map((category: Record<string, unknown>) => ({
+    ).map((category: Record<string, unknown>) => withoutTranslations({
       ...localizeEntityFields(category, locale, [
         'name',
         'description',
@@ -388,7 +407,7 @@ async function getHomePageData(locale: string) {
           discountValue: offer.discountValue,
         };
       }
-      return localized;
+      return toDestinationTourPayload(localized);
     });
 
     return {

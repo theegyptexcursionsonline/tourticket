@@ -1,4 +1,4 @@
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, revalidateTag } from 'next/cache';
 
 const PRICING_PATHS: Array<[string, 'page']> = [
   ['/[locale]', 'page'],
@@ -18,6 +18,8 @@ export function revalidatePricingPaths() {
   if (process.env.NODE_ENV !== 'production' && process.env.REVENUEPILOT_SKIP_CACHE_REVALIDATION === 'true') return true;
   try {
     for (const [path, type] of PRICING_PATHS) revalidatePath(path, type);
+    revalidateTag('destination-pages', 'max');
+    revalidateTag('tours-index', 'max');
     return true;
   } catch (error) {
     console.error('Pricing cache revalidation failed after durable write.', error);

@@ -42,6 +42,7 @@ export default async function DestinationsServer({ destinations }: DestinationsS
               <Link
                 key={destination._id}
                 href={contentPath('destination', destination.slug, destination.urlType, null, destination.parentPage?.slug)}
+                prefetch={false}
                 className="text-center group"
               >
                 <div className="relative w-32 h-32 sm:w-36 sm:h-36 md:w-40 md:h-40 rounded-full overflow-hidden shadow-lg transform transition-all duration-300 group-hover:scale-110 group-hover:shadow-xl bg-slate-200">
@@ -69,6 +70,7 @@ export default async function DestinationsServer({ destinations }: DestinationsS
         <div className="mt-8 flex justify-center sm:mt-10">
           <Link
             href="/destinations"
+            prefetch={false}
             className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-red-600 px-6 py-3 text-sm font-bold text-white transition-colors hover:bg-red-700 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-red-200 sm:text-base"
           >
             {t('viewAll')}

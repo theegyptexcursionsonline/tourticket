@@ -6,7 +6,6 @@ import { Metadata } from 'next';
 import dbConnect from '@/lib/dbConnect';
 import DestinationModel from '@/lib/models/Destination';
 import TourModel from '@/lib/models/Tour';
-import CategoryModel from '@/lib/models/Category';
 import ReviewModel from '@/lib/models/Review';
 import DestinationPageClient from './DestinationPageClient';
 import DestinationSchema from '@/components/schema/DestinationSchema';
@@ -23,30 +22,22 @@ import { localizeHtmlLinks } from '@/lib/i18n/localizeHtmlLinks';
 import { buildContentBreadcrumbs } from '@/lib/content/breadcrumbs';
 import { contentPath, localizedContentPath } from '@/lib/content/contentUrl';
 import type { Category, Destination, Review, Tour } from '@/types';
+import { unstable_cache } from 'next/cache';
+import { toDestinationTourPayload } from '@/lib/content/storefrontTourPayload';
+
+const DESTINATION_TOUR_SELECT = [
+  'title', 'slug', 'urlType', 'parentPage', 'image', 'price',
+  'discountPrice', 'originalPrice', 'discountPercent', 'pricingSummary',
+  'duration', 'rating', 'reviewCount', 'reviews', 'bookings', 'isFeatured',
+  'fullyBooked', 'spotsLeft', 'location', 'destination', 'category',
+  'availability', 'bookingOptions', 'addOns', 'groupSize', 'maxGroupSize',
+  'languages', 'instantConfirmation', 'meetingPoint', 'operatedBy',
+  'revenueGuestPrices', 'tieredRefunds', 'tags', 'includes', 'highlights',
+      'whatsIncluded', 'whatsNotIncluded', 'translations', 'language', 'tenantId', 'createdAt',
+].join(' ');
 
 export async function getDestinationMetadata(slug: string, locale: string, canonicalPath: string): Promise<Metadata | null> {
-  await dbConnect();
-  const destinationMatches = await DestinationModel.find({
-    slug,
-    ...DEFAULT_TENANT_FILTER,
-    ...PUBLIC_CONTENT_FILTER,
-  })
-    .select('name description image country metaTitle metaDescription translations')
-    .lean();
-  const destinationCandidate = selectLocalizedTaxonomyEntries(
-    JSON.parse(JSON.stringify(destinationMatches)) as Record<string, unknown>[],
-    locale,
-    ['name', 'description', 'country', 'longDescription', 'metaTitle', 'metaDescription']
-  )[0];
-  const destination = destinationCandidate
-    ? localizeEntityFields(destinationCandidate, locale, [
-        'name',
-        'description',
-        'country',
-        'metaTitle',
-        'metaDescription',
-      ])
-    : null;
+  const { destination, contentLocales } = await getPageData(slug, locale);
 
   if (!destination) return null;
 
@@ -69,7 +60,7 @@ export async function getDestinationMetadata(slug: string, locale: string, canon
     alternates: metadataAlternates(
       locale,
       canonicalPath,
-      explicitContentLocales(destinationCandidate, ['name', 'description']),
+      contentLocales,
     ),
     openGraph: {
       title: namePart,
@@ -80,7 +71,7 @@ export async function getDestinationMetadata(slug: string, locale: string, canon
   };
 }
 
-async function getPageData(slug: string, locale: string) {
+async function loadDestinationPageData(slug: string, locale: string) {
   await dbConnect();
 
   // A trashed destination must not keep serving its page.
@@ -88,14 +79,26 @@ async function getPageData(slug: string, locale: string) {
     slug,
     ...DEFAULT_TENANT_FILTER,
     ...PUBLIC_CONTENT_FILTER,
-  }).lean();
+  })
+    .select([
+      'name', 'slug', 'urlType', 'breadcrumbLabel', 'parentPage', 'country',
+      'region', 'image', 'images', 'imageMetadata', 'description',
+      'longDescription', 'coordinates', 'highlights', 'thingsToDo',
+      'localCustoms', 'bestTimeToVisit', 'gettingThere', 'gettingAround',
+      'currency', 'timezone', 'visaRequirements', 'languagesSpoken',
+      'emergencyNumber', 'averageTemperature', 'climate', 'weatherWarnings',
+      'faqs', 'travelTips', 'bestDealTourIds', 'topTourIds', 'translations',
+      'metaTitle', 'metaDescription',
+    ].join(' '))
+    .lean();
   if (destinationMatches.length === 0) {
     return {
       destination: null,
       destinationTours: [],
       allCategories: [],
       reviews: [],
-      relatedDestinations: []
+      relatedDestinations: [],
+      contentLocales: [],
     };
   }
 
@@ -131,7 +134,8 @@ async function getPageData(slug: string, locale: string) {
       destinationTours: [],
       allCategories: [],
       reviews: [],
-      relatedDestinations: []
+      relatedDestinations: [],
+      contentLocales: [],
     };
   }
 
@@ -141,14 +145,18 @@ async function getPageData(slug: string, locale: string) {
     ...DEFAULT_TENANT_FILTER,
     ...PUBLIC_CONTENT_FILTER,
   })
-    .populate({ path: 'destination', match: { ...DEFAULT_TENANT_FILTER, ...PUBLIC_CONTENT_FILTER } })
-    .populate({ path: 'category', match: { ...DEFAULT_TENANT_FILTER, ...PUBLIC_CONTENT_FILTER } })
+    .select(DESTINATION_TOUR_SELECT)
+    .populate({
+      path: 'destination',
+      match: { ...DEFAULT_TENANT_FILTER, ...PUBLIC_CONTENT_FILTER },
+      select: 'name slug',
+    })
+    .populate({
+      path: 'category',
+      match: { ...DEFAULT_TENANT_FILTER, ...PUBLIC_CONTENT_FILTER },
+      select: 'name slug icon urlType parentPage translations',
+    })
     .lean();
-
-  const allCategories = await CategoryModel.find({
-    ...DEFAULT_TENANT_FILTER,
-    ...PUBLIC_CONTENT_FILTER,
-  }).lean();
 
   const serializedBaseTours = JSON.parse(JSON.stringify(baseDestinationTours)) as Record<string, unknown>[];
   const candidateSlugs = serializedBaseTours
@@ -164,8 +172,17 @@ async function getPageData(slug: string, locale: string) {
       ...PUBLIC_CONTENT_FILTER,
       slug: { $in: candidateSlugs },
     })
-      .populate({ path: 'destination', match: { ...DEFAULT_TENANT_FILTER, ...PUBLIC_CONTENT_FILTER } })
-      .populate({ path: 'category', match: { ...DEFAULT_TENANT_FILTER, ...PUBLIC_CONTENT_FILTER } })
+      .select(DESTINATION_TOUR_SELECT)
+      .populate({
+        path: 'destination',
+        match: { ...DEFAULT_TENANT_FILTER, ...PUBLIC_CONTENT_FILTER },
+        select: 'name slug',
+      })
+      .populate({
+        path: 'category',
+        match: { ...DEFAULT_TENANT_FILTER, ...PUBLIC_CONTENT_FILTER },
+        select: 'name slug icon urlType parentPage translations',
+      })
       .lean();
 
     serializedTourCandidates = JSON.parse(JSON.stringify(localizedTourMatches)) as Record<string, unknown>[];
@@ -181,6 +198,7 @@ async function getPageData(slug: string, locale: string) {
     tour: { $in: tourIds },
     verified: true
   })
+    .select('rating title comment userName verified createdAt')
     .sort({ createdAt: -1 })
     .limit(6)
     .lean();
@@ -200,24 +218,30 @@ async function getPageData(slug: string, locale: string) {
       }
     ]
   })
+    .select('name slug image description featured urlType parentPage translations')
     .limit(4)
     .lean();
-
-  const relatedDestinations = await Promise.all(
-    relatedDestinationsRaw.map(async (dest) => {
-      const tourCount = await TourModel.countDocuments({
-        destination: dest._id,
-        ...DEFAULT_TENANT_FILTER,
-        ...PUBLIC_CONTENT_FILTER,
-      });
-      return {
-        ...dest,
-        tourCount
-      };
-    })
+  const relatedDestinationIds = relatedDestinationsRaw.map((destination) => destination._id);
+  const relatedDestinationCounts = relatedDestinationIds.length > 0
+    ? await TourModel.aggregate<{ _id: unknown; tourCount: number }>([
+        {
+          $match: {
+            destination: { $in: relatedDestinationIds },
+            ...DEFAULT_TENANT_FILTER,
+            ...PUBLIC_CONTENT_FILTER,
+          },
+        },
+        { $group: { _id: '$destination', tourCount: { $sum: 1 } } },
+      ])
+    : [];
+  const relatedCountById = new Map(
+    relatedDestinationCounts.map((row) => [String(row._id), row.tourCount]),
   );
+  const relatedDestinations = relatedDestinationsRaw.map((destination) => ({
+    ...destination,
+    tourCount: relatedCountById.get(String(destination._id)) || 0,
+  }));
 
-  const serializedCategories = JSON.parse(JSON.stringify(allCategories));
   const serializedReviews = JSON.parse(JSON.stringify(reviews)) as Review[];
   const serializedRelatedDest = JSON.parse(JSON.stringify(relatedDestinations)) as Record<string, unknown>[];
   const relatedDestinationCountBySlug = new Map<string, number>();
@@ -278,35 +302,39 @@ async function getPageData(slug: string, locale: string) {
       ld[field] = localizeHtmlLinks(ld[field] as string, locale);
     }
   }
+  delete (localizedDestination as Record<string, unknown>).translations;
 
-  const localizedTours = selectedDestinationTours.map((tour: Record<string, unknown>) =>
-    localizeEntityFields(tour, locale, [
+  const localizedTours = selectedDestinationTours.map((tour: Record<string, unknown>) => {
+    const localizedTour = localizeEntityFields(tour, locale, [
       'title',
-      'description',
-      'longDescription',
       'location',
       'duration',
       'includes',
       'highlights',
       'whatsIncluded',
-      'whatsNotIncluded',
       'tags',
-      'metaTitle',
-      'metaDescription',
-    ])
-  );
+    ]);
+    if (localizedTour.category && typeof localizedTour.category === 'object') {
+      localizedTour.category = localizeEntityFields(
+        localizedTour.category as Record<string, unknown>,
+        locale,
+        ['name'],
+      );
+    }
+    return toDestinationTourPayload(localizedTour);
+  });
 
-  const localizedCategories = serializedCategories.map((category: Record<string, unknown>) =>
-    localizeEntityFields(category, locale, [
-      'name',
-      'description',
-      'longDescription',
-      'highlights',
-      'features',
-      'metaTitle',
-      'metaDescription',
-    ])
-  );
+  const categoryById = new Map<string, Record<string, unknown>>();
+  for (const tour of localizedTours) {
+    const categories = Array.isArray(tour.category) ? tour.category : [tour.category];
+    for (const category of categories) {
+      if (!category || typeof category !== 'object') continue;
+      const record = category as Record<string, unknown>;
+      const id = String(record._id || '');
+      if (id && !categoryById.has(id)) categoryById.set(id, record);
+    }
+  }
+  const localizedCategories = Array.from(categoryById.values());
 
   const localizedRelatedDestinations = selectLocalizedTaxonomyEntries(
     serializedRelatedDest,
@@ -321,32 +349,47 @@ async function getPageData(slug: string, locale: string) {
       'metaTitle',
       'metaDescription',
     ]
-  ).map((dest: Record<string, unknown>) =>
-    ({
-      ...localizeEntityFields(dest, locale, [
+  ).map((dest: Record<string, unknown>) => {
+    const localized = localizeEntityFields(dest, locale, [
         'name',
         'country',
         'description',
-        'longDescription',
-        'highlights',
-        'thingsToDo',
-        'metaTitle',
-        'metaDescription',
-      ]),
+      ]);
+    return {
+      _id: localized._id == null ? undefined : String(localized._id),
+      name: localized.name,
+      slug: localized.slug,
+      image: localized.image,
+      description: localized.description,
+      featured: localized.featured,
+      urlType: localized.urlType,
+      parentPage: localized.parentPage,
       tourCount:
         relatedDestinationCountBySlug.get(String(dest.slug || '')) ||
         Number(dest.tourCount) ||
         0,
-    })
-  );
+    };
+  });
 
   return {
     destination: localizedDestination as unknown as Destination,
     destinationTours: localizedTours as unknown as Tour[],
     allCategories: localizedCategories as unknown as Category[],
     reviews: serializedReviews,
-    relatedDestinations: localizedRelatedDestinations as unknown as Destination[]
+    relatedDestinations: localizedRelatedDestinations as unknown as Destination[],
+    contentLocales: explicitContentLocales(destinationCandidate, ['name', 'description']),
   };
+}
+
+function getPageData(slug: string, locale: string) {
+  return unstable_cache(
+    () => loadDestinationPageData(slug, locale),
+    ['destination-page-data', slug, locale],
+    {
+      revalidate: 1800,
+      tags: ['destination-pages', `destination-page:${slug}`],
+    },
+  )();
 }
 
 export async function renderDestinationDetail(slug: string, locale: string): Promise<React.ReactElement | null> {

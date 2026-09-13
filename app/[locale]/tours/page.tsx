@@ -12,6 +12,8 @@ import { localizeEntityFields } from '@/lib/i18n/contentLocalization';
 import { selectLocalizedTours } from '@/lib/i18n/localizedCollections';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 import { metadataAlternates } from '@/lib/i18n/seoAlternates';
+import { toToursIndexPayload } from '@/lib/content/storefrontTourPayload';
+import { unstable_cache } from 'next/cache';
 
 // Netlify exposes the production database only to the runtime function. Static
 // generation therefore produced and cached an empty catalogue at deploy time.
@@ -66,7 +68,7 @@ export async function generateMetadata({
 };
 
 // Server-side function to fetch all tours with populated data
-async function getAllTours(locale: string): Promise<ITour[]> {
+async function loadAllTours(locale: string): Promise<ITour[]> {
   // Skip database fetch during build if MONGODB_URI is not set
   if (!process.env.MONGODB_URI) {
     console.warn('⚠️ Skipping tours fetch - MONGODB_URI not set');
@@ -164,7 +166,7 @@ async function getAllTours(locale: string): Promise<ITour[]> {
         });
       }
 
-      return localizedTour as unknown as ITour;
+      return toToursIndexPayload(localizedTour) as unknown as ITour;
     }).sort((left, right) => {
       const leftFeatured = left.isFeatured ? 1 : 0;
       const rightFeatured = right.isFeatured ? 1 : 0;
@@ -178,6 +180,14 @@ async function getAllTours(locale: string): Promise<ITour[]> {
     console.error('Failed to fetch tours:', error);
     return [];
   }
+}
+
+function getAllTours(locale: string): Promise<ITour[]> {
+  return unstable_cache(
+    () => loadAllTours(locale),
+    ['tours-index-data', locale],
+    { revalidate: 1800, tags: ['tours-index'] },
+  )();
 }
 
 // The main server component for the /tours route

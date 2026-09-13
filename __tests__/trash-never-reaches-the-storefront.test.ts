@@ -19,16 +19,18 @@ describe('storefront destination reads exclude trashed records', () => {
 
   it('a trashed destination no longer serves its own page or metadata', () => {
     const queries = detail.match(/DestinationModel\.find\(\{[\s\S]{0,260}?\}\)/g) || [];
-    expect(queries.length).toBeGreaterThanOrEqual(2);
+    expect(queries.length).toBeGreaterThanOrEqual(1);
     for (const query of queries) {
       expect(query).toMatch(/NOT_ARCHIVED_FILTER|PUBLIC_CONTENT_FILTER/);
     }
+    expect(detail).toContain('getDestinationMetadata');
+    expect(detail).toContain('await getPageData(slug, locale)');
   });
 
-  it('the category list is tenant-scoped and trash-filtered instead of find({})', () => {
-    expect(detail).not.toMatch(/CategoryModel\.find\(\{\}\)/);
-    const categories = detail.slice(detail.indexOf('CategoryModel.find('), detail.indexOf('CategoryModel.find(') + 220);
-    expect(categories).toContain('PUBLIC_CONTENT_FILTER');
+  it('derives the category list from already scoped public tours', () => {
+    expect(detail).not.toContain('CategoryModel.find(');
+    expect(detail).toContain('const categoryById = new Map');
+    expect(detail).toContain('const localizedCategories = Array.from(categoryById.values())');
   });
 });
 

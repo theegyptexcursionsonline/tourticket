@@ -1,4 +1,4 @@
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, revalidateTag } from 'next/cache';
 
 const STOREFRONT_ROOTS: Array<[string, 'layout']> = [
   ['/', 'layout'],
@@ -15,6 +15,8 @@ export function revalidateStorefrontContent() {
     for (const [path, type] of STOREFRONT_ROOTS) {
       revalidatePath(path, type);
     }
+    revalidateTag('destination-pages', 'max');
+    revalidateTag('tours-index', 'max');
     return true;
   } catch (error) {
     console.error('Storefront cache revalidation failed after durable write.', error);

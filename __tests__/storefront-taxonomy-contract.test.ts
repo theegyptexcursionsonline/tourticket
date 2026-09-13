@@ -55,6 +55,21 @@ describe('storefront taxonomy cleanup', () => {
     expect(tours).toContain('localizedTour.categories = [localizedTour.category]');
     expect(tours).not.toContain(".populate('categories'");
     expect(tours).not.toContain("slug: { $in: candidateSlugs }");
+    expect(tours).toContain('toToursIndexPayload(localizedTour)');
+    expect(tours).toContain("['tours-index-data', locale]");
+    expect(tours).toContain("tags: ['tours-index']");
+  });
+
+  it('keeps destination navigation and payloads within the public response budget', () => {
+    const cards = source('components/DestinationsServer.tsx');
+    const detail = source('app/[locale]/destinations/[slug]/DestinationDetailContent.tsx');
+
+    expect(cards.match(/prefetch=\{false\}/g)).toHaveLength(2);
+    expect(detail).toContain('unstable_cache(');
+    expect(detail).toContain("revalidate: 1800");
+    expect(detail).toContain('.select(DESTINATION_TOUR_SELECT)');
+    expect(detail).toContain('toDestinationTourPayload(localizedTour)');
+    expect(detail).not.toContain("import CategoryModel from '@/lib/models/Category'");
   });
 
   it('keeps dark-mode practical-information text readable', () => {

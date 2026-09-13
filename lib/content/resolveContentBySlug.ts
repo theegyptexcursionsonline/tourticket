@@ -23,6 +23,7 @@ import {
 } from '@/lib/content/contentUrl';
 import { defaultLocale } from '@/i18n/config';
 import { legacyTenantTourUrl } from '@/lib/content/legacyTenantTourRedirect';
+import { cache } from 'react';
 
 export interface ContentMatch {
   type: ContentType;
@@ -55,7 +56,7 @@ function citySlugOf(type: ContentType, doc: ContentDocument): string | undefined
   return owner && typeof owner === 'object' ? owner.slug : undefined;
 }
 
-export async function resolveContentMatches(slug: string): Promise<ContentMatch[]> {
+const queryContentMatches = async (slug: string): Promise<ContentMatch[]> => {
   await dbConnect();
 
   const [tour, destination, category, attractionPage] = await Promise.all([
@@ -111,7 +112,12 @@ export async function resolveContentMatches(slug: string): Promise<ContentMatch[
   return matches.sort(
     (a, b) => TYPE_PRIORITY.indexOf(a.type) - TYPE_PRIORITY.indexOf(b.type)
   );
-}
+};
+
+// Metadata and page rendering resolve the same slug during one request. React's
+// request cache prevents those phases from issuing the same four lookup queries
+// twice while preserving fresh resolution on the next request.
+export const resolveContentMatches = cache(queryContentMatches);
 
 export type ResolveDecision =
   | { action: 'render'; match: ContentMatch }
