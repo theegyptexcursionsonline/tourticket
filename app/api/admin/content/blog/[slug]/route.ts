@@ -42,6 +42,7 @@ export async function GET(
     slug: blog.slug,
     title: blog.title,
     status: blog.status,
+    revision: blog.__v,
     tenantId: blog.tenantId ?? null,
     updatedAt: blog.updatedAt,
   });

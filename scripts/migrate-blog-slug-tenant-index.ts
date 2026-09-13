@@ -68,6 +68,12 @@ const PLANS: CollectionPlan[] = [
         unique: true,
         sparse: true,
       },
+      {
+        name: 'contentEngineUpdateReceiptId_1',
+        key: { contentEngineUpdateReceiptId: 1 },
+        unique: true,
+        sparse: true,
+      },
     ],
   },
   {
@@ -93,6 +99,12 @@ const PLANS: CollectionPlan[] = [
       {
         name: 'contentEnginePublishReceiptId_1',
         key: { contentEnginePublishReceiptId: 1 },
+        unique: true,
+        sparse: true,
+      },
+      {
+        name: 'contentEngineUpdateReceiptId_1',
+        key: { contentEngineUpdateReceiptId: 1 },
         unique: true,
         sparse: true,
       },
