@@ -11,16 +11,23 @@ const BASE32_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
 const TOTP_PERIOD_SECONDS = 30;
 const TOTP_DIGITS = 6;
 
+/** Derives the AES key from a raw configured secret. Exported so a key rotation can address two keys at once. */
+export function deriveTwoFactorKey(raw: string): Buffer {
+  return createHash('sha256').update(`eeo-admin-2fa:${raw}`).digest();
+}
+
+export const TWO_FACTOR_KEY_MIN_LENGTH = 32;
+
 function encryptionKey(): Buffer {
   const raw = process.env.TWO_FACTOR_ENCRYPTION_KEY;
-  if (!raw || raw.length < 32) {
+  if (!raw || raw.length < TWO_FACTOR_KEY_MIN_LENGTH) {
     if (process.env.NODE_ENV === 'production') {
       throw new Error('TWO_FACTOR_ENCRYPTION_KEY must be configured with at least 32 characters.');
     }
     const fallback = process.env.JWT_SECRET || 'development-only-two-factor-key';
-    return createHash('sha256').update(`eeo-admin-2fa:${fallback}`).digest();
+    return deriveTwoFactorKey(fallback);
   }
-  return createHash('sha256').update(`eeo-admin-2fa:${raw}`).digest();
+  return deriveTwoFactorKey(raw);
 }
 
 function base32Encode(buffer: Buffer): string {
@@ -71,29 +78,33 @@ export function generateTwoFactorSecret(): string {
   return base32Encode(randomBytes(20));
 }
 
-export function encryptTwoFactorSecret(secret: string): string {
+export function encryptTwoFactorSecretWithKey(secret: string, key: Buffer): string {
   const iv = randomBytes(12);
-  const cipher = createCipheriv('aes-256-gcm', encryptionKey(), iv);
+  const cipher = createCipheriv('aes-256-gcm', key, iv);
   const encrypted = Buffer.concat([cipher.update(secret, 'utf8'), cipher.final()]);
   const tag = cipher.getAuthTag();
   return `v1.${iv.toString('base64url')}.${tag.toString('base64url')}.${encrypted.toString('base64url')}`;
 }
 
-export function decryptTwoFactorSecret(value: string): string {
+export function decryptTwoFactorSecretWithKey(value: string, key: Buffer): string {
   const [version, ivValue, tagValue, encryptedValue] = value.split('.');
   if (version !== 'v1' || !ivValue || !tagValue || !encryptedValue) {
     throw new Error('Invalid encrypted two-factor secret.');
   }
-  const decipher = createDecipheriv(
-    'aes-256-gcm',
-    encryptionKey(),
-    Buffer.from(ivValue, 'base64url'),
-  );
+  const decipher = createDecipheriv('aes-256-gcm', key, Buffer.from(ivValue, 'base64url'));
   decipher.setAuthTag(Buffer.from(tagValue, 'base64url'));
   return Buffer.concat([
     decipher.update(Buffer.from(encryptedValue, 'base64url')),
     decipher.final(),
   ]).toString('utf8');
+}
+
+export function encryptTwoFactorSecret(secret: string): string {
+  return encryptTwoFactorSecretWithKey(secret, encryptionKey());
+}
+
+export function decryptTwoFactorSecret(value: string): string {
+  return decryptTwoFactorSecretWithKey(value, encryptionKey());
 }
 
 export function buildAuthenticatorUri(email: string, secret: string): string {
