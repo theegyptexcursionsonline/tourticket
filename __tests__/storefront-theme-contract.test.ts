@@ -46,7 +46,8 @@ describe('storefront dark-mode wiring', () => {
     const localeRoot = path.join(root, 'app/[locale]');
     const publicPages = listPageFiles(localeRoot);
 
-    expect(publicPages).toHaveLength(46);
+    // 47 since the /ai-voice concierge showcase page joined the locale tree.
+    expect(publicPages).toHaveLength(47);
     expect(read('app/[locale]/layout.tsx')).toContain('StorefrontThemeProvider');
     for (const page of publicPages) {
       const source = fs.readFileSync(page, 'utf8');
