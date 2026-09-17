@@ -11,6 +11,8 @@ const SCRIPT_ID = 'eeo-voice-concierge-script';
 const FRAME_ID = 'foxes-voice-widget-frame';
 const MOBILE_BOOKING_BAR_SELECTOR = '[data-mobile-booking-bar="true"]';
 const MOBILE_ACTION_GAP_PX = 12;
+// widget.js parks the collapsed frame 12px from its corner; restored after a booking-bar override.
+const LOADER_CORNER_OFFSET_PX = 12;
 
 // Same funnel rules as the search launcher: single-CTA and transactional
 // surfaces stay clean, and the tour page owns its booking call to action
@@ -89,8 +91,14 @@ export default function EEOVoiceConcierge({ forceMount = false }: EEOVoiceConcie
           `${Math.ceil(bookingBarHeight) + MOBILE_ACTION_GAP_PX}px`,
           'important',
         );
-      } else {
-        frame.style.removeProperty('bottom');
+        frame.dataset.eeoBottomOverride = 'true';
+      } else if (frame.dataset.eeoBottomOverride === 'true') {
+        // Only undo our own override. Removing `bottom` outright stripped the
+        // loader's `bottom: 12px`, and a fixed frame with neither top nor
+        // bottom falls to its static position — off-screen at the foot of the
+        // document, so the launcher rendered but nobody could see it.
+        frame.style.setProperty('bottom', `${LOADER_CORNER_OFFSET_PX}px`);
+        delete frame.dataset.eeoBottomOverride;
       }
     };
 

@@ -138,6 +138,50 @@ describe('EEOVoiceConcierge', () => {
     expect(document.getElementById(SCRIPT_ID)).toBeNull();
   });
 
+  it('never strips the loader corner offset: without a booking bar the frame keeps bottom:12px', () => {
+    renderConcierge('true');
+    act(() => {
+      jest.advanceTimersByTime(3_000);
+    });
+    const frame = document.createElement('iframe');
+    frame.id = FRAME_ID;
+    frame.style.position = 'fixed';
+    frame.style.bottom = '12px';
+    document.body.appendChild(frame);
+    act(() => {
+      window.dispatchEvent(new Event('resize'));
+      jest.advanceTimersByTime(50);
+    });
+    expect(frame.style.bottom).toBe('12px');
+  });
+
+  it('lifts the frame above a mobile booking bar and restores the corner offset when the bar goes', () => {
+    renderConcierge('true');
+    act(() => {
+      jest.advanceTimersByTime(3_000);
+    });
+    const frame = document.createElement('iframe');
+    frame.id = FRAME_ID;
+    frame.style.position = 'fixed';
+    frame.style.bottom = '12px';
+    document.body.appendChild(frame);
+    const bar = document.createElement('div');
+    bar.setAttribute('data-mobile-booking-bar', 'true');
+    bar.getBoundingClientRect = () => ({ height: 64 } as DOMRect);
+    document.body.appendChild(bar);
+    act(() => {
+      window.dispatchEvent(new Event('resize'));
+      jest.advanceTimersByTime(50);
+    });
+    expect(frame.style.bottom).toBe('76px');
+    bar.remove();
+    act(() => {
+      window.dispatchEvent(new Event('resize'));
+      jest.advanceTimersByTime(50);
+    });
+    expect(frame.style.bottom).toBe('12px');
+  });
+
   it('removes its script when navigating into a hidden route', () => {
     const { rerender, unmount } = renderConcierge('true');
     act(() => {
