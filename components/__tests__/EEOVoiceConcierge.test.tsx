@@ -116,6 +116,28 @@ describe('EEOVoiceConcierge', () => {
     expect((document.getElementById(FRAME_ID) as HTMLElement).style.visibility).toBe('hidden');
   });
 
+  it('forceMount: the showcase page mounts the concierge at once, without the site-wide flag', () => {
+    delete process.env.NEXT_PUBLIC_VOICE_LAUNCHER_ENABLED;
+    pathname = '/en/ai-voice';
+    render(<EEOVoiceConcierge forceMount />);
+    act(() => {
+      jest.advanceTimersByTime(0);
+    });
+    const script = document.getElementById(SCRIPT_ID) as HTMLScriptElement;
+    expect(script).toBeInTheDocument();
+    expect(script.getAttribute('data-foxes-widget-id')).toBe('694c1a7a27cc23227da2ccdb');
+  });
+
+  it('forceMount: stays inert when the site-wide launcher is on, so the layout instance owns the frame', () => {
+    process.env.NEXT_PUBLIC_VOICE_LAUNCHER_ENABLED = 'true';
+    pathname = '/en/ai-voice';
+    render(<EEOVoiceConcierge forceMount />);
+    act(() => {
+      jest.advanceTimersByTime(10_000);
+    });
+    expect(document.getElementById(SCRIPT_ID)).toBeNull();
+  });
+
   it('removes its script when navigating into a hidden route', () => {
     const { rerender, unmount } = renderConcierge('true');
     act(() => {

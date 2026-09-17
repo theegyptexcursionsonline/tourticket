@@ -35,7 +35,18 @@ const HIDDEN_ROUTES = [
 // tour page declares its own type and the launcher reads that declaration.
 const TOUR_PAGE_SELECTOR = '[data-page-type="tour"]';
 
-export default function EEOVoiceConcierge() {
+type EEOVoiceConciergeProps = {
+  /**
+   * Mount on this page regardless of the site-wide launcher flag. Used by the
+   * dedicated /ai-voice showcase page, which is reached deliberately (a deep
+   * link) rather than surfacing the orb across the storefront. When the
+   * site-wide flag is on, the layout instance already owns the widget and the
+   * page instance stays inert so the two never fight over the frame.
+   */
+  forceMount?: boolean;
+};
+
+export default function EEOVoiceConcierge({ forceMount = false }: EEOVoiceConciergeProps = {}) {
   const pathname = usePathname() || '';
   const locale = useLocale();
 
@@ -44,7 +55,8 @@ export default function EEOVoiceConcierge() {
     // storefront can deploy ahead of the voice tenant's billing entitlement
     // without ever exposing a dead control. (NEXT_PUBLIC_* is inlined at
     // build time either way.)
-    if (process.env.NEXT_PUBLIC_VOICE_LAUNCHER_ENABLED !== 'true') return;
+    const siteWide = process.env.NEXT_PUBLIC_VOICE_LAUNCHER_ENABLED === 'true';
+    if (forceMount ? siteWide : !siteWide) return;
 
     const normalizedPath = pathname.replace(/^\/(en|ar|de|fr|es)(?=\/|$)/, '') || '/';
     const hidden = HIDDEN_ROUTES.some(
@@ -136,13 +148,14 @@ export default function EEOVoiceConcierge() {
       window.addEventListener('resize', scheduleSync);
       syncLauncherVisibility();
     };
-    idleHandle = window.setTimeout(inject, 2500);
+    // A visitor on the showcase page came for the concierge: mount it at once.
+    idleHandle = window.setTimeout(inject, forceMount ? 0 : 2500);
 
     return () => {
       window.removeEventListener('resize', scheduleSync);
       removeWidget();
     };
-  }, [locale, pathname]);
+  }, [forceMount, locale, pathname]);
 
   return null;
 }
