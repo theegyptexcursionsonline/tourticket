@@ -25,7 +25,6 @@ export function operatorBookingUpdate(data: WithBrand<OperatorBookingUpdateData>
       ),
     },
     sections: sections(
-      { kind: 'note', title: 'Changes made', body: [data.changesSummary] },
       {
         kind: 'table',
         title: 'Customer',

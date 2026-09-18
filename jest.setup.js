@@ -268,6 +268,10 @@ jest.mock('next/link', () => {
 })
 
 // Mock window.matchMedia
+// Guarded: server-side suites (Netlify functions, cron handlers) run under the
+// node test environment, where there is no `window`. Everything above this
+// point is environment-agnostic; only this browser API needs the check.
+if (typeof window !== 'undefined') {
 Object.defineProperty(window, 'matchMedia', {
   writable: true,
   value: jest.fn().mockImplementation(query => ({
@@ -281,6 +285,7 @@ Object.defineProperty(window, 'matchMedia', {
     dispatchEvent: jest.fn(),
   })),
 })
+}
 
 // Mock IntersectionObserver
 global.IntersectionObserver = class IntersectionObserver {

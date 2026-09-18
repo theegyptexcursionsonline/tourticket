@@ -258,6 +258,21 @@ const WARNING_BG = '#fef3c7';
 /** The EEO brand red. The default when a tenant configures no colour. */
 const LIGHT_PRIMARY = '#dc2626';
 
+/**
+ * The mark is capped by HEIGHT, not just width: the budget that matters is the
+ * vertical space before the headline, and a square logo at 140px wide would eat
+ * 140px of it.
+ */
+// Mobile geometry, matched to eeo-backend's layout so the two EEO systems
+// produce the same header rather than two interpretations of it.
+const PAGE_TOP = 20;
+const PAGE_BOTTOM = 28;
+const GUTTER = 20;          // side padding on mobile; the media query widens it
+const LOGO = 28;            // brand mark, far inside the 140px cap
+const LOGO_PLATE_PAD = 4;
+const HEADER_GAP = 16;      // brand row to card
+const CARD_TOP = 24;
+
 const TONE_FILL: Record<NonNullable<EmailSpec['statusTone']>, string> = {
   positive: '#047857',
   warning: '#b45309',
@@ -381,9 +396,22 @@ function head(spec: EmailSpec): string {
   .mso-fix { mso-line-height-rule:exactly; mso-table-lspace:0pt; mso-table-rspace:0pt; }
   @media only screen and (max-width:640px) {
     .container { width:100% !important; max-width:100% !important; }
-    .gutter { padding-left:24px !important; padding-right:24px !important; }
-    .stack { display:block !important; width:100% !important; max-width:100% !important; }
-    .stack-end { text-align:${startAlign(spec.dir ?? 'ltr')} !important; padding-top:4px !important; }
+    /* 20px side padding, 12px between rows in a block, 24px between blocks. */
+    .gutter { padding-left:${GUTTER}px !important; padding-right:${GUTTER}px !important; }
+    .pad-block { padding-top:12px !important; padding-bottom:12px !important; }
+    .pad-inner { padding:12px 14px !important; }
+    .page-pad { padding:${PAGE_TOP}px 0 ${PAGE_BOTTOM}px !important; }
+    .head-pad { padding:14px 20px !important; }
+    .headline-pad { padding:16px 20px 4px 20px !important; }
+    .summary-pad { padding:8px 20px 12px 20px !important; }
+    .cta-pad { padding:12px 20px 8px 20px !important; }
+    .foot-pad { padding:12px 20px 20px 20px !important; }
+    /* A label and its value keep one line. Stacking every fact onto two lines
+       is what made these emails twice as long as they needed to be. */
+    /* Labels are short ("Date", "Guests"); values are long. Giving the value
+       two thirds of the line keeps a full date on one line instead of two. */
+    .row-label { width:34% !important; font-size:15px !important; }
+    .row-value { font-size:15px !important; }
     .btn { width:100% !important; }
     .thumb { display:none !important; }
   }
@@ -395,43 +423,57 @@ function head(spec: EmailSpec): string {
     .t-muted { color:${DARK.muted} !important; }
     .t-faint { color:${DARK.faint} !important; }
     .rule { border-color:${DARK.rule} !important; background-color:${DARK.rule} !important; }
-    .logo-plate { background-color:#ffffff !important; }
+    /* The logo keeps a light backing so a dark-ink mark cannot vanish, but it
+       is sized to the mark rather than drawn as a plate. */
+    .logo-cell { background-color:#ffffff !important; }
   }
 </style>
 </head>`;
 }
 
+/**
+ * The brand row: a small mark beside the brand name, on the page background
+ * ABOVE the card — no colour slab, no oversized plate.
+ *
+ * This is eeo-backend's header structure, adopted verbatim in shape so a
+ * customer who books in the app and one who books on the web see the same
+ * sender treatment. The previous version here (a full-bleed slab of brand
+ * colour wrapping a 160px logo on a white plate) is exactly what §3 of the
+ * standard now rules out, and it cost ~277px before the headline.
+ *
+ * The status moved inside the card as an eyebrow above the headline, where it
+ * reads as part of the message instead of as furniture.
+ */
 function brandHeader(spec: EmailSpec, dir: EmailDirection): string {
   const { brand } = spec;
   const logo = safeUrl(brand.companyLogo, brand.website);
-  // A logo built for a light page disappears on a dark one, so it always sits
-  // on its own white plate rather than relying on the client to invert it.
-  const logoCell = logo
-    // The plate is sized to the logo (160px + 24px of padding) so it hugs the
-    // mark instead of stretching across the header as a white slab.
-    ? `<td width="184" style="width:184px;" align="${startAlign(dir)}">
-          <table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>
-            <td class="logo-plate" style="background-color:#ffffff;border-radius:6px;padding:8px 12px;">
-              <img src="${escapeHtml(logo)}" width="160" alt="${escapeHtml(brand.companyName)}" style="display:block;width:160px;max-width:160px;height:auto;">
-            </td>
-          </tr></table>
-        </td>`
-    : `<td align="${startAlign(dir)}" style="font-family:${FONT};font-size:20px;line-height:28px;font-weight:700;color:#ffffff;">${escapeHtml(brand.companyName)}</td>`;
+  const pad = dir === 'rtl' ? 'right' : 'left';
 
-  const tone = TONE_FILL[spec.statusTone ?? 'neutral'];
-  const pill = spec.statusLabel
-    ? `<td align="${endAlign(dir)}" style="padding-${startAlign(dir)}:12px;">
-          <span style="display:inline-block;background-color:#ffffff;color:${escapeHtml(tone)};font-family:${FONT};font-size:13px;line-height:18px;font-weight:700;padding:6px 12px;border-radius:4px;">${escapeHtml(spec.statusLabel)}</span>
-        </td>`
+  // The mark keeps a light plate so a dark-ink logo cannot vanish on a dark
+  // background, but at 4px it is a rounding, not a slab.
+  const mark = logo
+    ? `<td class="logo-plate" style="background-color:${LIGHT.cardBg};border-radius:6px;padding:${LOGO_PLATE_PAD}px;">
+              <img src="${escapeHtml(logo)}" width="${LOGO}" height="${LOGO}" alt="" role="presentation" style="display:block;width:${LOGO}px;height:${LOGO}px;border-radius:4px;">
+            </td>`
     : '';
 
   return `<tr>
-    <td class="gutter" style="background-color:${escapeHtml(normalizeHex(brand.primaryColor, LIGHT_PRIMARY))};padding:24px 32px;">
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" dir="${dir}">
-        <tr>${logoCell}${pill}</tr>
+    <td class="gutter" align="${startAlign(dir)}" style="padding:0 32px ${HEADER_GAP}px;">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" dir="${dir}">
+        <tr>
+          ${mark}
+          <td class="t-strong" style="${mark ? `padding-${pad}:10px;` : ''}font-family:${FONT};font-size:15px;line-height:22px;font-weight:700;color:${LIGHT.text};">${escapeHtml(brand.companyName)}</td>
+        </tr>
       </table>
     </td>
   </tr>`;
+}
+
+/** The status, as an eyebrow directly above the headline inside the card. */
+function statusEyebrow(spec: EmailSpec): string {
+  if (!spec.statusLabel) return '';
+  const tone = TONE_FILL[spec.statusTone ?? 'neutral'];
+  return `<div style="font-family:${FONT};font-size:13px;line-height:18px;font-weight:700;letter-spacing:0.4px;text-transform:uppercase;color:${escapeHtml(tone)};padding-bottom:6px;">${escapeHtml(spec.statusLabel)}</div>`;
 }
 
 function factBlock(facts: EmailFactBlock, dir: EmailDirection): string {
@@ -446,14 +488,14 @@ function factBlock(facts: EmailFactBlock, dir: EmailDirection): string {
     : '';
   const rows = facts.rows.map((row) => `
         <tr>
-          <td class="stack t-muted" align="${startAlign(dir)}" width="40%" style="font-family:${FONT};font-size:16px;line-height:24px;color:${LIGHT.muted};padding:8px 0;">${escapeHtml(row.label)}</td>
-          <td class="stack stack-end t-strong" align="${endAlign(dir)}" style="font-family:${FONT};font-size:16px;line-height:24px;font-weight:600;color:${LIGHT.text};padding:8px 0;">${value(row)}</td>
+          <td class="row-label t-muted" align="${startAlign(dir)}" valign="top" width="40%" style="font-family:${FONT};font-size:16px;line-height:22px;color:${LIGHT.muted};padding:6px 0;">${escapeHtml(row.label)}</td>
+          <td class="row-value t-strong" align="${endAlign(dir)}" valign="top" style="font-family:${FONT};font-size:16px;line-height:22px;font-weight:600;color:${LIGHT.text};padding:6px 0;">${value(row)}</td>
         </tr>`).join('');
 
   return `<tr>
-    <td class="gutter" style="padding:0 32px 8px 32px;">
+    <td class="gutter pad-block" style="padding:0 32px 12px 32px;">
       <table role="presentation" class="panel mso-fix" width="100%" cellpadding="0" cellspacing="0" border="0" dir="${dir}" style="background-color:${LIGHT.panelBg};border:1px solid ${LIGHT.border};border-radius:8px;">
-        <tr><td style="padding:20px 20px 16px 20px;">
+        <tr><td class="pad-inner" style="padding:16px 18px;">
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" dir="${dir}">
             ${eyebrow}${title}${subtitle}
           </table>
@@ -468,17 +510,17 @@ function tableSection(section: EmailTableSection, dir: EmailDirection): string {
   const heading = section.title ? sectionHeading(section.title, dir) : '';
   const rows = section.rows.map((row) => `
       <tr>
-        <td class="stack t-muted" align="${startAlign(dir)}" width="45%" style="font-family:${FONT};font-size:16px;line-height:24px;color:${LIGHT.muted};padding:7px 0;">${escapeHtml(row.label)}</td>
-        <td class="stack stack-end t-strong" align="${endAlign(dir)}" style="font-family:${FONT};font-size:16px;line-height:24px;color:${LIGHT.text};${row.strong ? 'font-weight:600;' : ''}padding:7px 0;">${value(row)}</td>
+        <td class="row-label t-muted" align="${startAlign(dir)}" valign="top" width="45%" style="font-family:${FONT};font-size:16px;line-height:22px;color:${LIGHT.muted};padding:6px 0;">${escapeHtml(row.label)}</td>
+        <td class="row-value t-strong" align="${endAlign(dir)}" valign="top" style="font-family:${FONT};font-size:16px;line-height:22px;color:${LIGHT.text};${row.strong ? 'font-weight:600;' : ''}padding:6px 0;">${value(row)}</td>
       </tr>`).join('');
   const total = section.total ? `
       <tr><td colspan="2" style="padding:6px 0;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td class="rule" style="height:1px;line-height:1px;font-size:0;background-color:${LIGHT.rule};border-top:1px solid ${LIGHT.rule};">&nbsp;</td></tr></table></td></tr>
       <tr>
-        <td class="stack t-strong" align="${startAlign(dir)}" style="font-family:${FONT};font-size:17px;line-height:26px;font-weight:700;color:${LIGHT.text};padding:7px 0;">${escapeHtml(section.total.label)}</td>
-        <td class="stack stack-end t-strong" align="${endAlign(dir)}" style="font-family:${FONT};font-size:17px;line-height:26px;font-weight:700;color:${LIGHT.text};padding:7px 0;">${value(section.total)}</td>
+        <td class="row-label t-strong" align="${startAlign(dir)}" valign="top" style="font-family:${FONT};font-size:17px;line-height:24px;font-weight:700;color:${LIGHT.text};padding:6px 0;">${escapeHtml(section.total.label)}</td>
+        <td class="row-value t-strong" align="${endAlign(dir)}" valign="top" style="font-family:${FONT};font-size:17px;line-height:24px;font-weight:700;color:${LIGHT.text};padding:6px 0;">${value(section.total)}</td>
       </tr>` : '';
 
-  return `<tr><td class="gutter" style="padding:8px 32px;">
+  return `<tr><td class="gutter pad-block" style="padding:12px 32px;">
     ${heading}
     <table role="presentation" class="mso-fix" width="100%" cellpadding="0" cellspacing="0" border="0" dir="${dir}">${rows}${total}</table>
   </td></tr>`;
@@ -504,9 +546,9 @@ function noteSection(section: EmailNoteSection, dir: EmailDirection): string {
 
   // A warning keeps its amber plate in dark mode on purpose: the dark override
   // classes are omitted so "action required" never loses its urgency.
-  return `<tr><td class="gutter" style="padding:8px 32px;">
+  return `<tr><td class="gutter pad-block" style="padding:12px 32px;">
     <table role="presentation" class="${warning ? 'mso-fix' : 'panel mso-fix'}" width="100%" cellpadding="0" cellspacing="0" border="0" dir="${dir}" style="background-color:${bg};border:1px solid ${border};border-radius:8px;">
-      <tr><td style="padding:16px 18px;">
+      <tr><td class="pad-inner" style="padding:14px 16px;">
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" dir="${dir}">${title}${body}</table>
       </td></tr>
     </table>
@@ -517,10 +559,10 @@ function listSection(section: EmailListSection, dir: EmailDirection): string {
   const heading = section.title ? sectionHeading(section.title, dir) : '';
   const items = section.items.map((item) => `
       <tr>
-        <td width="20" valign="top" align="${startAlign(dir)}" style="font-family:${FONT};font-size:16px;line-height:24px;color:${LIGHT.muted};padding:4px 0;" class="t-muted">&bull;</td>
-        <td align="${startAlign(dir)}" style="font-family:${FONT};font-size:16px;line-height:24px;color:${LIGHT.text};padding:4px 0;" class="t-strong">${escapeHtml(item)}</td>
+        <td width="16" valign="top" align="${startAlign(dir)}" style="font-family:${FONT};font-size:16px;line-height:22px;color:${LIGHT.muted};padding:3px 0;" class="t-muted">&bull;</td>
+        <td align="${startAlign(dir)}" style="font-family:${FONT};font-size:16px;line-height:22px;color:${LIGHT.text};padding:3px 0;" class="t-strong">${escapeHtml(item)}</td>
       </tr>`).join('');
-  return `<tr><td class="gutter" style="padding:8px 32px;">
+  return `<tr><td class="gutter pad-block" style="padding:12px 32px;">
     ${heading}
     <table role="presentation" class="mso-fix" width="100%" cellpadding="0" cellspacing="0" border="0" dir="${dir}">${items}</table>
   </td></tr>`;
@@ -536,7 +578,7 @@ function itemsSection(section: EmailItemsSection, dir: EmailDirection, brand: Em
       ? `<td class="thumb" width="56" valign="top" style="padding-${endAlign(dir)}:12px;"><img src="${escapeHtml(image)}" width="56" height="56" alt="" role="presentation" style="display:block;width:56px;height:56px;border-radius:6px;object-fit:cover;"></td>`
       : '';
     const amount = item.amount
-      ? `<td class="stack stack-end t-strong" align="${endAlign(dir)}" valign="top" style="font-family:${FONT};font-size:16px;line-height:24px;font-weight:600;color:${LIGHT.text};">${ltrIsolate(escapeHtml(item.amount))}</td>`
+      ? `<td class="row-value t-strong" align="${endAlign(dir)}" valign="top" style="font-family:${FONT};font-size:16px;line-height:22px;font-weight:600;color:${LIGHT.text};">${ltrIsolate(escapeHtml(item.amount))}</td>`
       : '';
     const meta = item.meta
       ? `<div style="font-family:${FONT};font-size:14px;line-height:22px;color:${LIGHT.muted};padding-top:2px;" class="t-muted">${escapeHtml(item.meta)}</div>`
@@ -544,13 +586,13 @@ function itemsSection(section: EmailItemsSection, dir: EmailDirection, brand: Em
     return `<tr><td style="padding:10px 0;border-bottom:1px solid ${LIGHT.border};" class="rule">
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" dir="${dir}"><tr>
           ${thumb}
-          <td class="stack t-strong" align="${startAlign(dir)}" valign="top" style="font-family:${FONT};font-size:16px;line-height:24px;font-weight:600;color:${LIGHT.text};">${escapeHtml(item.title)}${meta}</td>
+          <td class="t-strong" align="${startAlign(dir)}" valign="top" style="font-family:${FONT};font-size:16px;line-height:22px;font-weight:600;color:${LIGHT.text};">${escapeHtml(item.title)}${meta}</td>
           ${amount}
         </tr></table>
       </td></tr>`;
   }).join('');
 
-  return `<tr><td class="gutter" style="padding:8px 32px;">
+  return `<tr><td class="gutter pad-block" style="padding:12px 32px;">
     ${heading}
     <table role="presentation" class="mso-fix" width="100%" cellpadding="0" cellspacing="0" border="0" dir="${dir}">${rows}</table>
   </td></tr>`;
@@ -572,7 +614,7 @@ function imageSection(section: EmailImageSection, dir: EmailDirection, brand: Em
   const caption = section.caption
     ? `<div style="font-family:${FONT};font-size:14px;line-height:22px;color:${LIGHT.muted};padding-top:8px;" class="t-muted">${escapeHtml(section.caption)}</div>`
     : '';
-  return `<tr><td class="gutter" align="${startAlign(dir)}" style="padding:8px 32px;">
+  return `<tr><td class="gutter pad-block" align="${startAlign(dir)}" style="padding:12px 32px;">
     ${heading}${picture}${caption}
   </td></tr>`;
 }
@@ -589,7 +631,7 @@ function ctaBlock(cta: EmailCta, dir: EmailDirection, brand: EmailBrand): string
   const safeHref = escapeHtml(href);
   const safeLabel = escapeHtml(cta.label);
 
-  return `<tr><td class="gutter" align="${startAlign(dir)}" style="padding:20px 32px 8px 32px;">
+  return `<tr><td class="gutter cta-pad" align="${startAlign(dir)}" style="padding:16px 32px 8px 32px;">
     <!--[if mso]>
     <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="${safeHref}" style="height:${BUTTON_HEIGHT}px;v-text-anchor:middle;width:280px;" arcsize="12%" stroke="f" fillcolor="${fill}">
       <w:anchorlock/>
@@ -604,9 +646,16 @@ function ctaBlock(cta: EmailCta, dir: EmailDirection, brand: EmailBrand): string
     </tr></table>
     <!--<![endif]-->
     <div style="font-family:${FONT};font-size:14px;line-height:22px;color:${LIGHT.muted};padding-top:12px;" class="t-muted">
-      Button not working? Copy this link:<br>${ltrIsolate(`<a href="${safeHref}" style="color:${LIGHT.muted};">${safeHref}</a>`)}
+Or open:<br>${ltrIsolate(`<a href="${safeHref}" style="color:${LIGHT.muted};">${safeHref}</a>`)}
     </div>
   </td></tr>`;
+}
+
+/** True when the fact block's eyebrow already prints the reference. */
+function referenceShownInFacts(spec: EmailSpec): boolean {
+  if (!spec.reference) return false;
+  const eyebrow = spec.facts?.eyebrow ?? '';
+  return eyebrow.includes(spec.reference);
 }
 
 function helpBlock(spec: EmailSpec, dir: EmailDirection): string {
@@ -618,10 +667,16 @@ function helpBlock(spec: EmailSpec, dir: EmailDirection): string {
   if (mail) contacts.push(ltrIsolate(`<a href="${escapeHtml(mail)}" style="color:${LIGHT.text};font-weight:600;" class="t-strong">${escapeHtml(brand.supportEmail)}</a>`));
   if (brand.contactPhone) contacts.push(ltrIsolate(escapeHtml(brand.contactPhone)));
   if (contacts.length) lines.push(`Contact us: ${contacts.join(' &middot; ')}`);
-  if (spec.reference) lines.push(`Your reference: ${ltrIsolate(escapeHtml(spec.reference))}`);
+  // Only when the fact block is not already showing it. §2 asks the help block
+  // to carry the reference; §3 says never state the same fact twice. When the
+  // eyebrow has it on the first screen, that requirement is already met, and
+  // repeating it here just added a line.
+  if (spec.reference && !referenceShownInFacts(spec)) {
+    lines.push(`Your reference: ${ltrIsolate(escapeHtml(spec.reference))}`);
+  }
   if (!lines.length) return '';
 
-  return `<tr><td class="gutter" style="padding:16px 32px 8px 32px;">
+  return `<tr><td class="gutter pad-block" style="padding:12px 32px;">
     <table role="presentation" class="panel mso-fix" width="100%" cellpadding="0" cellspacing="0" border="0" dir="${dir}" style="background-color:${LIGHT.panelBg};border:1px solid ${LIGHT.border};border-radius:8px;">
       <tr><td align="${startAlign(dir)}" style="padding:16px 18px;font-family:${FONT};font-size:15px;line-height:24px;color:${LIGHT.muted};" class="t-muted">
         ${lines.join('<br>')}
@@ -633,7 +688,9 @@ function helpBlock(spec: EmailSpec, dir: EmailDirection): string {
 function footer(spec: EmailSpec, dir: EmailDirection): string {
   const { brand } = spec;
   const parts = [
-    escapeHtml(`© ${new Date().getFullYear()} ${brand.companyName}. All rights reserved.`),
+    // "All rights reserved." is boilerplate with no legal effect and cost a
+    // wrapped line on every message.
+    escapeHtml(`© ${new Date().getFullYear()} ${brand.companyName}`),
   ];
   if (brand.postalAddress) parts.push(escapeHtml(brand.postalAddress));
   parts.push(escapeHtml(spec.footerReason));
@@ -642,7 +699,8 @@ function footer(spec: EmailSpec, dir: EmailDirection): string {
     parts.push(`<a href="${escapeHtml(unsubscribe)}" style="color:${LIGHT.faint};text-decoration:underline;" class="t-faint">Unsubscribe from these emails</a>`);
   }
 
-  return `<tr><td class="gutter t-faint" align="${startAlign(dir)}" style="padding:8px 32px 28px 32px;font-family:${FONT};font-size:13px;line-height:20px;color:${LIGHT.faint};">
+  // On the page background, under the card — the same place eeo-backend puts it.
+  return `<tr><td class="gutter foot-pad t-faint" align="${startAlign(dir)}" style="padding:16px 32px 0 32px;font-family:${FONT};font-size:13px;line-height:20px;color:${LIGHT.faint};">
     ${parts.join('<br>')}
   </td></tr>`;
 }
@@ -669,18 +727,23 @@ ${head(spec)}
 <div style="display:none;font-size:0;line-height:0;max-height:0;max-width:0;opacity:0;overflow:hidden;mso-hide:all;">${escapeHtml(clampPreheader(spec.preheader))}</div>
 <div style="display:none;font-size:0;line-height:0;max-height:0;max-width:0;opacity:0;overflow:hidden;mso-hide:all;">&#8203;&#847;&nbsp;&#8203;&#847;&nbsp;&#8203;&#847;&nbsp;&#8203;&#847;&nbsp;&#8203;&#847;&nbsp;&#8203;&#847;&nbsp;&#8203;&#847;&nbsp;&#8203;&#847;&nbsp;&#8203;&#847;&nbsp;&#8203;&#847;&nbsp;&#8203;&#847;&nbsp;&#8203;&#847;&nbsp;</div>
 <table role="presentation" class="page mso-fix" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:${LIGHT.pageBg};">
-  <tr><td align="center" style="padding:24px 12px;">
-    <table role="presentation" class="container card mso-fix" width="${MAX_WIDTH}" cellpadding="0" cellspacing="0" border="0" dir="${dir}" style="width:${MAX_WIDTH}px;max-width:${MAX_WIDTH}px;background-color:${LIGHT.cardBg};border:1px solid ${LIGHT.border};border-radius:12px;overflow:hidden;">
+  <tr><td class="page-pad" align="center" style="padding:24px 12px 28px 12px;">
+    <table role="presentation" class="container mso-fix" width="${MAX_WIDTH}" cellpadding="0" cellspacing="0" border="0" dir="${dir}" style="width:${MAX_WIDTH}px;max-width:${MAX_WIDTH}px;">
       ${brandHeader(spec, dir)}
-      <tr><td class="gutter" align="${startAlign(dir)}" style="padding:28px 32px 4px 32px;">
-        <h1 style="margin:0;font-family:${FONT};font-size:26px;line-height:34px;font-weight:700;color:${LIGHT.text};" class="t-strong">${escapeHtml(spec.headline)}</h1>
+      <tr><td>
+        <table role="presentation" class="card mso-fix" width="100%" cellpadding="0" cellspacing="0" border="0" dir="${dir}" style="background-color:${LIGHT.cardBg};border:1px solid ${LIGHT.border};border-radius:12px;">
+          <tr><td class="gutter headline-pad" align="${startAlign(dir)}" style="padding:${CARD_TOP}px 32px 4px 32px;">
+            ${statusEyebrow(spec)}
+            <h1 style="margin:0;font-family:${FONT};font-size:24px;line-height:32px;font-weight:700;letter-spacing:-0.3px;color:${LIGHT.text};" class="t-strong">${escapeHtml(spec.headline)}</h1>
+          </td></tr>
+          <tr><td class="gutter summary-pad t-muted" align="${startAlign(dir)}" style="padding:6px 32px 8px 32px;font-family:${FONT};font-size:16px;line-height:24px;color:${LIGHT.muted};">${escapeHtml(spec.summary)}</td></tr>
+          ${spec.facts ? factBlock(spec.facts, dir) : ''}
+          ${sections}
+          ${spec.cta ? ctaBlock(spec.cta, dir, spec.brand) : ''}
+          ${helpBlock(spec, dir)}
+          <tr><td style="padding:0 0 12px;font-size:0;line-height:0;">&nbsp;</td></tr>
+        </table>
       </td></tr>
-      <tr><td class="gutter t-muted" align="${startAlign(dir)}" style="padding:10px 32px 16px 32px;font-family:${FONT};font-size:16px;line-height:26px;color:${LIGHT.muted};">${escapeHtml(spec.summary)}</td></tr>
-      ${spec.facts ? factBlock(spec.facts, dir) : ''}
-      ${sections}
-      ${spec.cta ? ctaBlock(spec.cta, dir, spec.brand) : ''}
-      ${helpBlock(spec, dir)}
-      <tr><td class="gutter" style="padding:8px 32px 0 32px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td class="rule" style="height:1px;line-height:1px;font-size:0;background-color:${LIGHT.border};">&nbsp;</td></tr></table></td></tr>
       ${footer(spec, dir)}
     </table>
   </td></tr>
@@ -761,11 +824,11 @@ export function renderText(spec: EmailSpec): string {
   if (spec.helpText) push(spec.helpText);
   const contacts = [spec.brand.supportEmail, spec.brand.contactPhone].filter(Boolean);
   if (contacts.length) push(`Contact us: ${contacts.join(' | ')}`);
-  if (spec.reference) push(`Your reference: ${spec.reference}`);
+  if (spec.reference && !referenceShownInFacts(spec)) push(`Your reference: ${spec.reference}`);
 
   push();
   push('---');
-  push(`© ${new Date().getFullYear()} ${spec.brand.companyName}. All rights reserved.`);
+  push(`© ${new Date().getFullYear()} ${spec.brand.companyName}`);
   if (spec.brand.postalAddress) push(spec.brand.postalAddress);
   push(spec.footerReason);
   const unsubscribe = safeUrl(spec.unsubscribeUrl, spec.brand.website);

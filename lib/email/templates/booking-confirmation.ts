@@ -39,7 +39,8 @@ function pricingTable(data: BookingConfirmationInput): EmailTableSection | null 
 
   return {
     kind: 'table',
-    title: 'Payment',
+    // No heading: a column of amounts ending in "Total paid" needs no label,
+    // and on a phone the label was a whole line.
     rows: breakdown,
     total: { label: 'Total paid', value: total, ltr: true },
   };
@@ -49,9 +50,11 @@ export function bookingConfirmation(data: BookingConfirmationInput): EmailSpec {
   const bookingsUrl = siteUrl(data, '/user/bookings');
   const countdown = humanizeCountdown(data.timeUntil);
 
+  // No email address: the customer is reading this at it, so printing it back
+  // proves nothing and cost a wrapped line on a phone. The phone number stays —
+  // a wrong number is worth catching before a hotel pickup.
   const guestLine = [
     data.customerName,
-    data.customerEmail,
     data.customerPhone,
   ].filter(Boolean).join(' · ');
 
@@ -61,7 +64,7 @@ export function bookingConfirmation(data: BookingConfirmationInput): EmailSpec {
     statusLabel: 'Confirmed',
     statusTone: 'positive',
     headline: 'Booking confirmed',
-    summary: `Hi ${data.customerName}, you're all set. This email is your ticket — keep it with you on the day.`,
+    summary: `Hi ${data.customerName}, you're all set — this email is your ticket.`,
     facts: {
       eyebrow: `Booking ${data.bookingId}`,
       title: data.tourTitle,
@@ -69,10 +72,22 @@ export function bookingConfirmation(data: BookingConfirmationInput): EmailSpec {
       rows: rows(
         { label: 'Date', value: data.bookingDate },
         { label: 'Time', value: data.bookingTime, ltr: true },
-        { label: 'Guests', value: data.participants, ltr: true },
-        data.participantBreakdown ? { label: 'Breakdown', value: data.participantBreakdown, ltr: true } : null,
-        data.meetingPoint ? { label: 'Meeting point', value: data.meetingPoint } : null,
-        countdown ? { label: 'Starts in', value: countdown } : null,
+        // The breakdown already states the counts AND their prices, so it IS
+        // the guests row when it exists; printing both said the same thing
+        // twice and cost a line doing it.
+        {
+          label: 'Guests',
+          value: data.participantBreakdown || data.participants,
+          ltr: true,
+        },
+        // The pickup block below names the hotel, its address and the pickup
+        // instruction, so a "Meeting point: Hotel lobby" row beside it is the
+        // same fact twice. Shown only when there is no pickup block.
+        data.meetingPoint && !data.hotelPickupDetails && !data.hotelPickupLocation?.address
+          ? { label: 'Meeting point', value: data.meetingPoint }
+          : null,
+        // No countdown row: it is the departure date above, restated in
+        // another unit. The preheader already carries the urgency.
         // No total here. `data.totalPrice` is the tour total BEFORE the service
         // fee, taxes and any promo, so showing it as "Total paid" beside the
         // payment summary put two different figures under the same label — and
@@ -84,14 +99,18 @@ export function bookingConfirmation(data: BookingConfirmationInput): EmailSpec {
       data.qrCodeCid
         ? {
           kind: 'image' as const,
-          title: 'Your ticket',
+          // No heading: the caption under the code says what it is, and a
+          // section title above a QR code is a line that earns nothing on a
+          // phone.
           src: `cid:${data.qrCodeCid}`,
           alt: `QR code for booking ${data.bookingId}`,
           // The reference below is the fallback: a guest whose client blocks
           // images can still be checked in by quoting it at the meeting point.
-          caption: `Show this code at the meeting point, or quote booking ${data.bookingId}.`,
+          caption: `Show at the meeting point, or quote ${data.bookingId}.`,
           href: data.verificationUrl,
-          width: 200,
+          // Comfortably scannable at arm's length; 200px bought nothing but
+          // 40px of scroll.
+          width: 120,
         }
         : {
           kind: 'note' as const,
@@ -127,12 +146,17 @@ export function bookingConfirmation(data: BookingConfirmationInput): EmailSpec {
       data.specialRequests
         ? { kind: 'note' as const, title: 'Special requests', body: [data.specialRequests] }
         : null,
-      { kind: 'table' as const, title: 'Guest', rows: [{ label: 'Booked by', value: guestLine, ltr: true }] },
     ),
     cta: { label: 'View my booking', url: bookingsUrl },
-    helpText: data.contactNumber
-      ? `Need changes? Reply to this email or ${whatsappLine(data.contactNumber)}.`
-      : 'Need changes? Reply to this email and a real person will answer.',
+    // The booking's contact details live here rather than in a section of
+    // their own: they are what support needs, and a titled one-row table cost
+    // ~80px on a phone to say the same thing.
+    helpText: [
+      // The contact line the layout prints underneath already says how to
+      // reach us, so a "Need changes? Reply to this email" sentence above it
+      // was the same instruction twice.
+      `Booked by ${guestLine}.`,
+    ].join(' '),
     reference: data.bookingId,
     footerReason: 'You are receiving this because you booked an experience with us.',
   };

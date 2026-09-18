@@ -25,9 +25,9 @@ export function paymentConfirmation(data: WithBrand<PaymentEmailData>): EmailSpe
       {
         kind: 'table',
         title: 'Payment details',
+        // No 'Booking ID' or 'Tour' row: the fact block above already states
+        // both, and a receipt that repeats them is just longer.
         rows: [
-          { label: 'Booking ID', value: data.bookingId, ltr: true },
-          { label: 'Tour', value: data.tourTitle },
           { label: 'Payment method', value: data.paymentMethod },
           { label: 'Payment ID', value: data.paymentId, ltr: true },
         ],

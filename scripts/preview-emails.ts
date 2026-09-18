@@ -17,6 +17,9 @@ import { renderEmail } from '../lib/email/layout';
 import { defaultBrandData } from '../lib/email/render';
 import { buildSpec } from '../lib/email/templates';
 import { ALL_TYPES, SAMPLES } from '../lib/email/sampleData';
+import {
+  BUDGETS, FIRST_SCREEN, MOBILE_WIDTH, heightBudget, measurableHtml, measureInPage,
+} from '../lib/email/measure';
 import type { EmailType } from '../lib/email/type';
 
 type Variant = 'light' | 'dark' | 'mobile' | 'rtl';
@@ -65,6 +68,34 @@ function escape(value: string): string {
   return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
+/**
+ * Measure every template at phone width in a real browser.
+ *
+ * The same helpers the test suite uses, so the number printed here is the
+ * number the budgets are enforced against. Returns null when a browser is not
+ * available, and the harness still writes the previews.
+ */
+async function measureAll(htmlByType: Map<EmailType, string>) {
+  let chromium: typeof import('@playwright/test')['chromium'];
+  try {
+    ({ chromium } = await import('@playwright/test'));
+  } catch {
+    console.warn('\nPlaywright is not available — previews written without measurements.');
+    return null;
+  }
+
+  const browser = await chromium.launch();
+  const page = await browser.newPage({ viewport: { width: MOBILE_WIDTH, height: FIRST_SCREEN } });
+  const results = new Map<EmailType, { height: number; chrome: number }>();
+  for (const [type, html] of htmlByType) {
+    await page.setContent(measurableHtml(html), { waitUntil: 'domcontentloaded' });
+    const { height, chrome } = await page.evaluate(measureInPage);
+    results.set(type, { height, chrome });
+  }
+  await browser.close();
+  return results;
+}
+
 async function main() {
   const date = argValue('--date') || new Date().toISOString().slice(0, 10);
   const outDir = path.join(process.cwd(), 'readiness-proof', date, 'email-previews');
@@ -72,12 +103,15 @@ async function main() {
 
   const index: Array<{ type: EmailType; subject: string; files: Array<{ variant: Variant; file: string; width: number }> }> = [];
 
+  const lightHtml = new Map<EmailType, string>();
+
   for (const type of ALL_TYPES) {
     const entry = { type, subject: '', files: [] as Array<{ variant: Variant; file: string; width: number }> };
     for (const variant of VARIANTS) {
       const rendered = renderVariant(type, variant.id);
       entry.subject = rendered.subject;
       const file = `${type}.${variant.id}.html`;
+      if (variant.id === 'light') lightHtml.set(type, rendered.html);
       await fs.writeFile(path.join(outDir, file), rendered.html, 'utf8');
       entry.files.push({ variant: variant.id, file, width: variant.width });
     }
@@ -144,7 +178,33 @@ async function main() {
 
   await fs.writeFile(path.join(outDir, 'index.html'), indexHtml, 'utf8');
   console.log(`\n${index.length} templates -> ${outDir}`);
-  console.log(`open ${path.join(outDir, 'index.html')}`);
+
+  const measurements = await measureAll(lightHtml);
+  if (measurements) {
+    console.log(`\nMeasured at ${MOBILE_WIDTH}px (chrome budget ${BUDGETS.chrome}px):\n`);
+    console.log('  template                        chrome    height   budget');
+    let over = 0;
+    for (const type of ALL_TYPES) {
+      const measurement = measurements.get(type)!;
+      const budget = heightBudget(type);
+      const bad = measurement.chrome > BUDGETS.chrome || measurement.height > budget;
+      if (bad) over += 1;
+      console.log([
+        `  ${bad ? '!' : ' '} ${type.padEnd(30)}`,
+        `${String(measurement.chrome).padStart(5)}px`,
+        `${String(measurement.height).padStart(7)}px`,
+        `${String(budget).padStart(7)}px`,
+      ].join(' '));
+    }
+    const heights = ALL_TYPES.map((type) => measurements.get(type)!.height);
+    const average = Math.round(heights.reduce((sum, value) => sum + value, 0) / heights.length);
+    console.log(`\n  average height ${average}px · tallest ${Math.max(...heights)}px · ${over} over budget`);
+    // A preview run that shows an over-budget template should not look like a
+    // success in CI or in a terminal scrollback.
+    if (over > 0) process.exitCode = 1;
+  }
+
+  console.log(`\nopen ${path.join(outDir, 'index.html')}`);
 }
 
 main().catch((error) => {

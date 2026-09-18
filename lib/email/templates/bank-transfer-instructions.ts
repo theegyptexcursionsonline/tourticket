@@ -9,7 +9,7 @@ export function bankTransferInstructions(data: WithBrand<BankTransferEmailData>)
     statusLabel: 'Action required',
     statusTone: 'warning',
     headline: 'Complete your payment',
-    summary: `Hi ${data.customerName}, thank you for booking ${data.tourTitle}. To confirm it, please transfer ${data.totalPrice} ${data.currency} using the bank details below.`,
+    summary: `Hi ${data.customerName}, thank you for booking ${data.tourTitle}. To confirm it, please make the transfer shown below.`,
     facts: {
       eyebrow: `Booking ${data.bookingId}`,
       title: data.tourTitle,
@@ -17,7 +17,8 @@ export function bankTransferInstructions(data: WithBrand<BankTransferEmailData>)
         { label: 'Date', value: data.bookingDate },
         data.bookingTime ? { label: 'Time', value: data.bookingTime, ltr: true } : null,
         { label: 'Participants', value: data.participants, ltr: true },
-        money(data.totalPrice) ? { label: 'Amount due', value: `${money(data.totalPrice)} ${data.currency}`, ltr: true, strong: true } : null,
+        // The amount lives in the bank block, next to the account it is paid
+         // into — one place, where it is acted on.
       ),
     },
     sections: sections(
