@@ -28,6 +28,7 @@ import QRCode from 'qrcode';
 import { CANCELLATION_POLICY_SUMMARY } from '@/lib/bookings/cancellationPolicy';
 import { contentPath } from '@/lib/content/contentUrl';
 import { storedAddOnUnits } from '@/lib/checkout/addOnPricing';
+import { bookingBreakdown, breakdownRowLabel } from '@/lib/checkout/bookingBreakdown';
 
 interface BookingUser {
   _id: string;
@@ -76,9 +77,16 @@ interface BookingDetails {
     _id: string;
     title: string;
     price: number;
+    type?: string;
     originalPrice?: number;
     duration?: string;
     badge?: string;
+  };
+  addOnQuantityVersion?: number;
+  /** Written at checkout; carries the unit contract for per-couple/family/group options. */
+  priceSnapshot?: {
+    guestPrices?: { adult?: number; child?: number; infant?: number };
+    unitPricing?: { unitSize: number; unitPrice: number } | null;
   };
   selectedAddOnDetails?: {
     [key: string]: {
@@ -319,51 +327,17 @@ const UserBookingDetailPage = () => {
     return hoursUntilBooking > 24;
   };
 
-  // Calculate pricing breakdown
+  // Pricing breakdown, rebuilt from the same authority that priced checkout.
+  // Never re-derive per-guest lines here: a per-couple/family/group option is
+  // charged in whole units and multiplying its price by the adult count
+  // overstates every line it touches.
   const calculatePricing = () => {
     if (!booking) return null;
-
-    const basePrice = booking.selectedBookingOption?.price || 0;
-    const adultPrice = basePrice * (booking.adultGuests || 1);
-    const childPrice = (basePrice / 2) * (booking.childGuests || 0);
-    const tourSubtotal = adultPrice + childPrice;
-
-    let addOnsTotal = 0;
-    if (booking.selectedAddOns && booking.selectedAddOnDetails) {
-      Object.entries(booking.selectedAddOns).forEach(([addOnId, quantity]) => {
-        const addOnDetail = booking.selectedAddOnDetails?.[addOnId];
-        if (addOnDetail && quantity > 0) {
-          // Units the server billed: chosen units for per-person add-ons
-          // (older bookings without a recorded quantity were billed per guest).
-          const addOnQuantity = storedAddOnUnits(addOnDetail, quantity, booking.adultGuests || 0, booking.childGuests || 0);
-          addOnsTotal += addOnDetail.price * addOnQuantity;
-        }
-      });
-    }
-
-    // Subtotal includes tour price + add-ons
-    const subtotal = tourSubtotal + addOnsTotal;
-
-    // Service fee and tax are calculated on the full subtotal (including add-ons)
-    const serviceFee = subtotal * 0.03;
-    const tax = subtotal * 0.05;
-
-    // Calculate the correct total
+    const { rows, subtotal, addOnsTotal, serviceFee, tax } = bookingBreakdown(booking);
     const calculatedTotal = subtotal + serviceFee + tax;
-
-    // Use the stored totalPrice if it seems reasonable, otherwise use calculated total
+    // The charged figure on the record is the money that moved; prefer it.
     const total = booking.totalPrice > subtotal ? booking.totalPrice : calculatedTotal;
-
-    return {
-      adultPrice,
-      childPrice,
-      tourSubtotal,
-      subtotal,
-      addOnsTotal,
-      serviceFee,
-      tax,
-      total
-    };
+    return { rows, subtotal, addOnsTotal, serviceFee, tax, total };
   };
 
   if (loading) {
@@ -631,25 +605,17 @@ const UserBookingDetailPage = () => {
                   Pricing Breakdown
                 </h3>
                 <div className="space-y-3">
-                  {booking.adultGuests && booking.adultGuests > 0 && (
-                    <div className="flex justify-between text-slate-700">
-                      <span>{booking.adultGuests} x Adult{booking.adultGuests > 1 ? 's' : ''} (${safeToFixed(booking.selectedBookingOption?.price)})</span>
-                      <span className="font-semibold">${safeToFixed(pricing.adultPrice)}</span>
+                  {pricing.rows.filter((row) => row.kind !== 'addOns').map((row) => (
+                    <div key={row.kind} className="flex justify-between text-slate-700">
+                      <span>{breakdownRowLabel(row)}</span>
+                      {row.amount === 0 ? (
+                        <span className="font-semibold text-green-600">FREE</span>
+                      ) : (
+                        <span className="font-semibold">${safeToFixed(row.amount)}</span>
+                      )}
                     </div>
-                  )}
-                  {booking.childGuests && booking.childGuests > 0 && (
-                    <div className="flex justify-between text-slate-700">
-                      <span>{booking.childGuests} x Child{booking.childGuests > 1 ? 'ren' : ''} (${safeToFixed((booking.selectedBookingOption?.price || 0) / 2)})</span>
-                      <span className="font-semibold">${safeToFixed(pricing.childPrice)}</span>
-                    </div>
-                  )}
-                  {booking.infantGuests && booking.infantGuests > 0 && (
-                    <div className="flex justify-between text-slate-700">
-                      <span>{booking.infantGuests} x Infant{booking.infantGuests > 1 ? 's' : ''}</span>
-                      <span className="font-semibold text-green-600">FREE</span>
-                    </div>
-                  )}
-                  
+                  ))}
+
                   {pricing.addOnsTotal > 0 && (
                     <>
                       <div className="border-t pt-3 mt-3"></div>

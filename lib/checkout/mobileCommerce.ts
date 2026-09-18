@@ -1,7 +1,12 @@
 import { createHash } from 'node:crypto';
 import type Stripe from 'stripe';
 import StripeClient from 'stripe';
-import { checkoutItemSubtotal } from '@/lib/checkout/cartTotals';
+import {
+  assertBreakdownReconciles,
+  checkoutItemBreakdown,
+  checkoutItemSubtotal,
+  type PriceBreakdownRow,
+} from '@/lib/checkout/cartTotals';
 import { normalizeCheckoutAttemptId } from '@/lib/checkout/checkoutAttempt';
 import {
   commitInventoryReservationHold,
@@ -68,7 +73,17 @@ export type MobileCommerceQuote = {
   pricing: {
     currency: 'USD';
     source: 'catalogue' | 'override';
+    /**
+     * Per-guest rates. MEANINGLESS when `unitPricing` is present: a unit-priced
+     * option charges per couple/family/group, so `prices.adult` is one whole
+     * unit's price and multiplying it by the adult count overstates the charge.
+     * Read `breakdown` instead — never re-derive a breakdown from these.
+     */
     prices: { adult: number; child: number; infant: number };
+    /** Present only for per-couple/family/group options: one unit's price and the participants it covers (0 = whole booking). */
+    unitPricing: { unitSize: number; unitPrice: number } | null;
+    /** The authoritative priced lines. Guaranteed to add up to `subtotal`. */
+    breakdown: PriceBreakdownRow[];
     subtotal: number;
     overrideVersion: number;
     catalogueVersion: string;
@@ -290,6 +305,11 @@ function quoteVersion(item: SecureCartItem, target: MobileCommerceTarget): strin
     target,
     pricingKey: item.selectedBookingOption.pricingKey,
     prices: item.guestPrices,
+    // Unit size and unit price change the charge without changing the guest
+    // rates, so a quote that omitted them survived a capacity edit that
+    // silently re-priced the booking. Bind them: the stale quote now fails
+    // closed with PRICE_CHANGED and the app re-quotes.
+    unitPricing: item.unitPricing ?? null,
     overrideVersion: item.priceVersion,
     catalogueVersion: item.priceSourceVersion,
     source: item.priceSource,
@@ -320,6 +340,12 @@ async function buildMobileCommerceQuote(target: MobileCommerceTarget): Promise<{
   }
   const availability = await inspectInventoryAvailability(item);
   const version = quoteVersion(item, target);
+  const subtotal = checkoutItemSubtotal(item);
+  const breakdown = checkoutItemBreakdown(item);
+  // The quote publishes its own breakdown so no consumer has to invent one.
+  // If a future pricing change made the lines disagree with the subtotal the
+  // quote fails closed here rather than shipping a breakdown that lies.
+  assertBreakdownReconciles(breakdown, subtotal);
   return {
     item,
     quote: {
@@ -337,7 +363,9 @@ async function buildMobileCommerceQuote(target: MobileCommerceTarget): Promise<{
         currency: 'USD',
         source: item.priceSource,
         prices: item.guestPrices,
-        subtotal: checkoutItemSubtotal(item),
+        unitPricing: item.unitPricing ?? null,
+        breakdown,
+        subtotal,
         overrideVersion: item.priceVersion,
         catalogueVersion: item.priceSourceVersion,
         executionId: item.priceExecutionId,

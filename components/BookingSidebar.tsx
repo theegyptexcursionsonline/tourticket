@@ -1990,7 +1990,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
   }, [generateTimeSlotsFromAvailability, stopSaleDates, tour, tourDisplayData]);
 
   // Enhanced price calculations with savings
-  const { subtotal, addOnsTotal, total, totalSavings } = useMemo(() => {
+  const { subtotal, addOnsTotal, total, totalSavings, tourPriceLabel } = useMemo(() => {
     let basePrice = 0;
     let originalBasePrice = 0;
     // Per-person add-ons: the guest's chosen units, capped at one per paying
@@ -1998,6 +1998,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
     const perPersonLimit = perPersonAddOnLimit(bookingData.adults, bookingData.children);
 
     let unitSizeForTotals: number | null = null;
+    let unitTypeForTotals: string | null = null;
     let optionIsUnitPriced = false;
     if (bookingData.selectedTimeSlot) {
       basePrice = bookingData.selectedTimeSlot.price;
@@ -2009,6 +2010,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
       if (selectedOption && isUnitPricedType(selectedOption.type)) {
         optionIsUnitPriced = true;
         unitSizeForTotals = effectiveUnitSize(selectedOption);
+        unitTypeForTotals = selectedOption.type ?? null;
       }
 
       originalBasePrice = bookingData.selectedTimeSlot.originalPrice ||
@@ -2040,6 +2042,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
         if (estimate.unitPriced) {
           optionIsUnitPriced = true;
           unitSizeForTotals = effectiveUnitSize(estimate.candidate);
+          unitTypeForTotals = estimate.candidate.type ?? null;
         }
       }
     }
@@ -2087,6 +2090,11 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
       addOnsTotal: addOnsCalc,
       total: subtotalCalc + addOnsCalc,
       totalSavings: totalSavingsCalc,
+      // A unit-priced option is not a per-head charge, so the breakdown must
+      // not word it as one: "5 Adults — $650" reads as $130 each.
+      tourPriceLabel: chargedUnits !== null
+        ? unitCountLabel(unitTypeForTotals, chargedUnits)
+        : `${bookingData.adults} Adults${bookingData.children > 0 ? `, ${bookingData.children} Children` : ''}`,
     };
   }, [bookingData, availability, tourDisplayData, tourBasePricing.originalPrice, tourBasePricing.price]);
 
@@ -3027,7 +3035,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
               </h3>
               <div className="space-y-2">
                 <div className="flex justify-between text-gray-600">
-                  <span>Tour Price ({bookingData.adults} Adults{bookingData.children > 0 ? `, ${bookingData.children} Children` : ''})</span>
+                  <span>Tour Price ({tourPriceLabel})</span>
                   <span>{formatPrice(subtotal)}</span>
                 </div>
                 {addOnsTotal > 0 && (

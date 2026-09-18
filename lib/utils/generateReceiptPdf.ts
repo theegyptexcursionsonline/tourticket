@@ -3,7 +3,8 @@
 import { PDFDocument, StandardFonts, rgb, PDFPage, PDFFont } from 'pdf-lib';
 import { Buffer } from 'buffer';
 import { parseLocalDate } from '@/utils/date';
-import { storedAddOnUnits } from '@/lib/checkout/addOnPricing';
+import { checkoutItemSubtotal, checkoutUnitCount } from '@/lib/checkout/cartTotals';
+import { unitCountLabel } from '@/lib/bookings/unitPricing';
 import * as QR from 'qrcode';
 
 // Helper functions
@@ -45,30 +46,49 @@ const wrapText = (text: string, font: PDFFont, size: number, maxWidth: number): 
   return lines;
 };
 
-const calculateItemTotal = (item: ReceiptOrderedItem) => {
-  const basePrice = item.selectedBookingOption?.price || item.discountPrice || item.price || 0;
-  const adultPrice = Number(item.guestPrices?.adult ?? basePrice) * (item.quantity || 1);
-  const childPrice = Number(item.guestPrices?.child ?? basePrice / 2) * (item.childQuantity || 0);
-  const infantPrice = Number(item.guestPrices?.infant ?? 0) * (item.infantQuantity || 0);
-  const tourTotal = adultPrice + childPrice + infantPrice;
-
-  let addOnsTotal = 0;
-  if (item.selectedAddOns && item.selectedAddOnDetails) {
-    Object.entries(item.selectedAddOns).forEach(([addOnId, qty]) => {
-      const addOnDetail = item.selectedAddOnDetails?.[addOnId];
-      const qtyNum = Number(qty) || 0;
-      if (addOnDetail && qtyNum > 0) {
-        // Per-person add-ons charge the units the guest chose (recorded by the
-        // server, capped at the paying party); per-unit add-ons charge per
-        // selected unit. Orders from before the recorded quantity keep their
-        // per-guest charge. Mirrors checkoutAddOnsTotal.
-        const addOnQuantity = storedAddOnUnits(addOnDetail, qtyNum, item.quantity || 0, item.childQuantity || 0);
-        addOnsTotal += addOnDetail.price * addOnQuantity;
+/**
+ * The receipt never re-derives money. It asks the one authority that priced
+ * the order, so a per-couple/family/group booking is charged as whole units
+ * here too — a receipt that multiplied the unit price by the adult count was
+ * the exact defect this replaces.
+ */
+const calculateItemTotal = (item: ReceiptOrderedItem) => checkoutItemSubtotal({
+  quantity: item.quantity,
+  childQuantity: item.childQuantity,
+  infantQuantity: item.infantQuantity,
+  guestPrices: item.guestPrices?.adult !== undefined
+    ? {
+        adult: Number(item.guestPrices.adult),
+        child: Number(item.guestPrices.child ?? Number(item.guestPrices.adult) / 2),
+        infant: Number(item.guestPrices.infant ?? 0),
       }
-    });
-  }
+    : undefined,
+  selectedBookingOption: item.selectedBookingOption,
+  unitPricing: item.unitPricing,
+  price: item.price,
+  discountPrice: item.discountPrice,
+  addOnQuantityVersion: item.addOnQuantityVersion,
+  selectedAddOns: item.selectedAddOns,
+  selectedAddOnDetails: item.selectedAddOnDetails,
+});
 
-  return tourTotal + addOnsTotal;
+/** How the receipt words what was charged: whole units, or the guests entered. */
+const participantSummary = (item: ReceiptOrderedItem) => {
+  const guests = [
+    (item.quantity ?? 0) > 0 ? `${item.quantity} Adult${(item.quantity ?? 0) > 1 ? 's' : ''}` : '',
+    (item.childQuantity ?? 0) > 0 ? `${item.childQuantity} Child${(item.childQuantity ?? 0) > 1 ? 'ren' : ''}` : '',
+    (item.infantQuantity ?? 0) > 0 ? `${item.infantQuantity} Infant${(item.infantQuantity ?? 0) > 1 ? 's' : ''}` : '',
+  ].filter(Boolean).join(', ');
+  const units = checkoutUnitCount({
+    quantity: item.quantity,
+    childQuantity: item.childQuantity,
+    infantQuantity: item.infantQuantity,
+    unitPricing: item.unitPricing,
+  });
+  if (units === 0 || !item.unitPricing) return guests;
+  const unitPrice = Number(item.unitPricing.unitPrice);
+  const label = unitCountLabel(item.selectedBookingOption?.type, units);
+  return guests ? `${guests} - ${label} x ${unitPrice.toFixed(2)}` : `${label} x ${unitPrice.toFixed(2)}`;
 };
 
 // Draw dashed line helper
@@ -102,13 +122,17 @@ export interface ReceiptOrderedItem {
   childQuantity?: number;
   infantQuantity?: number;
   guestPrices?: { adult?: number; child?: number; infant?: number };
+  /** Set for per-couple/family/group bookings: one unit's price and the participants it covers (0 = whole booking). */
+  unitPricing?: { unitSize: number; unitPrice: number } | null;
   price?: number;
   discountPrice?: number;
   totalPrice?: number;
   finalPrice?: number;
+  addOnQuantityVersion?: number;
   selectedBookingOption?: {
     title?: string;
     price?: number;
+    type?: string;
   };
   selectedAddOns?: Record<string, number>;
   selectedAddOnDetails?: Record<string, { price: number; perGuest?: boolean; quantity?: number }>;
@@ -403,11 +427,7 @@ export async function generateReceiptPdf(payload: ReceiptPayload): Promise<Buffe
 
     page.drawText(title, { x: margin + 12, y: y - 12, font: boldFont, size: 10, color: colors.black });
 
-    const participantText = [
-      (item.quantity ?? 0) > 0 ? `${item.quantity} Adult${(item.quantity ?? 0) > 1 ? 's' : ''}` : '',
-      (item.childQuantity ?? 0) > 0 ? `${item.childQuantity} Child${(item.childQuantity ?? 0) > 1 ? 'ren' : ''}` : '',
-      (item.infantQuantity ?? 0) > 0 ? `${item.infantQuantity} Infant${(item.infantQuantity ?? 0) > 1 ? 's' : ''}` : '',
-    ].filter(Boolean).join(', ');
+    const participantText = participantSummary(item);
 
     page.drawText(participantText, { x: margin + 12, y: y - 26, font: font, size: 9, color: colors.gray });
 

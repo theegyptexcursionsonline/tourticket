@@ -148,6 +148,77 @@ describe('mobile canonical commerce adapter', () => {
     expect(result.quoteToken).toBe('quote-token');
   });
 
+  it('publishes priced lines that add up to the subtotal, so no consumer has to invent them', async () => {
+    const result = await createMobileCommerceQuote(target);
+    const { breakdown, subtotal, unitPricing } = result.quote.pricing;
+
+    expect(unitPricing).toBeNull();
+    expect(breakdown).toEqual([
+      { kind: 'adults', count: 2, unitPrice: 120, amount: 240 },
+      { kind: 'children', count: 1, unitPrice: 60, amount: 60 },
+      { kind: 'addOns', count: 0, unitPrice: 0, amount: 75 },
+    ]);
+    expect(breakdown.reduce((total, line) => total + line.amount, 0)).toBe(subtotal);
+  });
+
+  // The live defect: a Per Group option at $650 with minCapacity 5, quoted for
+  // 5 participants, published prices.adult = 650 and no unit contract at all,
+  // so every consumer that multiplied by the head count reported $3,250
+  // against a $650 subtotal.
+  it('quotes a per-group option as one group line, never per adult', async () => {
+    const groupTarget = { ...target, guests: { adults: 5, children: 0, infants: 0 }, addOns: [] };
+    mockSecureCartPricing.mockResolvedValue([{
+      ...pricedItem,
+      quantity: 5,
+      childQuantity: 0,
+      infantQuantity: 0,
+      price: 650,
+      discountPrice: 650,
+      guestPrices: { adult: 650, child: 325, infant: 0 },
+      selectedBookingOption: {
+        id: 'option-0', pricingKey: target.pricingKey, title: 'Private group', type: 'Per Group', price: 650, originalPrice: 650,
+      },
+      unitPricing: { unitSize: 5, unitPrice: 650 },
+      selectedAddOns: {},
+      selectedAddOnDetails: {},
+      availableAddOns: [],
+    }]);
+
+    const { quote } = await createMobileCommerceQuote(groupTarget);
+
+    expect(quote.pricing.subtotal).toBe(650);
+    expect(quote.pricing.unitPricing).toEqual({ unitSize: 5, unitPrice: 650 });
+    expect(quote.pricing.breakdown).toEqual([
+      { kind: 'units', count: 1, unitPrice: 650, amount: 650, label: '1 group' },
+    ]);
+    // The exact figure the defect produced.
+    expect(quote.pricing.breakdown.map((line) => line.amount)).not.toContain(3250);
+    expect(quote.pricing.breakdown.reduce((total, line) => total + line.amount, 0))
+      .toBe(quote.pricing.subtotal);
+  });
+
+  it('binds the unit contract to the quote version so a capacity edit re-prices instead of slipping through', async () => {
+    const groupItem = {
+      ...pricedItem,
+      quantity: 5,
+      childQuantity: 0,
+      guestPrices: { adult: 650, child: 325, infant: 0 },
+      unitPricing: { unitSize: 5, unitPrice: 650 },
+      selectedAddOns: {},
+      selectedAddOnDetails: {},
+      availableAddOns: [],
+    };
+    mockSecureCartPricing.mockResolvedValue([groupItem]);
+    const before = (await createMobileCommerceQuote(target)).quote.quoteVersion;
+
+    // Same guest rates, smaller authored unit — 5 participants become 3 groups.
+    mockSecureCartPricing.mockResolvedValue([{ ...groupItem, unitPricing: { unitSize: 2, unitPrice: 650 } }]);
+    const after = await createMobileCommerceQuote(target);
+
+    expect(after.quote.quoteVersion).not.toBe(before);
+    expect(after.quote.pricing.subtotal).toBe(1950);
+  });
+
   it('uses the same price and inventory authorities for the availability contract', async () => {
     const result = await getMobileCommerceAvailability(target);
     expect(result.availability).toEqual(availability);

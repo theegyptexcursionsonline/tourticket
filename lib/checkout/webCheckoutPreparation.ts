@@ -4,7 +4,14 @@ import Discount from '@/lib/models/Discount';
 import CheckoutPaymentQuote from '@/lib/models/CheckoutPaymentQuote';
 import { CartMetadataTooLargeError, packCartMetadata } from '@/lib/checkout/cartMetadata';
 import { assertCartAvailability, UnavailableTourError } from '@/lib/checkout/assertAvailability';
-import { checkoutCartSubtotal, roundMoney } from '@/lib/checkout/cartTotals';
+import {
+  assertBreakdownReconciles,
+  assertOrderTotalReconciles,
+  checkoutCartSubtotal,
+  checkoutItemBreakdown,
+  checkoutItemSubtotal,
+  roundMoney,
+} from '@/lib/checkout/cartTotals';
 import { normalizeCheckoutAttemptId } from '@/lib/checkout/checkoutAttempt';
 import { buildQuoteBinding } from '@/lib/checkout/quoteBinding';
 import {
@@ -263,6 +270,14 @@ export async function prepareWebCheckout(
   if (!total || total <= 0) {
     throw new WebCheckoutInputError(400, 'INVALID_PAYMENT_AMOUNT', 'Invalid payment amount');
   }
+  // Nothing reaches Stripe unless the lines the customer is shown add up to
+  // each item's subtotal, and the amount charged reconciles to that subtotal
+  // plus fees and tax minus the discount. A pricing change that broke either
+  // now stops the charge instead of silently mis-stating it.
+  for (const item of cart) {
+    assertBreakdownReconciles(checkoutItemBreakdown(item), checkoutItemSubtotal(item));
+  }
+  assertOrderTotalReconciles({ subtotal, serviceFee, tax, discount, total });
 
   const cartSummary = recoveryCart(cart);
   let packedCart: Record<string, string>;

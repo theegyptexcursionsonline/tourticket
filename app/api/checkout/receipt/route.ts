@@ -60,7 +60,11 @@ export async function POST(request: NextRequest) {
         childQuantity: booking.childGuests || 0,
         infantQuantity: booking.infantGuests || 0,
         guestPrices: booking.priceSnapshot?.guestPrices,
+        // Without this a per-couple/family/group booking's receipt line is
+        // re-derived per adult and overstates what was charged.
+        unitPricing: booking.priceSnapshot?.unitPricing,
         totalPrice: booking.totalPrice,
+        addOnQuantityVersion: booking.addOnQuantityVersion,
         selectedBookingOption: booking.selectedBookingOption,
         selectedAddOns: booking.selectedAddOns,
         selectedAddOnDetails: booking.selectedAddOnDetails,

@@ -20,6 +20,7 @@ import { buildQuoteBinding } from '@/lib/checkout/quoteBinding';
 import { normalizeCheckoutAttemptId } from '@/lib/checkout/checkoutAttempt';
 import { assertCartAvailability, UnavailableTourError } from '@/lib/checkout/assertAvailability';
 import {
+  assertOrderTotalReconciles,
   checkoutCartSubtotal,
   checkoutItemSubtotal,
   roundMoney,
@@ -270,6 +271,12 @@ export async function POST(request: NextRequest) {
       currency: currencyCode,
       symbol: currencySymbol,
     };
+    // Bookings, emails and receipts are all written from this one figure set,
+    // so a freshly computed one must reconcile before any of them exist.
+    // A stored quote is deliberately exempt: it is the immutable snapshot
+    // Stripe already charged (asserted in webCheckoutPreparation BEFORE the
+    // charge), and refusing it here would reject a customer who has paid.
+    if (!storedQuote) assertOrderTotalReconciles(computedPricing);
 
     const isBankTransfer = paymentMethod === 'bank';
     const isCardPayment = !isBankTransfer;
