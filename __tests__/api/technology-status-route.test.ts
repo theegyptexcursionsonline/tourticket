@@ -189,7 +189,7 @@ describe('GET /api/technology/status', () => {
     jest.resetModules();
   });
 
-  it('answers 200 with the capabilities and a one-minute cache header', async () => {
+  it('answers 200 with the capabilities and only the client-safe fields', async () => {
     const realFetch = globalThis.fetch;
     globalThis.fetch = jest.fn(async (url: string | URL | Request) =>
       String(url).includes('/api/version')
@@ -200,8 +200,9 @@ describe('GET /api/technology/status', () => {
       const { GET } = await import('@/app/api/technology/status/route');
       const response = await GET();
       expect(response.status).toBe(200);
-      expect(response.headers.get('Cache-Control')).toBe('public, max-age=0, s-maxage=60');
       const body = await response.json();
+      expect(typeof body.checkedAt).toBe('string');
+      expect(Date.parse(body.expiresAt) - Date.parse(body.checkedAt)).toBe(STATUS_CACHE_TTL_MS);
       expect(body.capabilities.map((entry: { id: string }) => entry.id)).toEqual(
         SHOWCASE_CAPABILITIES.map((capability) => capability.id),
       );
