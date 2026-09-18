@@ -49,6 +49,7 @@ export const STATIC_SITEMAP_ROUTES: readonly SitemapRoute[] = [
   { path: '/tools/trip-cost-calculator', changeFrequency: 'monthly', priority: 0.6, availableLocales: [defaultLocale] },
   { path: '/tools/visa-checker', changeFrequency: 'monthly', priority: 0.6, availableLocales: [defaultLocale] },
   { path: '/mobile-app', changeFrequency: 'monthly', priority: 0.5 },
+  { path: '/technology', changeFrequency: 'monthly', priority: 0.6 },
   { path: '/careers', changeFrequency: 'monthly', priority: 0.4, availableLocales: [defaultLocale] },
   { path: '/terms', changeFrequency: 'yearly', priority: 0.3, availableLocales: [defaultLocale] },
   { path: '/privacy', changeFrequency: 'yearly', priority: 0.3, availableLocales: [defaultLocale] },

@@ -399,6 +399,7 @@ export default function Footer() {
                 <li><Link className="hover:text-red-600 transition-colors inline-flex items-center gap-2" href="/blog"><span className="h-1.5 w-1.5 rounded-full bg-slate-500" />{t('blog')}</Link></li>
                 <li><Link className="hover:text-red-600 transition-colors inline-flex items-center gap-2" href="/faqs"><span className="h-1.5 w-1.5 rounded-full bg-slate-500" />{t('faq')}</Link></li>
                 <li><Link className="hover:text-red-600 transition-colors inline-flex items-center gap-2" href="/careers"><span className="h-1.5 w-1.5 rounded-full bg-slate-500" />{t('careers')}</Link></li>
+                <li><Link className="hover:text-red-600 transition-colors inline-flex items-center gap-2" href="/technology"><span className="h-1.5 w-1.5 rounded-full bg-slate-500" />{t('technology')}</Link></li>
               </ul>
             </div>
           </div>
