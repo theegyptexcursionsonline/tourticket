@@ -160,6 +160,7 @@ async function PATCHHandler(
       inviteeEmail: user.email,
       updatedBy: auth.email || 'Admin Team',
       action: 'permissions_updated',
+      permissions: Array.isArray(user.permissions) ? [...user.permissions] : undefined,
       isActivated: user.isActive,
       portalLink: getPortalLink(),
       supportEmail: getSupportEmail(),

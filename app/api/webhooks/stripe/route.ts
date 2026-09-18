@@ -27,6 +27,7 @@ import Discount from '@/lib/models/Discount';
 import { recoveryAddOnUnits, recoveryCartItemSubtotal, roundMoney } from '@/lib/checkout/cartTotals';
 import { reconcileStripeBookingRefund, reconcileUnboundStripeRefund } from '@/lib/bookings/refunds';
 import { sendBookingRefundNotification } from '@/lib/bookings/refundNotifications';
+import { notifyPaymentFailed } from '@/lib/checkout/paymentFailedNotification';
 import { deliverCheckoutNotifications } from '@/lib/bookings/checkoutNotificationDelivery';
 import {
   acquireCheckoutInventoryLease,
@@ -1071,7 +1072,7 @@ export async function POST(request: Request) {
         }
         break;
 
-      case 'payment_intent.payment_failed':
+      case 'payment_intent.payment_failed': {
         const failedPayment = event.data.object as Stripe.PaymentIntent;
         console.log(`[Webhook] Payment failed: ${failedPayment.id}`);
         await dbConnect();
@@ -1080,7 +1081,21 @@ export async function POST(request: Request) {
           'payment_failed',
           paidTenantId(failedPayment.metadata),
         );
+        // A customer whose payment failed is left with nothing otherwise: no
+        // booking, no receipt, no explanation. Claimed before sending so
+        // Stripe's retries cannot mail them twice, and isolated so a mail
+        // failure never stops us acknowledging the event.
+        try {
+          const notified = await notifyPaymentFailed(failedPayment);
+          console.log(`[Webhook] Payment-failed notice ${notified} for ${failedPayment.id}`);
+        } catch (notifyError) {
+          console.error(
+            '[Webhook] Payment-failed notice errored:',
+            notifyError instanceof Error ? notifyError.name : 'unknown_error',
+          );
+        }
         break;
+      }
 
       case 'payment_intent.canceled':
         const canceledPayment = event.data.object as Stripe.PaymentIntent;

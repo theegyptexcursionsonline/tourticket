@@ -1,6 +1,8 @@
 // lib/email/templateEngine.ts
-import fs from 'fs/promises';
-import path from 'path';
+//
+// Subjects only. Email BODIES are built by `lib/email/templates/*` against the
+// shared layout in `lib/email/layout.ts`; there is no longer a directory of
+// Handlebars HTML files to read from disk at runtime.
 import Handlebars from 'handlebars';
 
 // Register Handlebars helpers
@@ -19,20 +21,6 @@ Handlebars.registerHelper('gt', function(a, b) {
 });
 
 export class TemplateEngine {
-  private static templateCache = new Map<string, HandlebarsTemplateDelegate>();
-  private static templatesPath = path.join(process.cwd(), 'lib/email/templates');
-
-  static async loadTemplate(templateName: string): Promise<string> {
-    try {
-      const templatePath = path.join(this.templatesPath, `${templateName}.html`);
-      const templateSource = await fs.readFile(templatePath, 'utf-8');
-      return templateSource;
-    } catch (error) {
-      console.error(`Error loading template ${templateName}:`, error);
-      throw new Error(`Template ${templateName} not found`);
-    }
-  }
-
   static replaceVariables(template: string, data: object): string {
     // Use Handlebars to compile and render the template
     const compiledTemplate = Handlebars.compile(template);

@@ -11,6 +11,7 @@ jest.mock('@/lib/email/emailService', () => ({
   EmailService: {
     sendCancellationConfirmation: jest.fn(),
     sendBookingStatusUpdate: jest.fn(),
+    sendRefundIssued: jest.fn(),
     sendOperatorBookingUpdate: jest.fn(),
   },
 }));

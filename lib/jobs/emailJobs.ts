@@ -4,12 +4,25 @@ import Booking, { type IBooking } from '@/lib/models/Booking';
 import Tour, { type ITour } from '@/lib/models/Tour';
 import User, { type IUser } from '@/lib/models/user';
 import { EmailService } from '@/lib/email/emailService';
+import { isValidEmailAddress } from '@/lib/mailgun';
 import { contentPath } from '@/lib/content/contentUrl';
+import { loadWelcomeTourRecommendations } from '@/lib/auth/welcomeRecommendations';
 
 type PopulatedBooking = Omit<IBooking, 'tour' | 'user'> & {
   tour: ITour;
   user: IUser;
 };
+
+/** What a scheduled mail run actually did. Never a row count dressed as a send. */
+export interface EmailJobResult {
+  success: boolean;
+  /** Bookings the window matched, before claiming. */
+  matched: number;
+  sent: number;
+  failed: number;
+  /** Already claimed by an earlier run — the idempotency guard doing its job. */
+  skipped: number;
+}
 
 // Helper to format dates consistently and avoid timezone issues
 // MongoDB stores dates in UTC which can cause off-by-one day errors when reformatted
@@ -45,127 +58,183 @@ function formatBookingDate(dateValue: Date | string | undefined): string {
   });
 }
 
+function dayWindow(offsetDays: number): { start: Date; end: Date } {
+  const start = new Date();
+  start.setDate(start.getDate() + offsetDays);
+  start.setHours(0, 0, 0, 0);
+  const end = new Date(start);
+  end.setHours(23, 59, 59, 999);
+  return { start, end };
+}
+
+/**
+ * Claim one booking for one kind of scheduled email.
+ *
+ * The field is set BEFORE the send, with the "not yet set" condition inside the
+ * filter, so two overlapping runs cannot both win. `modifiedCount` is checked
+ * rather than the absence of an error: a filter that matches nothing returns a
+ * perfectly successful-looking result.
+ */
+async function claim(
+  bookingId: unknown,
+  tenantId: string,
+  field: 'tripReminderSentAt' | 'tripCompletionSentAt',
+): Promise<boolean> {
+  const result = await Booking.updateOne(
+    { _id: bookingId, tenantId, [field]: { $exists: false } },
+    { $set: { [field]: new Date() } },
+  );
+  return result.modifiedCount === 1;
+}
+
+/** Release a claim so the next run can retry a send that never left the building. */
+async function releaseClaim(
+  bookingId: unknown,
+  tenantId: string,
+  field: 'tripReminderSentAt' | 'tripCompletionSentAt',
+): Promise<void> {
+  await Booking.updateOne(
+    { _id: bookingId, tenantId },
+    { $unset: { [field]: 1 } },
+  ).catch((error) => {
+    console.error(`Could not release ${field} claim for ${String(bookingId)}:`, error);
+  });
+}
+
 // Send trip reminders (run this daily)
-export async function sendTripReminders() {
-  try {
-    await dbConnect();
+export async function sendTripReminders(): Promise<EmailJobResult> {
+  await dbConnect();
 
-    // Find bookings that are tomorrow
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    tomorrow.setHours(0, 0, 0, 0);
+  const { start, end } = dayWindow(1);
+  // The claim field is part of the query as well as the guarded write, so a
+  // re-run does not even load the bookings an earlier run already mailed.
+  const upcomingBookings = await Booking.find({
+    date: { $gte: start, $lte: end },
+    status: 'Confirmed',
+    tripReminderSentAt: { $exists: false },
+  }).populate([
+    { path: 'tour', model: Tour },
+    { path: 'user', model: User },
+  ]);
 
-    const endOfTomorrow = new Date(tomorrow);
-    endOfTomorrow.setHours(23, 59, 59, 999);
+  console.log(`Trip reminders: ${upcomingBookings.length} unsent bookings for tomorrow`);
+  const result: EmailJobResult = { success: true, matched: upcomingBookings.length, sent: 0, failed: 0, skipped: 0 };
 
-    const upcomingBookings = await Booking.find({
-      date: {
-        $gte: tomorrow,
-        $lte: endOfTomorrow
-      },
-      status: 'Confirmed'
-    }).populate([
-      { path: 'tour', model: Tour },
-      { path: 'user', model: User }
-    ]);
-
-    console.log(`Found ${upcomingBookings.length} bookings for tomorrow`);
-
-    for (const booking of upcomingBookings as unknown as PopulatedBooking[]) {
-      try {
-        await EmailService.sendTripReminder({
-          customerName: `${booking.user.firstName} ${booking.user.lastName}`,
-          customerEmail: booking.user.email,
-          tourTitle: booking.tour.title,
-          bookingDate: formatBookingDate(booking.date),
-          bookingTime: booking.time,
-          meetingPoint: booking.tour.meetingPoint || "Meeting point will be provided via WhatsApp",
-          contactNumber: "+20 11 42255624",
-          weatherInfo: "Sunny, 28°C - Perfect weather for sightseeing!",
-          whatToBring: [
-            "Comfortable walking shoes",
-            "Sun hat and sunglasses",
-            "Camera",
-            "Water bottle",
-            "Light jacket for evening"
-          ],
-          importantNotes: "Please arrive 15 minutes early at the meeting point. Our guide will be wearing an Egypt Excursions Online badge.",
-          bookingId: booking._id.toString()
-        });
-
-        console.log(`✅ Trip reminder sent for booking ${booking._id}`);
-      } catch (emailError) {
-        console.error(`❌ Failed to send reminder for booking ${booking._id}:`, emailError);
-      }
+  for (const booking of upcomingBookings as unknown as PopulatedBooking[]) {
+    const tenantId = booking.tenantId || 'default';
+    if (!isValidEmailAddress(booking.user?.email) || !booking.tour?.title) {
+      result.failed += 1;
+      console.error(`Trip reminder skipped booking=${String(booking._id)} reason=missing_recipient_or_tour`);
+      continue;
+    }
+    if (!(await claim(booking._id, tenantId, 'tripReminderSentAt'))) {
+      result.skipped += 1;
+      continue;
     }
 
-    return { success: true, sent: upcomingBookings.length };
-  } catch (error) {
-    console.error('Error sending trip reminders:', error);
-    throw error;
+    try {
+      await EmailService.sendTripReminder({
+        customerName: `${booking.user.firstName || ''} ${booking.user.lastName || ''}`.trim() || 'there',
+        customerEmail: booking.user.email,
+        tourTitle: booking.tour.title,
+        bookingDate: formatBookingDate(booking.date),
+        bookingTime: booking.time,
+        meetingPoint: booking.tour.meetingPoint || 'Meeting point will be confirmed by our team',
+        contactNumber: process.env.NEXT_PUBLIC_SUPPORT_PHONE || '+20 11 42255624',
+        // No `weatherInfo`: this product has no weather source, and a fixed
+        // "Sunny, 28°C" told every customer a forecast we had not looked up.
+        whatToBring: [
+          'Comfortable walking shoes',
+          'Sun hat and sunglasses',
+          'Water bottle',
+          'A light layer for the evening',
+        ],
+        importantNotes: 'Please arrive 15 minutes early at the meeting point.',
+        // The customer-facing reference, not a raw database id.
+        bookingId: booking.bookingReference || String(booking._id),
+      });
+      result.sent += 1;
+    } catch (emailError) {
+      result.failed += 1;
+      await releaseClaim(booking._id, tenantId, 'tripReminderSentAt');
+      console.error(`Trip reminder failed booking=${String(booking._id)}:`, emailError);
+    }
   }
+
+  result.success = result.failed === 0;
+  return result;
 }
 
 // Send trip completion emails (run this daily)
-export async function sendTripCompletionEmails() {
-  try {
-    await dbConnect();
+export async function sendTripCompletionEmails(): Promise<EmailJobResult> {
+  await dbConnect();
 
-    // Find bookings that were yesterday
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-    yesterday.setHours(0, 0, 0, 0);
+  const { start, end } = dayWindow(-1);
+  const completedBookings = await Booking.find({
+    date: { $gte: start, $lte: end },
+    status: 'Confirmed',
+    tripCompletionSentAt: { $exists: false },
+  }).populate([
+    { path: 'tour', model: Tour },
+    { path: 'user', model: User },
+  ]);
 
-    const endOfYesterday = new Date(yesterday);
-    endOfYesterday.setHours(23, 59, 59, 999);
+  console.log(`Trip completion: ${completedBookings.length} unsent bookings from yesterday`);
+  const result: EmailJobResult = { success: true, matched: completedBookings.length, sent: 0, failed: 0, skipped: 0 };
+  if (!completedBookings.length) return result;
 
-    const completedBookings = await Booking.find({
-      date: {
-        $gte: yesterday,
-        $lte: endOfYesterday
-      },
-      status: 'Confirmed'
-    }).populate([
-      { path: 'tour', model: Tour },
-      { path: 'user', model: User }
-    ]);
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || '';
+  // Real catalogue entries with the catalogue's own prices and current URL
+  // shape, loaded once for the batch. Two hardcoded tours at hardcoded prices
+  // used to go out here; both prices were wrong and both links were stale.
+  const recommendedTours = await loadWelcomeTourRecommendations(2)
+    .then((tours) => tours
+      .filter((tour) => tour.slug && Number(tour.discountPrice) > 0)
+      .map((tour) => ({
+        title: tour.title,
+        image: tour.images?.[0] || '',
+        price: `From $${tour.discountPrice}`,
+        link: `${baseUrl}${contentPath('tour', tour.slug, (tour as { urlType?: string }).urlType)}`,
+      })))
+    .catch((error) => {
+      // A recommendation block is a nicety; its absence must never stop the
+      // thank-you, and a failed load is not an empty catalogue.
+      console.error('Trip completion recommendations unavailable:', error);
+      return [] as Array<{ title: string; image: string; price: string; link: string }>;
+    });
 
-    console.log(`Found ${completedBookings.length} completed bookings from yesterday`);
-
-    for (const booking of completedBookings as unknown as PopulatedBooking[]) {
-      try {
-        await EmailService.sendTripCompletion({
-          customerName: `${booking.user.firstName} ${booking.user.lastName}`,
-          customerEmail: booking.user.email,
-          tourTitle: booking.tour.title,
-          bookingDate: formatBookingDate(booking.date),
-          reviewLink: `${process.env.NEXT_PUBLIC_BASE_URL}${contentPath('tour', booking.tour.slug, (booking.tour as { urlType?: string }).urlType)}?review=true`,
-          photoSharingLink: `${process.env.NEXT_PUBLIC_BASE_URL}/share-photos/${booking._id}`,
-          recommendedTours: [
-            {
-              title: "Alexandria Day Trip",
-              image: `${process.env.NEXT_PUBLIC_BASE_URL}/images/alexandria.jpg`,
-              price: "$75",
-              link: `${process.env.NEXT_PUBLIC_BASE_URL}/tour/alexandria-day-trip`
-            },
-            {
-              title: "Desert Safari Adventure",
-              image: `${process.env.NEXT_PUBLIC_BASE_URL}/images/desert.jpg`,
-              price: "$120",
-              link: `${process.env.NEXT_PUBLIC_BASE_URL}/tour/desert-safari`
-            }
-          ]
-        });
-
-        console.log(`✅ Trip completion email sent for booking ${booking._id}`);
-      } catch (emailError) {
-        console.error(`❌ Failed to send completion email for booking ${booking._id}:`, emailError);
-      }
+  for (const booking of completedBookings as unknown as PopulatedBooking[]) {
+    const tenantId = booking.tenantId || 'default';
+    if (!isValidEmailAddress(booking.user?.email) || !booking.tour?.title || !booking.tour?.slug) {
+      result.failed += 1;
+      console.error(`Trip completion skipped booking=${String(booking._id)} reason=missing_recipient_or_tour`);
+      continue;
+    }
+    if (!(await claim(booking._id, tenantId, 'tripCompletionSentAt'))) {
+      result.skipped += 1;
+      continue;
     }
 
-    return { success: true, sent: completedBookings.length };
-  } catch (error) {
-    console.error('Error sending trip completion emails:', error);
-    throw error;
+    try {
+      await EmailService.sendTripCompletion({
+        customerName: `${booking.user.firstName || ''} ${booking.user.lastName || ''}`.trim() || 'there',
+        customerEmail: booking.user.email,
+        tourTitle: booking.tour.title,
+        bookingDate: formatBookingDate(booking.date),
+        reviewLink: `${baseUrl}${contentPath('tour', booking.tour.slug, (booking.tour as { urlType?: string }).urlType)}?review=true`,
+        // No `photoSharingLink`: `/share-photos/:id` does not exist in this
+        // application, so the link led nowhere.
+        recommendedTours,
+        baseUrl,
+      });
+      result.sent += 1;
+    } catch (emailError) {
+      result.failed += 1;
+      await releaseClaim(booking._id, tenantId, 'tripCompletionSentAt');
+      console.error(`Trip completion failed booking=${String(booking._id)}:`, emailError);
+    }
   }
+
+  result.success = result.failed === 0;
+  return result;
 }

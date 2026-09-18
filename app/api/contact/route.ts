@@ -1,6 +1,8 @@
+import { randomBytes } from 'node:crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
 import { sendContactFormEmail } from '@/lib/mailgun';
+import { EmailService } from '@/lib/email/emailService';
 import { enforcePublicActionLimits } from '@/lib/security/distributedAbuseLimit';
 import {
   normalizeBoundedText,
@@ -43,6 +45,16 @@ async function verifyRecaptcha(token: string): Promise<boolean> {
     console.error('Contact security verification unavailable:', error instanceof Error ? error.name : 'unknown_error');
     return false;
   }
+}
+
+/**
+ * A reference the customer can quote and support can search for. It is printed
+ * on the internal copy and on the sender's acknowledgement, so the two halves
+ * of one enquiry can always be matched even though enquiries are not persisted.
+ */
+function enquiryReference(): string {
+  const day = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+  return `ENQ-${day}-${randomBytes(3).toString('hex').toUpperCase()}`;
 }
 
 function noStoreJson(body: Record<string, unknown>, status: number) {
@@ -108,8 +120,32 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    await sendContactFormEmail({ name, fromEmail: email, message });
-    return noStoreJson({ success: true, message: 'Your message was sent successfully.' }, 200);
+    const reference = enquiryReference();
+    // The internal copy is the delivery that matters: if it fails the customer
+    // is told plainly, rather than being thanked for a message nobody received.
+    await sendContactFormEmail({ name, fromEmail: email, message, reference });
+
+    // The acknowledgement is a courtesy on top of a delivery that already
+    // succeeded, so its failure must not turn a received enquiry into a 503.
+    try {
+      await EmailService.sendEnquiryReceived({
+        customerName: name,
+        customerEmail: email,
+        message,
+        enquiryReference: reference,
+      });
+    } catch (error) {
+      console.error(
+        'Enquiry acknowledgement not delivered:',
+        reference,
+        error instanceof Error ? error.name : 'unknown_error',
+      );
+    }
+
+    return noStoreJson(
+      { success: true, message: 'Your message was sent successfully.', reference },
+      200,
+    );
   } catch (error) {
     if (error instanceof PublicInputError) {
       return noStoreJson({ success: false, error: error.message }, error.status);

@@ -149,18 +149,23 @@ export async function sendBookingRefundNotification(bookingId: string): Promise<
         baseUrl: process.env.NEXT_PUBLIC_BASE_URL || '',
       });
     } else {
-      await EmailService.sendBookingStatusUpdate({
+      // A confirmed refund on a booking that was not cancelled is its own
+      // message: it answers "how much, back to where, by when", which a
+      // generic status update never did.
+      await EmailService.sendRefundIssued({
         customerName,
         customerEmail: user.email,
         tourTitle: tour.title,
         bookingDate: formatDate(booking.date),
-        bookingTime: booking.time,
         bookingId: booking.bookingReference || String(booking._id),
+        refundAmount: `$${Number(booking.refundAmount || 0).toFixed(2)}`,
+        originalAmount: Number(booking.totalPrice || 0) > 0
+          ? `$${Number(booking.totalPrice).toFixed(2)}`
+          : undefined,
+        refundType: booking.status === 'Refunded' ? 'full' : 'partial',
+        refundProcessingDays: 5,
+        refundReason: booking.refundReason,
         newStatus: booking.status,
-        statusMessage: booking.status === 'Refunded'
-          ? `A $${Number(booking.refundAmount || 0).toFixed(2)} refund was confirmed by the payment provider.`
-          : `A $${Number(booking.refundAmount || 0).toFixed(2)} partial refund was confirmed by the payment provider.`,
-        additionalInfo: booking.refundReason,
         baseUrl: process.env.NEXT_PUBLIC_BASE_URL || '',
       });
     }

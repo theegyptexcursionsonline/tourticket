@@ -77,6 +77,9 @@ export interface IBooking extends Document {
   confirmationEmailFailedAt?: Date;
   confirmationEmailFailureCode?: string;
   operatorNotificationSentAt?: Date;
+  /** One-shot claims for the daily scheduled customer emails. */
+  tripReminderSentAt?: Date;
+  tripCompletionSentAt?: Date;
   operatorNotificationFailedAt?: Date;
   operatorNotificationFailureCode?: string;
   paymentMethod?: string;
@@ -390,6 +393,8 @@ const BookingSchema: Schema<IBooking> = new Schema({
   operatorNotificationSentAt: {
     type: Date,
   },
+  tripReminderSentAt: { type: Date },
+  tripCompletionSentAt: { type: Date },
   operatorNotificationFailedAt: {
     type: Date,
   },

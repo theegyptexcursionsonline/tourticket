@@ -1,81 +1,65 @@
 // lib/email/emailService.ts
-import { TemplateEngine } from './templateEngine';
-import { sendEmail } from '../mailgun';
+import { renderEmailTemplate } from './render';
+import { sendEmail, isValidEmailAddress, InvalidRecipientError } from '../mailgun';
 import { generateBookingVerificationURL } from '@/lib/utils/qrcode';
 import { generateReceiptPdf, ReceiptPayload } from '@/lib/utils/generateReceiptPdf';
 import type {
   EmailType,
   BookingEmailData,
   PaymentEmailData,
+  PaymentFailedEmailData,
   BankTransferEmailData,
   TripReminderData,
   TripCompletionData,
   CancellationData,
+  RefundIssuedEmailData,
   WelcomeEmailData,
   AdminAlertData,
   BookingStatusUpdateData,
   AdminInviteEmailData,
   AdminAccessUpdateEmailData,
   OperatorBookingUpdateData,
-  EmailTemplate
+  PasswordChangedEmailData,
+  EnquiryReceivedEmailData,
+  EmailTemplate,
 } from './type';
 
+/**
+ * A Mailgun rejection that is specifically about the attachments on a message,
+ * as opposed to a bad address, a template error or a transport timeout.
+ *
+ * Only these justify retrying the message without its attachments. Anything
+ * else — including a timeout, which can occur AFTER Mailgun accepted the
+ * message — must not trigger a second send, or the customer receives two
+ * confirmations for one booking.
+ */
+function isAttachmentRejection(error: unknown): boolean {
+  if (typeof error !== 'object' || error === null) return false;
+  const status = Number((error as { status?: unknown }).status);
+  // 413 Payload Too Large / 400 Bad Request are the two Mailgun answers that a
+  // too-large or malformed attachment actually produces.
+  if (status !== 413 && status !== 400) return false;
+  const details = [
+    (error as { message?: unknown }).message,
+    (error as { details?: unknown }).details,
+  ].map((value) => String(value ?? '').toLowerCase()).join(' ');
+  return /attach|inline|size|too large|payload/.test(details);
+}
+
 export class EmailService {
-  private static readonly subjects: Record<EmailType, string> = {
-    'booking-confirmation': '🎉 Booking Confirmed - {{tourTitle}}',
-    'payment-confirmation': '✅ Payment Confirmed - {{tourTitle}}',
-    'bank-transfer-instructions': '🏦 Bank Transfer Instructions - {{tourTitle}}',
-    'trip-reminder': '⏰ Your Trip is Tomorrow - {{tourTitle}}',
-    'trip-completion': '🌟 Thank You for Traveling with Us!',
-    'booking-cancellation': '❌ Booking Cancelled - {{tourTitle}}',
-    'booking-update': '📢 Booking Status Update - {{tourTitle}}',
-    'welcome': '🎊 Welcome to Egypt Excursions Online!',
-    'admin-booking-alert': '📋 New Booking Alert - {{tourTitle}}',
-    'admin-invite': "You've been invited to manage Egypt Excursions Online",
-    'admin-access-update': 'Your admin access has been {{action}}',
-    'operator-booking-update': '🔔 Booking Updated - {{bookingId}} - {{tourTitle}}'
-  };
-
-  private static getDefaultTemplateData(baseUrl?: string) {
-    const website = baseUrl || process.env.NEXT_PUBLIC_BASE_URL || 'https://egypt-excursionsonline.com';
-    const normalizedWebsite = website.startsWith('http') ? website : `https://${website}`;
-
-    return {
-      companyName: 'Egypt Excursions Online',
-      companyLogo: `${normalizedWebsite.replace(/\/$/, '')}/EEO-logo.png`,
-      primaryColor: '#dc2626',
-      secondaryColor: '#0f172a',
-      accentColor: '#f97316',
-      contactEmail: 'booking@egypt-excursionsonline.com',
-      contactPhone: '+20 11 42255624',
-      supportEmail: 'booking@egypt-excursionsonline.com',
-      website: normalizedWebsite,
-    };
+  private static generateEmailTemplate<T extends object>(type: EmailType, data: T): EmailTemplate {
+    return renderEmailTemplate(type, data);
   }
 
-  private static async generateEmailTemplate<T extends object>(
-    type: EmailType,
-    data: T
-  ): Promise<EmailTemplate> {
-    try {
-      const baseUrl = 'baseUrl' in data && typeof data.baseUrl === 'string' ? data.baseUrl : undefined;
-      const templateData = {
-        year: new Date().getFullYear(),
-        ...this.getDefaultTemplateData(baseUrl),
-        ...data,
-      };
-      const htmlTemplate = await TemplateEngine.loadTemplate(type);
-      const html = TemplateEngine.replaceVariables(htmlTemplate, templateData);
-      const subject = TemplateEngine.generateSubject(this.subjects[type], templateData);
-      return { subject, html };
-    } catch (error) {
-      console.error(`Error generating email template for ${type}:`, error);
-      throw error;
-    }
+  /** The display name on the envelope follows the brand the customer bought from. */
+  private static fromName(data: { companyName?: string }): string | undefined {
+    return data.companyName;
   }
 
   // BOOKING CONFIRMATION
   static async sendBookingConfirmation(data: BookingEmailData): Promise<void> {
+    if (!isValidEmailAddress(data.customerEmail)) throw new InvalidRecipientError('customer');
+
     // Generate QR code for booking verification
     const verificationUrl = generateBookingVerificationURL(data.bookingId);
     let qrCodeBuffer: Buffer | null = null;
@@ -133,8 +117,8 @@ export class EmailService {
           date: data.bookingDate,
           time: data.bookingTime,
           tourTitle: data.tourTitle, // Pass tour title for PDF fallback
-          guests: typeof data.participants === 'string' 
-            ? parseInt(data.participants) || 1 
+          guests: typeof data.participants === 'string'
+            ? parseInt(data.participants) || 1
             : 1,
         },
         qrData: verificationUrl,
@@ -146,182 +130,161 @@ export class EmailService {
       console.error('Error generating receipt PDF:', error);
     }
 
-    // Add QR code CID reference to email data
-    const emailData = {
+    // Build inline attachments (QR code for email body)
+    const inlineAttachments = qrCodeBuffer ? [
+      {
+        filename: 'qr-code.png',
+        data: qrCodeBuffer,
+        cid: 'booking-qr-code',
+      },
+    ] : [];
+
+    // Build regular attachments (receipt PDF)
+    const attachments = receiptPdfBuffer ? [
+      {
+        filename: `booking-ticket-${data.bookingId}.pdf`,
+        data: receiptPdfBuffer,
+        contentType: 'application/pdf',
+      },
+    ] : [];
+
+    // The template is rendered once. Only the attachment list differs between
+    // the primary attempt and the degraded retry, so the two can never present
+    // different facts to the customer.
+    const template = this.generateEmailTemplate('booking-confirmation', {
       ...data,
       verificationUrl,
       qrCodeCid: qrCodeBuffer ? 'booking-qr-code' : undefined,
-    };
+    });
 
     try {
-      const template = await this.generateEmailTemplate('booking-confirmation', emailData);
-
-      // Build inline attachments (QR code for email body)
-      const inlineAttachments = qrCodeBuffer ? [
-        {
-          filename: 'qr-code.png',
-          data: qrCodeBuffer,
-          cid: 'booking-qr-code'
-        }
-      ] : [];
-
-      // Build regular attachments (receipt PDF)
-      const attachments = receiptPdfBuffer ? [
-        {
-          filename: `booking-ticket-${data.bookingId}.pdf`,
-          data: receiptPdfBuffer,
-          contentType: 'application/pdf'
-        }
-      ] : [];
-
       await sendEmail({
         to: data.customerEmail,
         subject: template.subject,
         html: template.html,
+        text: template.text,
         type: 'booking-confirmation',
+        fromName: this.fromName(data),
         inlineAttachments,
-        attachments
+        attachments,
       });
-
-      console.log(`✅ Booking confirmation sent with QR code and receipt PDF attached`);
+      console.log(
+        `Booking confirmation accepted booking=${data.bookingId} qr=${qrCodeBuffer ? 'yes' : 'no'} receipt=${receiptPdfBuffer ? 'yes' : 'no'}`,
+      );
+      return;
     } catch (error) {
-      console.error('Error sending booking confirmation:', error);
-      // Fallback: send email without attachments
-      const fallbackData = {
-        ...data,
-        verificationUrl,
-      };
-      const template = await this.generateEmailTemplate('booking-confirmation', fallbackData);
-      await sendEmail({
-        to: data.customerEmail,
-        subject: template.subject,
-        html: template.html,
-        type: 'booking-confirmation'
-      });
+      // Any other cause — a timeout that may have followed acceptance, a bad
+      // address, a renderer fault — is re-thrown untouched. Retrying it could
+      // put a SECOND confirmation in the customer's inbox for one booking.
+      if (!isAttachmentRejection(error) || (!inlineAttachments.length && !attachments.length)) {
+        throw error;
+      }
+      // The ticket itself is what we are about to drop, so this is recorded
+      // loudly rather than swallowed: operations must be able to find the
+      // bookings whose voucher never left the building.
+      console.error(
+        `Booking confirmation degraded booking=${data.bookingId} reason=attachment_rejected — the QR voucher and receipt PDF were NOT delivered and need a manual resend.`,
+      );
     }
+
+    // Degraded retry: the same message without its attachments, and without
+    // the QR panel, so the email does not point at an image that is not there.
+    const plainTemplate = this.generateEmailTemplate('booking-confirmation', {
+      ...data,
+      verificationUrl,
+      qrCodeCid: undefined,
+    });
+    await sendEmail({
+      to: data.customerEmail,
+      subject: plainTemplate.subject,
+      html: plainTemplate.html,
+      text: plainTemplate.text,
+      type: 'booking-confirmation-degraded',
+      fromName: this.fromName(data),
+    });
   }
 
   // PAYMENT CONFIRMATION
   static async sendPaymentConfirmation(data: PaymentEmailData): Promise<void> {
-    const template = await this.generateEmailTemplate('payment-confirmation', data);
-    await sendEmail({
-      to: data.customerEmail,
-      subject: template.subject,
-      html: template.html,
-      type: 'payment-confirmation'
-    });
+    await this.deliver('payment-confirmation', data, data.customerEmail);
+  }
+
+  // PAYMENT FAILED / ACTION NEEDED
+  static async sendPaymentFailed(data: PaymentFailedEmailData): Promise<void> {
+    await this.deliver('payment-failed', data, data.customerEmail);
   }
 
   // BANK TRANSFER INSTRUCTIONS
   static async sendBankTransferInstructions(data: BankTransferEmailData): Promise<void> {
-    const template = await this.generateEmailTemplate('bank-transfer-instructions', data);
-    await sendEmail({
-      to: data.customerEmail,
-      subject: template.subject,
-      html: template.html,
-      type: 'bank-transfer-instructions'
-    });
+    await this.deliver('bank-transfer-instructions', data, data.customerEmail);
   }
 
   // TRIP REMINDER (24H BEFORE)
   static async sendTripReminder(data: TripReminderData): Promise<void> {
-    const template = await this.generateEmailTemplate('trip-reminder', data);
-    await sendEmail({
-      to: data.customerEmail,
-      subject: template.subject,
-      html: template.html,
-      type: 'trip-reminder'
-    });
+    await this.deliver('trip-reminder', data, data.customerEmail);
   }
 
   // TRIP COMPLETION + REVIEW REQUEST
   static async sendTripCompletion(data: TripCompletionData): Promise<void> {
-    const template = await this.generateEmailTemplate('trip-completion', data);
-    await sendEmail({
-      to: data.customerEmail,
-      subject: template.subject,
-      html: template.html,
-      type: 'trip-completion'
-    });
+    await this.deliver('trip-completion', data, data.customerEmail);
   }
 
   // BOOKING CANCELLATION
   static async sendCancellationConfirmation(data: CancellationData): Promise<void> {
-    const template = await this.generateEmailTemplate('booking-cancellation', data);
-    await sendEmail({
-      to: data.customerEmail,
-      subject: template.subject,
-      html: template.html,
-      type: 'booking-cancellation'
-    });
+    await this.deliver('booking-cancellation', data, data.customerEmail);
+  }
+
+  // REFUND CONFIRMED BY THE PAYMENT PROVIDER
+  static async sendRefundIssued(data: RefundIssuedEmailData): Promise<void> {
+    await this.deliver('refund-issued', data, data.customerEmail);
   }
 
   // BOOKING STATUS UPDATE
   static async sendBookingStatusUpdate(data: BookingStatusUpdateData): Promise<void> {
-    const template = await this.generateEmailTemplate('booking-update', data);
-    await sendEmail({
-      to: data.customerEmail,
-      subject: template.subject,
-      html: template.html,
-      type: 'booking-update'
-    });
+    await this.deliver('booking-update', data, data.customerEmail);
   }
 
   // WELCOME EMAIL
   static async sendWelcomeEmail(data: WelcomeEmailData): Promise<void> {
-    const template = await this.generateEmailTemplate('welcome', data);
-    await sendEmail({
-      to: data.customerEmail,
-      subject: template.subject,
-      html: template.html,
-      type: 'welcome'
-    });
+    await this.deliver('welcome', data, data.customerEmail);
+  }
+
+  // PASSWORD CHANGED (security notice to the account's own address)
+  static async sendPasswordChanged(data: PasswordChangedEmailData): Promise<void> {
+    await this.deliver('password-changed', data, data.customerEmail);
+  }
+
+  // ENQUIRY ACKNOWLEDGEMENT (to the person who wrote in)
+  static async sendEnquiryReceived(data: EnquiryReceivedEmailData): Promise<void> {
+    await this.deliver('enquiry-received', data, data.customerEmail);
   }
 
   // ADMIN BOOKING ALERT
   static async sendAdminBookingAlert(data: AdminAlertData): Promise<void> {
     const adminEmail = process.env.ADMIN_NOTIFICATION_EMAIL;
 
-    if (!adminEmail) {
-      console.warn('ADMIN_NOTIFICATION_EMAIL is not set. Skipping admin notification.');
+    if (!isValidEmailAddress(adminEmail)) {
+      console.warn('ADMIN_NOTIFICATION_EMAIL is not set or not a valid address. Skipping admin notification.');
       return;
     }
 
-    const template = await this.generateEmailTemplate('admin-booking-alert', data);
-    await sendEmail({
-      to: adminEmail,
-      subject: template.subject,
-      html: template.html,
-      type: 'admin-booking-alert'
-    });
+    await this.deliver('admin-booking-alert', data, adminEmail);
   }
 
   static async sendAdminInviteEmail(data: AdminInviteEmailData): Promise<void> {
-    const template = await this.generateEmailTemplate('admin-invite', data);
-    await sendEmail({
-      to: data.inviteeEmail,
-      subject: template.subject,
-      html: template.html,
-      type: 'admin-invite'
-    });
+    await this.deliver('admin-invite', data, data.inviteeEmail);
   }
 
   static async sendAdminAccessUpdateEmail(data: AdminAccessUpdateEmailData): Promise<void> {
-    const template = await this.generateEmailTemplate('admin-access-update', data);
-    await sendEmail({
-      to: data.inviteeEmail,
-      subject: template.subject,
-      html: template.html,
-      type: 'admin-access-update'
-    });
+    await this.deliver('admin-access-update', data, data.inviteeEmail);
   }
 
   // OPERATOR BOOKING UPDATE (sent when admin edits a booking)
   static async sendOperatorBookingUpdate(data: OperatorBookingUpdateData): Promise<void> {
     const operatorEmail = process.env.OPERATOR_NOTIFICATION_EMAIL || process.env.ADMIN_NOTIFICATION_EMAIL;
 
-    if (!operatorEmail) {
-      console.warn('OPERATOR_NOTIFICATION_EMAIL and ADMIN_NOTIFICATION_EMAIL are not set. Skipping operator notification.');
+    if (!isValidEmailAddress(operatorEmail)) {
+      console.warn('OPERATOR_NOTIFICATION_EMAIL and ADMIN_NOTIFICATION_EMAIL are not set or not valid addresses. Skipping operator notification.');
       return;
     }
 
@@ -336,12 +299,24 @@ export class EmailService {
           hour: 'numeric', minute: '2-digit', hour12: true,
         })} (Cairo time)`;
 
-    const template = await this.generateEmailTemplate('operator-booking-update', { ...data, changedAt });
+    await this.deliver('operator-booking-update', { ...data, changedAt }, operatorEmail);
+  }
+
+  /** Render and send one message. Every simple sender routes through here. */
+  private static async deliver<T extends object>(
+    type: EmailType,
+    data: T,
+    recipient: string | undefined,
+  ): Promise<void> {
+    if (!isValidEmailAddress(recipient)) throw new InvalidRecipientError('recipient');
+    const template = this.generateEmailTemplate(type, data);
     await sendEmail({
-      to: operatorEmail,
+      to: recipient,
       subject: template.subject,
       html: template.html,
-      type: 'operator-booking-update'
+      text: template.text,
+      type,
+      fromName: this.fromName(data as { companyName?: string }),
     });
   }
 }

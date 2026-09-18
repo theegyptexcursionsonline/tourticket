@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import dbConnect from '@/lib/dbConnect';
 import User from '@/lib/models/user';
+import { EmailService } from '@/lib/email/emailService';
 import { enforcePublicActionLimits } from '@/lib/security/distributedAbuseLimit';
 import { PublicInputError, readBoundedJson } from '@/lib/security/publicInput';
 import {
@@ -24,6 +25,15 @@ export const dynamic = 'force-dynamic';
  */
 
 const INVALID_LINK = 'This reset link is invalid or has expired. Request a new link and try again.';
+
+/** Cairo local time — the time zone the business and most customers read in. */
+function changedAtLabel(): string {
+  return `${new Date().toLocaleString('en-US', {
+    timeZone: 'Africa/Cairo',
+    year: 'numeric', month: 'long', day: 'numeric',
+    hour: 'numeric', minute: '2-digit', hour12: true,
+  })} (Cairo time)`;
+}
 
 function noStoreJson(body: Record<string, unknown>, status: number, retryAfter?: number) {
   return NextResponse.json(body, {
@@ -105,6 +115,24 @@ export async function POST(request: NextRequest) {
     // unknown, expired, already-used or deactivated link gets the same reply.
     if (!user) {
       return noStoreJson({ success: false, error: INVALID_LINK }, 400);
+    }
+
+    // A password change is the signal an account takeover cannot hide, so the
+    // account's own address is told every time. It is best-effort: a transport
+    // failure must not make a completed reset look like it failed, which would
+    // push the customer into requesting another link.
+    try {
+      await EmailService.sendPasswordChanged({
+        customerName: `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'there',
+        customerEmail: user.email,
+        changedAt: changedAtLabel(),
+        method: 'reset-link',
+      });
+    } catch (error) {
+      console.error(
+        'Password change notice not delivered:',
+        error instanceof Error ? error.name : 'unknown_error',
+      );
     }
 
     return noStoreJson(

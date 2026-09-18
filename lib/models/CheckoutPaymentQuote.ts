@@ -33,6 +33,8 @@ export interface ICheckoutPaymentQuote extends Document {
   inventoryRefundId?: string;
   inventoryFailureReason?: string;
   inventoryUpdatedAt?: Date;
+  /** One-shot claim: the "payment failed" email is sent once per quote. */
+  paymentFailedNotifiedAt?: Date;
   expiresAt: Date;
 }
 
@@ -82,6 +84,7 @@ const CheckoutPaymentQuoteSchema = new Schema<ICheckoutPaymentQuote>({
   inventoryRefundId: { type: String },
   inventoryFailureReason: { type: String },
   inventoryUpdatedAt: { type: Date },
+  paymentFailedNotifiedAt: { type: Date },
   expiresAt: { type: Date, required: true },
 }, { timestamps: true, minimize: false });
 

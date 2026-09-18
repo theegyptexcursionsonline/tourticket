@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import User from '@/lib/models/user';
 import bcrypt from 'bcryptjs';
 import { authenticateCustomerSession } from '@/lib/auth/customerSession';
+import { EmailService } from '@/lib/email/emailService';
 
 export async function POST(request: NextRequest) {
   try {
@@ -52,7 +53,27 @@ export async function POST(request: NextRequest) {
       { runValidators: true }
     );
 
-    return NextResponse.json({ 
+    // Best-effort security notice to the account's own address. The password
+    // is already changed; a mail failure must not report otherwise.
+    try {
+      await EmailService.sendPasswordChanged({
+        customerName: `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'there',
+        customerEmail: user.email,
+        changedAt: `${new Date().toLocaleString('en-US', {
+          timeZone: 'Africa/Cairo',
+          year: 'numeric', month: 'long', day: 'numeric',
+          hour: 'numeric', minute: '2-digit', hour12: true,
+        })} (Cairo time)`,
+        method: 'account-settings',
+      });
+    } catch (emailError) {
+      console.error(
+        'Password change notice not delivered:',
+        emailError instanceof Error ? emailError.name : 'unknown_error',
+      );
+    }
+
+    return NextResponse.json({
       success: true,
       message: 'Password changed successfully'
     });

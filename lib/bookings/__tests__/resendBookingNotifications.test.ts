@@ -12,6 +12,7 @@ jest.mock('@/lib/email/emailService', () => ({
   EmailService: {
     sendCancellationConfirmation: jest.fn(),
     sendBookingStatusUpdate: jest.fn(),
+    sendRefundIssued: jest.fn(),
     sendBookingConfirmation: jest.fn(),
     sendOperatorBookingUpdate: jest.fn(),
   },
@@ -25,6 +26,7 @@ const findOne = Booking.findOne as unknown as jest.Mock;
 const findOneAndUpdate = Booking.findOneAndUpdate as unknown as jest.Mock;
 const updateOne = Booking.updateOne as unknown as jest.Mock;
 const sendStatusUpdate = EmailService.sendBookingStatusUpdate as jest.Mock;
+const sendRefundIssued = EmailService.sendRefundIssued as jest.Mock;
 const sendConfirmation = EmailService.sendBookingConfirmation as jest.Mock;
 const sendCancellation = EmailService.sendCancellationConfirmation as jest.Mock;
 const sendOperator = EmailService.sendOperatorBookingUpdate as jest.Mock;
@@ -53,6 +55,7 @@ describe('resendBookingNotifications', () => {
     jest.clearAllMocks();
     updateOne.mockResolvedValue({ acknowledged: true, modifiedCount: 1 });
     sendStatusUpdate.mockResolvedValue(undefined);
+    sendRefundIssued.mockResolvedValue(undefined);
     sendConfirmation.mockResolvedValue(undefined);
     sendCancellation.mockResolvedValue(undefined);
     sendOperator.mockResolvedValue(undefined);
@@ -70,7 +73,8 @@ describe('resendBookingNotifications', () => {
       refundNotificationState: 1,
       refundNotificationSentAt: 1,
     });
-    expect(sendStatusUpdate).toHaveBeenCalledTimes(1); // admin_full → status-update email
+    expect(sendRefundIssued).toHaveBeenCalledTimes(1); // admin_full → dedicated refund-issued email
+    expect(sendStatusUpdate).not.toHaveBeenCalled();
     expect(sendOperator).toHaveBeenCalledTimes(1);
   });
 

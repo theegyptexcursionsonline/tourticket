@@ -261,6 +261,8 @@ export interface AdminAccessUpdateEmailData {
   portalLink: string;
   supportEmail?: string;
   isActivated?: boolean;
+  /** Listed on a `permissions_updated` notice so the reader sees the new level. */
+  permissions?: string[];
 }
 
 export interface BankTransferEmailData extends BaseEmailData {
@@ -281,15 +283,69 @@ export interface BankTransferEmailData extends BaseEmailData {
   baseUrl?: string;
 }
 
+export interface PasswordResetEmailData {
+  customerEmail: string;
+  /** Single-use, platform-issued reset link. */
+  resetUrl: string;
+  expiresInMinutes: number;
+}
+
+export interface PasswordChangedEmailData {
+  customerName: string;
+  customerEmail: string;
+  /** Rendered in the account's own locale by the caller, with its time zone. */
+  changedAt: string;
+  method: 'reset-link' | 'account-settings';
+}
+
+export interface PaymentFailedEmailData {
+  customerName: string;
+  customerEmail: string;
+  tourTitle: string;
+  amount: string;
+  /** Plain language, never the raw provider string. */
+  reason: string;
+  attemptedAt?: string;
+  retryUrl?: string;
+  baseUrl?: string;
+}
+
+export interface RefundIssuedEmailData extends BaseEmailData {
+  tourTitle: string;
+  bookingId: string;
+  bookingDate: string;
+  refundAmount: string;
+  originalAmount?: string;
+  refundType: 'full' | 'partial';
+  refundProcessingDays?: number;
+  refundReason?: string;
+  newStatus: string;
+  baseUrl?: string;
+}
+
+export interface EnquiryReceivedEmailData {
+  customerName: string;
+  customerEmail: string;
+  message: string;
+  /** Printed on both this acknowledgement and the internal copy. */
+  enquiryReference: string;
+  baseUrl?: string;
+}
+
 export type EmailType =
   | 'booking-confirmation'
   | 'payment-confirmation'
+  | 'payment-failed'
   | 'bank-transfer-instructions'
   | 'trip-reminder'
   | 'trip-completion'
   | 'booking-cancellation'
   | 'booking-update'
+  | 'refund-issued'
   | 'welcome'
+  | 'password-reset'
+  | 'password-changed'
+  | 'enquiry-received'
   | 'admin-booking-alert'
   | 'admin-invite'
   | 'admin-access-update'
@@ -298,5 +354,6 @@ export type EmailType =
 export interface EmailTemplate {
   subject: string;
   html: string;
-  text?: string;
+  /** Required: the standard gives every message a real plain-text alternative. */
+  text: string;
 }
