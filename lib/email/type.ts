@@ -152,9 +152,7 @@ export interface WelcomeEmailData extends BaseEmailData {
   baseUrl?: string;
 }
 
-export interface AdminAlertData {
-  customerName: string;
-  customerEmail: string;
+export interface AdminAlertData extends BaseEmailData {
   customerPhone?: string;
   tourTitle: string;
   bookingId: string;
@@ -178,6 +176,13 @@ export interface AdminAlertData {
   };
   adminDashboardLink?: string;
   baseUrl?: string;
+  /**
+   * The tenant this booking belongs to. A named brand's alert must never fall
+   * back to the platform inbox: that inbox belongs to a different company.
+   */
+  tenantId?: string;
+  /** The brand's own operations address, from its tenant record. */
+  notificationEmail?: string;
   tours?: Array<{
     title: string;
     date: string;
@@ -211,12 +216,14 @@ export interface BookingStatusUpdateData extends BaseEmailData {
   baseUrl?: string;
 }
 
-export interface OperatorBookingUpdateData {
+export interface OperatorBookingUpdateData extends BaseEmailData {
   bookingId: string;
   tourTitle: string;
-  customerName: string;
-  customerEmail: string;
   customerPhone?: string;
+  /** See `AdminAlertData.tenantId` — same fail-closed rule. */
+  tenantId?: string;
+  /** The brand's own operations address, from its tenant record. */
+  notificationEmail?: string;
   bookingDate: string;
   bookingTime: string;
   changesSummary: string;

@@ -1,6 +1,7 @@
 jest.mock('@/lib/models/Booking', () => ({
   __esModule: true,
   default: {
+    findById: jest.fn(),
     findOne: jest.fn(),
     findOneAndUpdate: jest.fn(),
     updateOne: jest.fn(),
@@ -25,6 +26,12 @@ import { resendBookingNotifications } from '@/lib/bookings/refundNotifications';
 const findOne = Booking.findOne as unknown as jest.Mock;
 const findOneAndUpdate = Booking.findOneAndUpdate as unknown as jest.Mock;
 const updateOne = Booking.updateOne as unknown as jest.Mock;
+const findById = Booking.findById as unknown as jest.Mock;
+
+/** The notifier reads the booking's own tenant before it claims anything. */
+function ownedByTenant(tenantId = 'default') {
+  findById.mockReturnValue({ select: () => ({ lean: async () => ({ tenantId }) }) });
+}
 const sendStatusUpdate = EmailService.sendBookingStatusUpdate as jest.Mock;
 const sendRefundIssued = EmailService.sendRefundIssued as jest.Mock;
 const sendConfirmation = EmailService.sendBookingConfirmation as jest.Mock;
@@ -52,6 +59,7 @@ function financialBooking() {
 
 describe('resendBookingNotifications', () => {
   beforeEach(() => {
+    ownedByTenant();
     jest.clearAllMocks();
     updateOne.mockResolvedValue({ acknowledged: true, modifiedCount: 1 });
     sendStatusUpdate.mockResolvedValue(undefined);

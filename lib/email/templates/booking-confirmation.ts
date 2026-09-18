@@ -73,7 +73,11 @@ export function bookingConfirmation(data: BookingConfirmationInput): EmailSpec {
         data.participantBreakdown ? { label: 'Breakdown', value: data.participantBreakdown, ltr: true } : null,
         data.meetingPoint ? { label: 'Meeting point', value: data.meetingPoint } : null,
         countdown ? { label: 'Starts in', value: countdown } : null,
-        money(data.totalPrice) ? { label: 'Total paid', value: money(data.totalPrice)!, ltr: true, strong: true } : null,
+        // No total here. `data.totalPrice` is the tour total BEFORE the service
+        // fee, taxes and any promo, so showing it as "Total paid" beside the
+        // payment summary put two different figures under the same label — and
+        // the larger one was not what the customer was charged. The payment
+        // block below is the single authority for money in this email.
       ),
     },
     sections: sections(
@@ -95,11 +99,15 @@ export function bookingConfirmation(data: BookingConfirmationInput): EmailSpec {
           body: [`Quote booking ${data.bookingId} at the meeting point. Your full booking stays available at ${bookingsUrl}.`],
         },
       pickupSection(data),
-      data.orderedItems?.length
+      // Only a multi-tour cart earns a line-item panel. For a single booking the
+      // fact block above already names the tour, the option and the guests, so
+      // the panel restated them and added a third price to a message that only
+      // needs one.
+      (data.orderedItems?.length ?? 0) > 1
         ? {
           kind: 'items' as const,
           title: 'Order summary',
-          items: data.orderedItems.map((item) => ({
+          items: (data.orderedItems ?? []).map((item) => ({
             title: item.title,
             meta: guestSummary({
               adults: item.adults,

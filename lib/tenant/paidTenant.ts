@@ -130,3 +130,22 @@ export async function loadPaidTenant(tenantId: string): Promise<PaidTenant> {
     return base;
   }
 }
+
+/**
+ * Brand identity for an email, in the shape `EmailService` merges over its
+ * defaults.
+ *
+ * Empty for the default brand, which keeps the platform defaults. For a named
+ * brand every key it actually has is set, so the customer is never addressed
+ * under another company's name, logo or support address.
+ */
+export function paidTenantEmailBranding(tenant: PaidTenant): Record<string, string> {
+  if (tenant.isDefault) return {};
+  return {
+    ...(tenant.name ? { companyName: tenant.name } : {}),
+    ...(tenant.logo ? { companyLogo: tenant.logo } : {}),
+    ...(tenant.primaryColor ? { primaryColor: tenant.primaryColor } : {}),
+    ...(tenant.contactEmail ? { contactEmail: tenant.contactEmail, supportEmail: tenant.contactEmail } : {}),
+    ...(tenant.contactPhone ? { contactPhone: tenant.contactPhone } : {}),
+  };
+}

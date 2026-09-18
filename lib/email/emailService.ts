@@ -259,16 +259,43 @@ export class EmailService {
     await this.deliver('enquiry-received', data, data.customerEmail);
   }
 
+  /**
+   * The internal address for a brand's own operations mail.
+   *
+   * The platform inbox belongs to the platform. Falling back to it for a named
+   * white-label brand does two wrong things at once: that brand's operator
+   * never learns about their booking, and the platform's staff receive another
+   * company's customer name, email, phone and pickup address. So a named brand
+   * with no notification address of its own fails closed and says so.
+   */
+  private static internalRecipient(
+    channel: string,
+    data: { tenantId?: string; notificationEmail?: string },
+    platformInbox: string | undefined,
+  ): string | null {
+    const named = Boolean(data.tenantId) && data.tenantId !== 'default';
+    if (named) {
+      if (isValidEmailAddress(data.notificationEmail)) return data.notificationEmail;
+      console.error(
+        `${channel} not sent: tenant "${data.tenantId}" has no notification address, and the platform inbox must not receive another brand's customer data.`,
+      );
+      return null;
+    }
+    if (isValidEmailAddress(platformInbox)) return platformInbox;
+    console.warn(`${channel} not sent: no platform notification address is configured.`);
+    return null;
+  }
+
   // ADMIN BOOKING ALERT
   static async sendAdminBookingAlert(data: AdminAlertData): Promise<void> {
-    const adminEmail = process.env.ADMIN_NOTIFICATION_EMAIL;
+    const recipient = this.internalRecipient(
+      'Admin booking alert',
+      data,
+      process.env.ADMIN_NOTIFICATION_EMAIL,
+    );
+    if (!recipient) return;
 
-    if (!isValidEmailAddress(adminEmail)) {
-      console.warn('ADMIN_NOTIFICATION_EMAIL is not set or not a valid address. Skipping admin notification.');
-      return;
-    }
-
-    await this.deliver('admin-booking-alert', data, adminEmail);
+    await this.deliver('admin-booking-alert', data, recipient);
   }
 
   static async sendAdminInviteEmail(data: AdminInviteEmailData): Promise<void> {
@@ -281,12 +308,12 @@ export class EmailService {
 
   // OPERATOR BOOKING UPDATE (sent when admin edits a booking)
   static async sendOperatorBookingUpdate(data: OperatorBookingUpdateData): Promise<void> {
-    const operatorEmail = process.env.OPERATOR_NOTIFICATION_EMAIL || process.env.ADMIN_NOTIFICATION_EMAIL;
-
-    if (!isValidEmailAddress(operatorEmail)) {
-      console.warn('OPERATOR_NOTIFICATION_EMAIL and ADMIN_NOTIFICATION_EMAIL are not set or not valid addresses. Skipping operator notification.');
-      return;
-    }
+    const recipient = this.internalRecipient(
+      'Operator booking update',
+      data,
+      process.env.OPERATOR_NOTIFICATION_EMAIL || process.env.ADMIN_NOTIFICATION_EMAIL,
+    );
+    if (!recipient) return;
 
     // Render the change time in Cairo local time instead of a raw UTC ISO
     // string — operators read this to know when the change actually happened.
@@ -299,7 +326,7 @@ export class EmailService {
           hour: 'numeric', minute: '2-digit', hour12: true,
         })} (Cairo time)`;
 
-    await this.deliver('operator-booking-update', { ...data, changedAt }, operatorEmail);
+    await this.deliver('operator-booking-update', { ...data, changedAt }, recipient);
   }
 
   /** Render and send one message. Every simple sender routes through here. */

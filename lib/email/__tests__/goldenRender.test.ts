@@ -237,18 +237,82 @@ describe('money rows are never rendered empty', () => {
   });
 });
 
+describe('one authoritative total', () => {
+  const base = SAMPLES['booking-confirmation'].data as Record<string, unknown>;
+
+  it('labels exactly one figure "Total paid", and it is the amount charged', () => {
+    const rendered = renderEmailTemplate('booking-confirmation', base);
+    const html = visibleText(rendered.html);
+
+    const labels = html.match(/Total paid/g) ?? [];
+    expect(labels).toHaveLength(1);
+
+    // $244.80 is what the customer was charged. $248.00 is the tour total
+    // before the service fee, taxes and the promo — it must not appear under
+    // this label anywhere in the email.
+    const charged = (base.pricingDetails as { total: string }).total;
+    expect(/Total paid\s*\$?244\.80/.test(html.replace(/\s+/g, ' '))).toBe(true);
+    expect(charged).toBe('$244.80');
+    expect(rendered.text).toContain('Total paid: $244.80');
+    expect(rendered.text).not.toMatch(/Total paid: \$248\.00/);
+  });
+
+  it('shows the gross tour total nowhere under a "paid" label', () => {
+    const rendered = renderEmailTemplate('booking-confirmation', base);
+    const paidFigures = [...visibleText(rendered.html).matchAll(/Total paid\s*(\$[\d.,]+)/g)]
+      .map((match) => match[1]);
+    expect(new Set(paidFigures).size).toBeLessThanOrEqual(1);
+  });
+
+  it('still shows one total when there is no pricing breakdown at all', () => {
+    const rendered = renderEmailTemplate('booking-confirmation', {
+      ...base, pricingDetails: undefined, orderedItems: undefined,
+    });
+    expect((visibleText(rendered.html).match(/Total paid/g) ?? [])).toHaveLength(1);
+    expect(visibleText(rendered.html)).toContain('$248.00');
+  });
+
+  it('keeps the line-item panel for a multi-tour cart', () => {
+    const rendered = renderEmailTemplate('booking-confirmation', {
+      ...base,
+      orderedItems: [
+        { title: 'Pyramids of Giza', adults: 2, children: 1, infants: 0, totalPrice: '$248.00' },
+        { title: 'Nile Dinner Cruise', adults: 2, children: 0, infants: 0, totalPrice: '$118.00' },
+      ],
+    });
+    const html = visibleText(rendered.html);
+    expect(html).toContain('Order summary');
+    expect(html).toContain('Nile Dinner Cruise');
+    // Still only one "Total paid".
+    expect((html.match(/Total paid/g) ?? [])).toHaveLength(1);
+  });
+
+  it('drops the panel that only restates a single booking', () => {
+    const rendered = renderEmailTemplate('booking-confirmation', base);
+    expect(visibleText(rendered.html)).not.toContain('Order summary');
+  });
+});
+
 describe('contrast', () => {
   // Every text/background pair the layout can produce, light and dark.
+  // The shipped EEO tokens: ink #0a2540, muted #5b6b7f, border #e6ebf1,
+  // page #f6f9fc, primary #dc2626. Every text pair the layout can produce.
   const PAIRS: Array<[string, string, number, string]> = [
-    ['#0f172a', '#ffffff', 4.5, 'body text on the light card'],
-    ['#475569', '#ffffff', 4.5, 'muted text on the light card'],
-    ['#475569', '#f8fafc', 4.5, 'muted text on a light panel'],
-    ['#64748b', '#ffffff', 4.5, 'footer text on the light card'],
-    ['#f1f5f9', '#111827', 4.5, 'body text on the dark card'],
-    ['#cbd5e1', '#111827', 4.5, 'muted text on the dark card'],
-    ['#cbd5e1', '#1b2434', 4.5, 'muted text on a dark panel'],
-    ['#94a3b8', '#111827', 4.5, 'footer text on the dark card'],
+    ['#0a2540', '#ffffff', 4.5, 'ink on the light card'],
+    ['#0a2540', '#f6f9fc', 4.5, 'ink on a light panel'],
+    ['#5b6b7f', '#ffffff', 4.5, 'muted on the light card'],
+    ['#5b6b7f', '#f6f9fc', 4.5, 'muted on the page/panel'],
+    ['#eef4fa', '#0e2132', 4.5, 'ink on the dark card'],
+    ['#c3d0dd', '#0e2132', 4.5, 'muted on the dark card'],
+    ['#c3d0dd', '#162c40', 4.5, 'muted on a dark panel'],
+    ['#9aabbd', '#0e2132', 4.5, 'footer on the dark card'],
     ['#78350f', '#fef3c7', 4.5, 'warning text on its amber plate'],
+    // Status pills are coloured text on a white chip in the brand header.
+    ['#047857', '#ffffff', 4.5, 'positive status pill'],
+    ['#b45309', '#ffffff', 4.5, 'warning status pill'],
+    ['#b91c1c', '#ffffff', 4.5, 'negative status pill'],
+    ['#0a2540', '#ffffff', 4.5, 'neutral status pill'],
+    ['#ffffff', '#dc2626', 4.5, 'button label on the EEO brand red'],
   ];
 
   it.each(PAIRS)('%s on %s clears %s:1 (%s)', (fg, bg, minimum) => {

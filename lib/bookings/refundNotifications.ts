@@ -4,6 +4,36 @@ import Tour from '@/lib/models/Tour';
 import User from '@/lib/models/user';
 import { EmailService } from '@/lib/email/emailService';
 import type { PopulatedBookingTour, PopulatedBookingUser } from '@/lib/types/populatedBooking';
+import {
+  loadPaidTenant,
+  paidTenantEmailBranding,
+  paidTenantFilter,
+  paidTenantValue,
+} from '@/lib/tenant/paidTenant';
+
+/**
+ * The tenant that owns this booking, and everything the emails need from it.
+ *
+ * Every query below used a literal `tenantId: 'default'`. A white-label
+ * booking therefore matched nothing: the claim returned no document, the
+ * caller read that as `already_handled`, and the refund email was never sent
+ * to anyone — with no failure state recorded and no way to resend it. The
+ * tenant is now read from the booking itself, exactly as the rest of the paid
+ * path does.
+ */
+async function resolveBookingTenant(bookingId: string) {
+  const owner = await Booking.findById(bookingId).select('tenantId').lean<{ tenantId?: string } | null>();
+  const tenantId = paidTenantValue(owner?.tenantId || 'default');
+  const tenant = await loadPaidTenant(tenantId);
+  return {
+    tenantId,
+    /** Matching filter — the default brand's rows predate the field. */
+    filter: paidTenantFilter(tenantId),
+    branding: paidTenantEmailBranding(tenant),
+    /** The brand's own operations inbox, never the platform's. */
+    notificationEmail: tenant.contactEmail,
+  };
+}
 
 function formatDate(value: Date | string) {
   const date = new Date(value);
@@ -59,10 +89,11 @@ function describeRefundOutcome(booking: {
  */
 export async function sendBookingRefundNotification(bookingId: string): Promise<RefundNotificationOutcome> {
   const claimToken = randomUUID();
+  const tenant = await resolveBookingTenant(bookingId);
   const booking = await Booking.findOneAndUpdate(
     {
       _id: bookingId,
-      tenantId: 'default',
+      ...tenant.filter,
       refundState: { $in: ['succeeded', 'not_required', 'manual_required'] },
       refundNotificationSentAt: { $exists: false },
       refundNotificationState: { $exists: false },
@@ -83,7 +114,7 @@ export async function sendBookingRefundNotification(bookingId: string): Promise<
     await Booking.updateOne(
       {
         _id: booking._id,
-        tenantId: 'default',
+        ...tenant.filter,
         refundNotificationState: 'sending',
         refundNotificationClaimToken: claimToken,
       },
@@ -109,6 +140,9 @@ export async function sendBookingRefundNotification(bookingId: string): Promise<
   let operator: RefundNotificationOutcome['operator'] = 'failed';
   try {
     await EmailService.sendOperatorBookingUpdate({
+      ...tenant.branding,
+      tenantId: tenant.tenantId,
+      notificationEmail: tenant.notificationEmail,
       bookingId: booking.bookingReference || String(booking._id),
       tourTitle: tour.title,
       customerName,
@@ -134,6 +168,7 @@ export async function sendBookingRefundNotification(bookingId: string): Promise<
     const cancellation = booking.refundKind === 'customer_cancel' || booking.refundKind === 'admin_cancel';
     if (cancellation) {
       await EmailService.sendCancellationConfirmation({
+        ...tenant.branding,
         customerName,
         customerEmail: user.email,
         tourTitle: tour.title,
@@ -153,6 +188,7 @@ export async function sendBookingRefundNotification(bookingId: string): Promise<
       // message: it answers "how much, back to where, by when", which a
       // generic status update never did.
       await EmailService.sendRefundIssued({
+        ...tenant.branding,
         customerName,
         customerEmail: user.email,
         tourTitle: tour.title,
@@ -179,7 +215,7 @@ export async function sendBookingRefundNotification(bookingId: string): Promise<
     await Booking.updateOne(
       {
         _id: booking._id,
-        tenantId: 'default',
+        ...tenant.filter,
         refundNotificationState: 'sending',
         refundNotificationClaimToken: claimToken,
       },
@@ -221,14 +257,15 @@ export async function resendBookingNotifications(
   bookingId: string,
   actor: string,
 ): Promise<RefundNotificationOutcome | null> {
+  const resendTenant = await resolveBookingTenant(bookingId);
   const financial = await Booking.findOne({
     _id: bookingId,
-    tenantId: 'default',
+    ...resendTenant.filter,
     refundState: { $in: FINAL_REFUND_STATES },
   }).select('_id').lean();
   if (financial) {
     await Booking.updateOne(
-      { _id: bookingId, tenantId: 'default' },
+      { _id: bookingId, ...resendTenant.filter },
       {
         $unset: {
           refundNotificationState: 1,
@@ -242,7 +279,7 @@ export async function resendBookingNotifications(
     return sendBookingRefundNotification(bookingId);
   }
 
-  const booking = await Booking.findOne({ _id: bookingId, tenantId: 'default' })
+  const booking = await Booking.findOne({ _id: bookingId, ...resendTenant.filter })
     .populate([{ path: 'tour', model: Tour }, { path: 'user', model: User }]);
   if (!booking) return null;
   const user = booking.user as unknown as PopulatedBookingUser;
@@ -261,6 +298,7 @@ export async function resendBookingNotifications(
       const infants = Number(booking.infantGuests || 0);
       const totalGuests = adults + children + infants || Number(booking.guests || 1);
       await EmailService.sendBookingConfirmation({
+        ...resendTenant.branding,
         customerName,
         customerEmail: user.email,
         customerPhone: user.phone,
@@ -278,11 +316,12 @@ export async function resendBookingNotifications(
         baseUrl: process.env.NEXT_PUBLIC_BASE_URL || '',
       });
       await Booking.updateOne(
-        { _id: booking._id, tenantId: 'default' },
+        { _id: booking._id, ...resendTenant.filter },
         { $set: { confirmationSentAt: new Date() }, $unset: { confirmationEmailFailedAt: 1, confirmationEmailFailureCode: 1 } },
       ).catch(() => undefined);
     } else {
       await EmailService.sendBookingStatusUpdate({
+        ...resendTenant.branding,
         customerName,
         customerEmail: user.email,
         tourTitle: tour.title,
@@ -300,6 +339,9 @@ export async function resendBookingNotifications(
   }
   try {
     await EmailService.sendOperatorBookingUpdate({
+      ...resendTenant.branding,
+      tenantId: resendTenant.tenantId,
+      notificationEmail: resendTenant.notificationEmail,
       bookingId: booking.bookingReference || String(booking._id),
       tourTitle: tour.title,
       customerName,

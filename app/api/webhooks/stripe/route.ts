@@ -18,6 +18,7 @@ import {
   isDefaultTenant,
   loadPaidTenant,
   paidCheckoutReservationKey,
+  paidTenantEmailBranding,
   paidTenantFilter,
   paidTenantId,
   paidTenantReferencePrefix,
@@ -134,13 +135,7 @@ async function processSuccessfulPayment(paymentIntent: Stripe.PaymentIntent) {
   // created here or was already written by the brand's own checkout — goes out
   // under the brand the customer actually bought from.
   const paidTenant = await loadPaidTenant(tenantId);
-  const tenantEmailBranding = paidTenant.isDefault ? {} : {
-    ...(paidTenant.name ? { companyName: paidTenant.name } : {}),
-    ...(paidTenant.logo ? { companyLogo: paidTenant.logo } : {}),
-    ...(paidTenant.primaryColor ? { primaryColor: paidTenant.primaryColor } : {}),
-    ...(paidTenant.contactEmail ? { contactEmail: paidTenant.contactEmail, supportEmail: paidTenant.contactEmail } : {}),
-    ...(paidTenant.contactPhone ? { contactPhone: paidTenant.contactPhone } : {}),
-  };
+  const tenantEmailBranding = paidTenantEmailBranding(paidTenant);
 
   // Hosted Checkout Sessions don't have a PaymentIntent when the durable
   // quote is written. Adopt the quote exactly once when Stripe later creates
@@ -852,7 +847,10 @@ async function processSuccessfulPayment(paymentIntent: Stripe.PaymentIntent) {
       bookingId: bookingId,
       bookingOption: mainBooking.booking.selectedBookingOption?.title,
       meetingPoint: mainBooking.tour?.meetingPoint || "Meeting point will be confirmed 24 hours before tour",
-      contactNumber: "+20 11 42255624",
+      // The brand's own number where it has one — the sibling path at the
+      // already-booked branch has always done this; this one had the
+      // platform's number hardcoded on a branded confirmation.
+      contactNumber: paidTenant.contactPhone || "+20 11 42255624",
       tourImage: mainBooking.tour?.image,
       baseUrl,
       // Hotel pickup info
@@ -932,6 +930,9 @@ async function processSuccessfulPayment(paymentIntent: Stripe.PaymentIntent) {
       }));
 
       await EmailService.sendAdminBookingAlert({
+      ...tenantEmailBranding,
+      tenantId: paidTenant.tenantId,
+      notificationEmail: paidTenant.contactEmail,
       customerName: `${customerFirstName} ${customerLastName}`,
       customerEmail: customerEmail,
       customerPhone: customerPhone,

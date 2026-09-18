@@ -208,40 +208,61 @@ export function normalizeOrigin(website: string | undefined): string {
 /* ------------------------------------------------------------------ */
 
 /**
- * Hex only — `oklch()`/`lab()` are not understood by any mail client.
- * Contrast of every text pair below is asserted in the test suite.
+ * The EEO email palette. Hex only — `oklch()`/`lab()` are not understood by any
+ * mail client — and contrast of every text pair is asserted in the test suite.
+ *
+ * These are the SHIPPED EEO tokens, not a Tailwind scale: the same five values
+ * live in the backend's own brand module, so a customer who books in the app
+ * and a customer who books on the web receive emails that look like one
+ * company. Do not re-derive them from Tailwind classes.
+ *
+ *   ink #0a2540 · muted #5b6b7f · border #e6ebf1 · page #f6f9fc · primary #dc2626
+ *
+ * The one deliberate departure is the positive status green: the shipped
+ * #0cbd6b was 2.47:1 and unreadable, so it is #047857 (5.48:1) here and in the
+ * backend.
  */
 const LIGHT = {
-  pageBg: '#f1f5f9',
+  pageBg: '#f6f9fc',
   cardBg: '#ffffff',
-  panelBg: '#f8fafc',
-  text: '#0f172a',
-  muted: '#475569',
-  faint: '#64748b',
-  border: '#e2e8f0',
-  rule: '#cbd5e1',
+  panelBg: '#f6f9fc',
+  text: '#0a2540',
+  muted: '#5b6b7f',
+  // Footer and eyebrow share the muted token rather than inventing a sixth
+  // value; at 13px it still clears 4.5:1 on every surface it appears on.
+  faint: '#5b6b7f',
+  border: '#e6ebf1',
+  rule: '#e6ebf1',
 } as const;
 
+/**
+ * Dark mode has no shipped precedent — the old templates had none at all — so
+ * it is built from the same navy the ink token comes from, not from a
+ * different colour family.
+ */
 const DARK = {
-  pageBg: '#0b1120',
-  cardBg: '#111827',
-  panelBg: '#1b2434',
-  text: '#f1f5f9',
-  muted: '#cbd5e1',
-  faint: '#94a3b8',
-  border: '#334155',
-  rule: '#475569',
+  pageBg: '#061320',
+  cardBg: '#0e2132',
+  panelBg: '#162c40',
+  text: '#eef4fa',
+  muted: '#c3d0dd',
+  faint: '#9aabbd',
+  border: '#26405a',
+  rule: '#34506c',
 } as const;
 
-/** Ink on the amber "action required" plate. 4.5:1 against #fef3c7. */
+/** Ink on the amber "action required" plate. Ratio asserted in the tests. */
 const WARNING_TEXT = '#78350f';
 const WARNING_BG = '#fef3c7';
+
+/** The EEO brand red. The default when a tenant configures no colour. */
+const LIGHT_PRIMARY = '#dc2626';
 
 const TONE_FILL: Record<NonNullable<EmailSpec['statusTone']>, string> = {
   positive: '#047857',
   warning: '#b45309',
   negative: '#b91c1c',
-  neutral: '#334155',
+  neutral: '#0a2540',
 };
 
 const FONT = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
@@ -285,7 +306,7 @@ export function contrastRatio(foreground: string, background: string): number {
  * of shipping unreadable text.
  */
 export function readableOn(background: string): string {
-  return contrastRatio('#ffffff', background) >= 4.5 ? '#ffffff' : '#0f172a';
+  return contrastRatio('#ffffff', background) >= 4.5 ? '#ffffff' : LIGHT.text;
 }
 
 /**
@@ -294,7 +315,7 @@ export function readableOn(background: string): string {
  * 3:1; a button label here is body-sized and must clear the text threshold.
  */
 function buttonFill(primary: string): string {
-  let hex = normalizeHex(primary, '#b91c1c');
+  let hex = normalizeHex(primary, '#dc2626');
   for (let step = 0; step < 24 && contrastRatio('#ffffff', hex) < 4.5; step += 1) {
     const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
     hex = `#${[r, g, b]
@@ -355,7 +376,7 @@ function head(spec: EmailSpec): string {
   body { margin:0; padding:0; width:100% !important; }
   table { border-collapse:collapse; }
   img { border:0; outline:none; text-decoration:none; -ms-interpolation-mode:bicubic; }
-  a { color:${normalizeHex(spec.brand.primaryColor, '#b91c1c')}; }
+  a { color:${normalizeHex(spec.brand.primaryColor, LIGHT_PRIMARY)}; }
   /* Outlook resets — no border-radius dependence, no meaning in background images. */
   .mso-fix { mso-line-height-rule:exactly; mso-table-lspace:0pt; mso-table-rspace:0pt; }
   @media only screen and (max-width:640px) {
@@ -405,7 +426,7 @@ function brandHeader(spec: EmailSpec, dir: EmailDirection): string {
     : '';
 
   return `<tr>
-    <td class="gutter" style="background-color:${escapeHtml(normalizeHex(brand.primaryColor, '#b91c1c'))};padding:24px 32px;">
+    <td class="gutter" style="background-color:${escapeHtml(normalizeHex(brand.primaryColor, LIGHT_PRIMARY))};padding:24px 32px;">
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" dir="${dir}">
         <tr>${logoCell}${pill}</tr>
       </table>
