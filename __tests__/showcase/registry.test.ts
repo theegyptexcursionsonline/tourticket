@@ -18,7 +18,9 @@ describe('showcase registry', () => {
         expect(capability.href).toMatch(/^\/[a-z-]+$/);
       } else {
         // Previews carry no call to action and nothing to probe.
-        expect(capability.href).toBeNull();
+        // A preview capability never probes (nothing to claim live), but it may
+        // still link to its page when one exists (/ai-voice ships ahead of the
+        // EEO voice tenant being active again).
         expect(capability.probes).toHaveLength(0);
       }
     }
@@ -56,7 +58,8 @@ describe('showcase registry', () => {
   });
 
   it('exposes the four showcased capabilities with the reviewed tiers', () => {
-    expect(showcaseCapabilityById('ai-voice')?.tier).toBe('accepted');
+    // Preview until the EEO voice tenant is active again on the voice platform.
+    expect(showcaseCapabilityById('ai-voice')?.tier).toBe('preview');
     expect(showcaseCapabilityById('ai-search')?.tier).toBe('accepted');
     expect(showcaseCapabilityById('online-booking')?.tier).toBe('accepted');
     expect(showcaseCapabilityById('mobile-apps')?.tier).toBe('preview');

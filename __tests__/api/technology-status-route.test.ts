@@ -76,10 +76,11 @@ describe('technology status evaluation', () => {
     const payload = await evaluateTechnologyStatus({ fetchImpl, now: () => 1_000 });
     const map = byId(payload);
 
-    expect(map['ai-voice'].status).toBe('live');
+    // Preview never reads live, whatever the endpoints say (voice is preview
+    // until the EEO voice tenant is active again).
+    expect(map['ai-voice']).toMatchObject({ tier: 'preview', status: 'unavailable' });
     expect(map['ai-search'].status).toBe('live');
     expect(map['online-booking'].status).toBe('live');
-    // Preview never reads live, whatever the endpoints say.
     expect(map['mobile-apps']).toMatchObject({ tier: 'preview', status: 'unavailable' });
     expect(payload.checkedAt).toBe(new Date(1_000).toISOString());
     expect(payload.expiresAt).toBe(new Date(1_000 + STATUS_CACHE_TTL_MS).toISOString());
@@ -97,23 +98,22 @@ describe('technology status evaluation', () => {
   it('maps a 5xx to unavailable for that capability only', async () => {
     const { fetchImpl } = fetchWith({
       ...allHealthy,
-      'https://voice.foxestechnology.com/api/health': () => jsonResponse({ error: 'down' }, 503),
+      'https://search.foxestechnology.com/api/version': () => jsonResponse({ error: 'down' }, 503),
     });
     const map = byId(await evaluateTechnologyStatus({ fetchImpl }));
-    expect(map['ai-voice'].status).toBe('unavailable');
-    expect(map['ai-search'].status).toBe('live');
+    expect(map['ai-search'].status).toBe('unavailable');
     expect(map['online-booking'].status).toBe('live');
   });
 
   it('maps a 200 whose body misses the contract to unavailable', async () => {
     const { fetchImpl } = fetchWith({
       ...allHealthy,
-      'https://foxes-api-production.up.railway.app/api/v1/health': () => jsonResponse({ status: 'degraded' }),
+      [SHOWCASE_CAPABILITIES.find((c) => c.id === 'online-booking')!.probes[0].url]: () => jsonResponse([]),
     });
     const map = byId(await evaluateTechnologyStatus({ fetchImpl }));
-    // One booking dependency down → the booking capability is not live.
+    // The storefront answered 200 without its version contract → not live.
     expect(map['online-booking'].status).toBe('unavailable');
-    expect(map['ai-voice'].status).toBe('live');
+    expect(map['ai-search'].status).toBe('live');
   });
 
   it('maps a malformed body and a transport error to unavailable', async () => {
@@ -121,18 +121,18 @@ describe('technology status evaluation', () => {
       ...allHealthy,
       'https://search.foxestechnology.com/api/version': () =>
         ({ status: 200, json: async () => { throw new SyntaxError('bad json'); } }) as unknown as Response,
-      'https://voice.foxestechnology.com/api/health': () => { throw new TypeError('fetch failed'); },
+      [SHOWCASE_CAPABILITIES.find((c) => c.id === 'online-booking')!.probes[0].url]: () => { throw new TypeError('fetch failed'); },
     });
     const map = byId(await evaluateTechnologyStatus({ fetchImpl }));
     expect(map['ai-search'].status).toBe('unavailable');
-    expect(map['ai-voice'].status).toBe('unavailable');
+    expect(map['online-booking'].status).toBe('unavailable');
   });
 
   it('aborts a slow probe at the timeout and does not let it serialize the others', async () => {
     jest.useFakeTimers();
     const { fetchImpl } = fetchWith({
       ...allHealthy,
-      'https://voice.foxestechnology.com/api/health': (_url, init) =>
+      'https://search.foxestechnology.com/api/version': (_url, init) =>
         new Promise<Response>((_resolve, reject) => {
           init?.signal?.addEventListener('abort', () => reject(new DOMException('aborted', 'AbortError')));
         }),
@@ -148,8 +148,7 @@ describe('technology status evaluation', () => {
 
     await jest.advanceTimersByTimeAsync(2);
     const map = byId(await pending);
-    expect(map['ai-voice'].status).toBe('unavailable');
-    expect(map['ai-search'].status).toBe('live');
+    expect(map['ai-search'].status).toBe('unavailable');
     expect(map['online-booking'].status).toBe('live');
   });
 

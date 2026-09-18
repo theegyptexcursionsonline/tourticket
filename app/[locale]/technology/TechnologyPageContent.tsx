@@ -409,9 +409,9 @@ export default function TechnologyPageContent({ locale }: { locale: string }) {
                 {badge === 'unavailable' ? (
                   <p className="mt-3 text-sm text-amber-900">{localized.unavailableHint}</p>
                 ) : null}
-                {badge === 'preview' ? <p className="mt-3 text-sm text-sky-800">{localized.previewHint}</p> : null}
+                {badge === 'preview' && !capability.href ? <p className="mt-3 text-sm text-sky-800">{localized.previewHint}</p> : null}
 
-                {capability.tier === 'accepted' && text.cta ? (
+                {text.cta && (capability.tier === 'accepted' || capability.href) ? (
                   capability.id === 'ai-search' ? (
                     <button
                       type="button"

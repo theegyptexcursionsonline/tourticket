@@ -113,10 +113,13 @@ function storefrontVersionUrl(): string {
 export const SHOWCASE_CAPABILITIES: readonly ShowcaseCapability[] = [
   {
     id: 'ai-voice',
-    tier: 'accepted',
+    // Preview until the EEO voice tenant is active on the voice platform again
+    // (its trial has lapsed): the service health probe alone would read "Live"
+    // while /ai-voice cannot reach a call.
+    tier: 'preview',
     copyKey: 'ai-voice',
     href: '/ai-voice',
-    probes: [probe('voice-service', 'https://voice.foxestechnology.com/api/health', { kind: 'status-ok' })],
+    probes: [],
   },
   {
     id: 'ai-search',
@@ -134,8 +137,9 @@ export const SHOWCASE_CAPABILITIES: readonly ShowcaseCapability[] = [
     // booking assistant is probed as well so "Live" only appears when every
     // booking dependency on the allowlist answers.
     probes: [
+      // EEO checkout runs inside this storefront; the separate booking platform
+      // is not on its path, so only the storefront itself decides "Live".
       probe('storefront', storefrontVersionUrl(), { kind: 'json-object' }),
-      probe('booking-platform', 'https://foxes-api-production.up.railway.app/api/v1/health', { kind: 'status-ok' }),
     ],
   },
   {
