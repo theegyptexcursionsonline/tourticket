@@ -103,14 +103,19 @@ export function bookingConfirmation(data: BookingConfirmationInput): EmailSpec {
           // section title above a QR code is a line that earns nothing on a
           // phone.
           src: `cid:${data.qrCodeCid}`,
-          alt: `QR code for booking ${data.bookingId}`,
+          // Short: a long alt wrapped to three lines at 390px, and the
+          // caption underneath already carries the reference.
+          alt: 'Booking QR code',
           // The reference below is the fallback: a guest whose client blocks
           // images can still be checked in by quoting it at the meeting point.
           caption: `Show at the meeting point, or quote ${data.bookingId}.`,
           href: data.verificationUrl,
           // Comfortably scannable at arm's length; 200px bought nothing but
           // 40px of scroll.
-          width: 120,
+          // 104px is ~27% of a 390px screen and scans from arm's length on any
+          // phone camera; the caption's reference is the manual fallback.
+          width: 104,
+          height: 104,
         }
         : {
           kind: 'note' as const,

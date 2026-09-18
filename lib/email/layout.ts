@@ -99,6 +99,15 @@ export interface EmailImageSection {
   caption?: string;
   href?: string;
   width?: number;
+  /**
+   * Rendered height, in the same pixels as `width`.
+   *
+   * Required in practice: without it the box collapses when the image does not
+   * load and the layout jumps by its full height between the blocked and
+   * loaded states. Every caller knows its aspect — a QR is square, the pickup
+   * map is always requested at 640x360 — so there is no excuse for `auto`.
+   */
+  height?: number;
 }
 
 export type EmailSection =
@@ -400,6 +409,7 @@ function head(spec: EmailSpec): string {
     .gutter { padding-left:${GUTTER}px !important; padding-right:${GUTTER}px !important; }
     .pad-block { padding-top:12px !important; padding-bottom:12px !important; }
     .pad-inner { padding:12px 14px !important; }
+    .pad-image { padding:10px 12px !important; }
     .page-pad { padding:${PAGE_TOP}px 0 ${PAGE_BOTTOM}px !important; }
     .head-pad { padding:14px 20px !important; }
     .headline-pad { padding:16px 20px 4px 20px !important; }
@@ -602,20 +612,33 @@ function imageSection(section: EmailImageSection, dir: EmailDirection, brand: Em
   const src = safeUrl(section.src, brand.website);
   const heading = section.title ? sectionHeading(section.title, dir) : '';
   const width = section.width ?? 200;
-  // Images are decoration: when `src` is unusable or blocked, the caption still
-  // carries the fact, so the message is complete with images off.
+  // Reserve the box. An unreserved image is a ~120px layout jump between the
+  // images-blocked and images-loaded states, and the blocked state is the one
+  // most people see first.
+  const height = section.height ?? width;
+
   const picture = src
     ? (() => {
-      const tag = `<img src="${escapeHtml(src)}" width="${width}" alt="${escapeHtml(section.alt)}"${section.alt ? '' : ' role="presentation"'} style="display:block;width:${width}px;max-width:100%;height:auto;border-radius:8px;">`;
+      const tag = `<img src="${escapeHtml(src)}" width="${width}" height="${height}" alt="${escapeHtml(section.alt)}"${section.alt ? '' : ' role="presentation"'} style="display:block;width:${width}px;height:${height}px;max-width:100%;border-radius:8px;">`;
       const href = safeUrl(section.href, brand.website);
-      return href ? `<a href="${escapeHtml(href)}" style="text-decoration:none;">${tag}</a>` : tag;
+      // The alt text must not inherit the link colour: brand red reads as an
+      // error rather than as a placeholder for an image that has not loaded.
+      return href
+        ? `<a href="${escapeHtml(href)}" style="text-decoration:none;color:${LIGHT.muted};" class="t-muted">${tag}</a>`
+        : tag;
     })()
     : '';
   const caption = section.caption
-    ? `<div style="font-family:${FONT};font-size:14px;line-height:22px;color:${LIGHT.muted};padding-top:8px;" class="t-muted">${escapeHtml(section.caption)}</div>`
+    ? `<div class="t-muted" style="font-family:${FONT};font-size:14px;line-height:22px;color:${LIGHT.muted};padding-top:6px;">${escapeHtml(section.caption)}</div>`
     : '';
-  return `<tr><td class="gutter pad-block" align="${startAlign(dir)}" style="padding:12px 32px;">
-    ${heading}${picture}${caption}
+
+  // The same bordered panel every other block uses, so with images off this
+  // reads as a deliberate placeholder rather than a broken message.
+  return `<tr><td class="gutter pad-block" style="padding:12px 32px;">
+    ${heading}
+    <table role="presentation" class="panel mso-fix" width="100%" cellpadding="0" cellspacing="0" border="0" dir="${dir}" style="background-color:${LIGHT.panelBg};border:1px solid ${LIGHT.border};border-radius:8px;">
+      <tr><td class="pad-image" align="${startAlign(dir)}" style="padding:12px 14px;">${picture}${caption}</td></tr>
+    </table>
   </td></tr>`;
 }
 

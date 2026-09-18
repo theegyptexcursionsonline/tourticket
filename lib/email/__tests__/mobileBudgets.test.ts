@@ -19,6 +19,9 @@ import {
 } from '@/lib/email/measure';
 import type { EmailType } from '@/lib/email/type';
 
+/** A 1x1 transparent PNG that always loads, for the images-on comparison. */
+const TRANSPARENT_PIXEL = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
+
 jest.setTimeout(120_000);
 
 let browser: Browser;
@@ -227,5 +230,64 @@ describe('no fact is stated twice', () => {
     // With no pickup block, the meeting point is the only place it is stated.
     expect(visible(withoutPickup.html)).toContain('Meeting point');
     expect(visible(withoutPickup.html)).toContain('Hotel lobby');
+  });
+});
+
+/**
+ * Images blocked is the state most people see first, and it is the state this
+ * suite measured wrongly until the QR box was reserved. An image whose height
+ * is left to `auto` collapses when it does not load, so the message is a
+ * different length depending on whether the reader's client fetched remote
+ * content — the class of defect that hid ~130px of the confirmation.
+ */
+describe('images blocked renders at the same height as images loaded', () => {
+  /** Every remote and attached image replaced by a pixel that DOES load. */
+  function loaded(html: string): string {
+    return html.replace(/src="(?:cid:|https?:)[^"]*"/g, `src="${TRANSPARENT_PIXEL}"`);
+  }
+
+  /** Nothing loads: every src points at a URL that cannot resolve. */
+  function blocked(html: string): string {
+    return html.replace(/src="[^"]*"/g, 'src="about:blank#blocked"');
+  }
+
+  it.each(ALL_TYPES)('%s is the same height either way', async (type: EmailType) => {
+    const { html } = renderEmailTemplate(type, SAMPLES[type].data);
+    const page = await browser.newPage({ viewport: { width: MOBILE_WIDTH, height: FIRST_SCREEN } });
+
+    await page.setContent(loaded(html), { waitUntil: 'load' });
+    const withImages = await page.evaluate(() => document.documentElement.scrollHeight);
+
+    await page.setContent(blocked(html), { waitUntil: 'domcontentloaded' });
+    const withoutImages = await page.evaluate(() => document.documentElement.scrollHeight);
+    await page.close();
+
+    expect(withoutImages).toBe(withImages);
+  });
+
+  it('gives every image in a section an explicit height, never auto', () => {
+    for (const type of ALL_TYPES) {
+      const { html } = renderEmailTemplate(type, SAMPLES[type].data);
+      for (const tag of html.match(/<img\b[^>]*>/g) ?? []) {
+        expect(tag).toMatch(/\sheight="\d+"/);
+        expect(tag).toMatch(/height:\d+px/);
+        expect(tag).not.toContain('height:auto');
+      }
+    }
+  });
+
+  it('never renders alt text in the link colour', () => {
+    const { html } = renderEmailTemplate('booking-confirmation', SAMPLES['booking-confirmation'].data);
+    const anchor = /<a [^>]*>\s*<img[^>]*Booking QR code[^>]*>/.exec(html)?.[0] ?? '';
+    expect(anchor).toContain('color:#5b6b7f');
+    expect(anchor).toContain('class="t-muted"');
+  });
+
+  it('puts the QR in the same bordered panel as every other block', () => {
+    const { html } = renderEmailTemplate('booking-confirmation', SAMPLES['booking-confirmation'].data);
+    const panelBefore = html.lastIndexOf('class="panel mso-fix"', html.indexOf('Booking QR code'));
+    expect(panelBefore).toBeGreaterThan(0);
+    // ...and the caption with the reference is still underneath it.
+    expect(html).toContain('Show at the meeting point, or quote EEO-10421.');
   });
 });

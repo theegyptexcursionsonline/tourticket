@@ -127,10 +127,13 @@ export function pickupSection(input: {
       kind: 'image',
       title: 'Hotel pickup',
       src: input.hotelPickupMapImage,
-      alt: `Map of the pickup point${input.hotelPickupLocation?.name ? ` at ${input.hotelPickupLocation.name}` : ''}`,
+      alt: 'Pickup map',
       caption: lines.join(' — '),
       href: input.hotelPickupMapLink,
+      // `buildStaticMapImageUrl` always requests 640x360, so the box is known
+      // and can be reserved rather than collapsing when images are blocked.
       width: 480,
+      height: 270,
     };
   }
   return { kind: 'note', title: 'Hotel pickup', body: lines };
