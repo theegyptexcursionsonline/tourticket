@@ -52,7 +52,8 @@ export interface IBlog extends Document {
   relatedDestinations?: mongoose.Schema.Types.ObjectId[];
   relatedTours?: mongoose.Schema.Types.ObjectId[];
 
-  // FAQ Q&A pairs (from the content engine) → rendered as FAQPage JSON-LD.
+  // FAQ Q&A pairs from the content engine. These must not be emitted as
+  // FAQPage JSON-LD unless the same questions and answers are visibly rendered.
   faqs?: { question: string; answer: string }[];
 
   // Localized overrides by locale code (e.g. ar, es, fr, de). When a locale is
@@ -281,7 +282,7 @@ const BlogSchema: Schema<IBlog> = new Schema({
     ref: 'Tour',
   }],
 
-  // FAQ pairs for FAQPage structured data.
+  // Stored FAQ pairs; public structured data is gated on matching visible UI.
   faqs: {
     type: [
       {

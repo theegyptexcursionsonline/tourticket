@@ -66,6 +66,7 @@ export async function generateMetadata({ params }: { params: Promise<Params> }) 
         images: blog.featuredImage ? [blog.featuredImage] : undefined,
         type: 'article',
         publishedTime: blog.publishedAt?.toISOString(),
+        modifiedTime: blog.updatedAt?.toISOString(),
         authors: blog.author ? [blog.author] : undefined,
       },
       twitter: {
@@ -73,6 +74,10 @@ export async function generateMetadata({ params }: { params: Promise<Params> }) 
         title,
         description,
         images: blog.featuredImage ? [blog.featuredImage] : undefined,
+      },
+      robots: {
+        index: true,
+        follow: true,
       },
     };
   } catch (err) {
@@ -175,11 +180,12 @@ export default async function BlogPostPage({ params }: { params: Promise<Params>
         locale={locale}
         title={localized.title}
         slug={slug}
-        description={localized.excerpt}
+        description={localized.metaDescription || localized.excerpt}
         excerpt={localized.excerpt}
         image={localized.featuredImage}
         author={localized.author}
         publishedAt={localized.publishedAt?.toString()}
+        modifiedAt={localized.updatedAt?.toString()}
         tags={localized.tags}
       />
       <Header startSolid />

@@ -29,4 +29,9 @@ describe('blog article dark-mode contrast contract', () => {
     expect(source).toContain('.blog-content summary');
     expect(source).toContain('background: #1e293b');
   });
+
+  it('balances narrow headings instead of leaving orphaned words', () => {
+    expect(source).toContain('text-wrap: balance');
+    expect(source).toContain('overflow-wrap: anywhere');
+  });
 });

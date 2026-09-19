@@ -11,14 +11,20 @@ interface Props {
   image?: string;
   author?: string;
   publishedAt?: string;
+  modifiedAt?: string;
   tags?: string[];
   locale?: string;
 }
 
-export default function BlogPostSchema({ title, slug, description, excerpt, image, author, publishedAt, tags, locale = 'en' }: Props) {
+const ORGANIZATION_AUTHOR_PATTERN = /\b(?:editorial|team|staff|company|organisation|organization)\b/i;
+
+export default function BlogPostSchema({ title, slug, description, excerpt, image, author, publishedAt, modifiedAt, tags, locale = 'en' }: Props) {
   const postUrl = localizedAbsoluteUrl(locale, `/blog/${slug}`);
   const safeAuthor = author?.trim();
   const safeTags = tags?.map((tag) => tag.trim()).filter(Boolean);
+  const authorType = safeAuthor && ORGANIZATION_AUTHOR_PATTERN.test(safeAuthor)
+    ? 'Organization'
+    : 'Person';
 
   const ld = {
     '@context': 'https://schema.org',
@@ -29,9 +35,10 @@ export default function BlogPostSchema({ title, slug, description, excerpt, imag
         ...((description || excerpt) ? { description: description || excerpt } : {}),
         url: postUrl,
         ...(image ? { image } : {}),
-        ...(safeAuthor ? { author: { '@type': 'Person', name: safeAuthor } } : {}),
+        ...(safeAuthor ? { author: { '@type': authorType, name: safeAuthor } } : {}),
         publisher: { '@id': `${SEO_BASE_URL}/#organization` },
         ...(publishedAt ? { datePublished: publishedAt } : {}),
+        ...(modifiedAt ? { dateModified: modifiedAt } : {}),
         mainEntityOfPage: { '@type': 'WebPage', '@id': postUrl },
         ...(safeTags && safeTags.length > 0 ? { keywords: safeTags.join(', ') } : {}),
       },

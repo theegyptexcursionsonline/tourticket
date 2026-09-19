@@ -590,6 +590,8 @@ export default function BlogPostClient({ blog, relatedPosts, relevantTours = [] 
           color: #1c1917; /* stone-900 */
           letter-spacing: -0.01em;
           scroll-margin-top: 5rem;
+          text-wrap: balance;
+          overflow-wrap: anywhere;
         }
         .blog-content h2 {
           font-size: 1.9rem;

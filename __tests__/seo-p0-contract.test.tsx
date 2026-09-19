@@ -237,6 +237,31 @@ describe('P0 truthful structured data', () => {
     expect(renderedJsonLd(absent.container)['@graph'][0].author).toBeUndefined();
   });
 
+  it('emits complete BlogPosting dates, prefers the SEO description, and types editorial teams as organizations', () => {
+    const rendered = render(
+      <BlogPostSchema
+        title="Visible article"
+        slug="visible-article"
+        description="Search-focused description"
+        excerpt="Visible standfirst"
+        author="EEO Editorial Team"
+        publishedAt="2026-09-01T00:00:00.000Z"
+        modifiedAt="2026-09-19T00:00:00.000Z"
+      />,
+    );
+    const article = renderedJsonLd(rendered.container)['@graph'][0];
+
+    expect(article.description).toBe('Search-focused description');
+    expect(article.author).toEqual({ '@type': 'Organization', name: 'EEO Editorial Team' });
+    expect(article.datePublished).toBe('2026-09-01T00:00:00.000Z');
+    expect(article.dateModified).toBe('2026-09-19T00:00:00.000Z');
+    expect(article.mainEntityOfPage).toEqual({
+      '@type': 'WebPage',
+      '@id': 'https://egypt-excursionsonline.com/blog/visible-article',
+    });
+    expect(article.publisher).toEqual({ '@id': 'https://egypt-excursionsonline.com/#organization' });
+  });
+
   it('bounds and deduplicates destination list identity without synthetic destination claims', () => {
     const tours = Array.from({ length: 22 }, (_, index) => ({
       title: `Tour ${index}`,
@@ -302,7 +327,13 @@ describe('P0 truthful structured data', () => {
   });
 
   it('does not publish blog FAQ rich results without matching visible FAQ content', () => {
-    expect(read('app/[locale]/blog/[slug]/page.tsx')).not.toContain('FAQSchema');
+    const blogPage = read('app/[locale]/blog/[slug]/page.tsx');
+    expect(blogPage).not.toContain('FAQSchema');
+    expect(blogPage).toContain('description={localized.metaDescription || localized.excerpt}');
+    expect(blogPage).toContain('modifiedAt={localized.updatedAt?.toString()}');
+    expect(blogPage).toContain('modifiedTime: blog.updatedAt?.toISOString()');
+    expect(blogPage).toContain('index: true');
+    expect(blogPage).toContain('follow: true');
   });
 
   it('does not call FAQ schema from any public route', () => {
