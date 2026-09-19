@@ -211,7 +211,7 @@ function ShareAndLike({ blog }: { blog: BlogPost }) {
         </button>
 
         {open && (
-          <div className="absolute right-0 z-40 mt-2 w-44 bg-white border rounded-lg shadow-lg p-2">
+          <div className="blog-card absolute right-0 z-40 mt-2 w-44 bg-white border rounded-lg shadow-lg p-2">
             <button onClick={() => handleShare('facebook')} className="w-full text-left px-2 py-2 rounded hover:bg-slate-50 flex items-center gap-2">
               <Facebook className="h-4 w-4 text-blue-600" /> Facebook
             </button>
@@ -231,7 +231,7 @@ function ShareAndLike({ blog }: { blog: BlogPost }) {
 /* ---------- Small Tour Card used in sidebar CTA ---------- */
 function MiniTourCard({ tour }: { tour: TourPreview }) {
   return (
-    <Link href={tour?.slug ? tourContentPath(tour) : '#'} className="flex gap-3 items-center p-3 rounded-lg border hover:shadow-md transition bg-white">
+    <Link href={tour?.slug ? tourContentPath(tour) : '#'} className="blog-card flex gap-3 items-center p-3 rounded-lg border hover:shadow-md transition bg-white">
       <div className="relative w-20 h-14 rounded-lg overflow-hidden bg-slate-100 flex-shrink-0">
         {tour?.image ? (
           <Image src={tour.image} alt={tour.title} fill className="object-cover" />
@@ -259,7 +259,7 @@ function AuthorCard({ author }: { author: AuthorProfile }) {
   const authorSlug = getAuthorRouteSlug(author);
 
   return (
-    <div className="bg-white rounded-2xl shadow p-6 flex gap-4 items-start">
+    <div className="blog-card bg-white rounded-2xl shadow p-6 flex gap-4 items-start">
       <div className="w-20 h-20 rounded-full overflow-hidden bg-slate-100 flex-shrink-0">
         <Image src={avatar} alt={author.name} width={80} height={80} className="object-cover" />
       </div>
@@ -312,7 +312,7 @@ function Sidebar({ blog }: { blog: BlogPost }) {
     <aside className="lg:col-span-1">
       <div className="space-y-6 sticky top-6">
         {/* Book a tour CTA */}
-        <div className="bg-white rounded-2xl shadow p-6">
+        <div className="blog-card bg-white rounded-2xl shadow p-6">
           <h4 className="text-lg font-bold mb-3">Book a Tour</h4>
           <p className="text-sm text-slate-600 mb-4">Want to experience this? Book one of our recommended tours below, or contact our travel team to build a custom itinerary.</p>
 
@@ -332,7 +332,7 @@ function Sidebar({ blog }: { blog: BlogPost }) {
         </div>
 
         {/* Travel Essentials */}
-        <div className="bg-white rounded-2xl shadow p-6">
+        <div className="blog-card bg-white rounded-2xl shadow p-6">
           <h4 className="font-semibold mb-3">Travel Essentials</h4>
           <ul className="text-sm text-slate-600 space-y-2">
             <li className="flex items-start gap-2"><MapPin className="h-4 w-4 text-amber-500 mt-1" /> Passport & visa check</li>
@@ -342,7 +342,7 @@ function Sidebar({ blog }: { blog: BlogPost }) {
         </div>
 
         {/* Newsletter */}
-        <div className="bg-white rounded-2xl shadow p-6 text-center">
+        <div className="blog-card bg-white rounded-2xl shadow p-6 text-center">
           <h4 className="font-semibold mb-2">Get Trip Ideas</h4>
           <p className="text-sm text-slate-600 mb-3">Subscribe for the best Egypt tours & insider tips.</p>
           <form onSubmit={(e) => { e.preventDefault(); toast.success('Subscribed'); }}>
@@ -385,7 +385,7 @@ export default function BlogPostClient({ blog, relatedPosts, relevantTours = [] 
   });
 
   return (
-    <div className="bg-stone-50 min-h-screen">
+    <div className="blog-post-page bg-stone-50 min-h-screen">
       <ReadingProgress />
 
       {/* Back / breadcrumb */}
@@ -457,13 +457,13 @@ export default function BlogPostClient({ blog, relatedPosts, relevantTours = [] 
 
             {/* Article body — editorial styles live in the global block below */}
             <div
-              className="bg-white rounded-2xl shadow-sm ring-1 ring-stone-100 p-6 md:p-10 blog-content"
+              className="blog-card bg-white rounded-2xl shadow-sm ring-1 ring-stone-100 p-6 md:p-10 blog-content"
               dangerouslySetInnerHTML={{ __html: sanitizeRichHtml(blog.content) }}
             />
 
             {/* Tags */}
             {Array.isArray(blog.tags) && blog.tags.length > 0 && (
-              <div className="bg-white rounded-2xl shadow p-6">
+              <div className="blog-card bg-white rounded-2xl shadow p-6">
                 <h3 className="font-semibold mb-3 flex items-center gap-2"><Tag className="h-4 w-4 text-amber-600" /> Tags</h3>
                 <div className="flex flex-wrap gap-2">
                   {blog.tags.map((t: string) => (
@@ -476,7 +476,7 @@ export default function BlogPostClient({ blog, relatedPosts, relevantTours = [] 
             )}
 
             {/* Author */}
-            <div className="bg-white rounded-2xl shadow p-6">
+            <div className="blog-card bg-white rounded-2xl shadow p-6">
               <AuthorCard author={blog.authorObject ?? {
                 name: blog.author || 'Author',
                 role: blog.authorRole,
@@ -492,7 +492,7 @@ export default function BlogPostClient({ blog, relatedPosts, relevantTours = [] 
 
             {/* Tours you'll love — bookable tours relevant to this post */}
             {relevantTours && relevantTours.length > 0 && (
-              <div className="bg-white rounded-2xl shadow p-6">
+              <div className="blog-card bg-white rounded-2xl shadow p-6">
                 <h3 className="font-semibold mb-4 flex items-center gap-2">
                   <MapPin className="h-4 w-4 text-amber-600" /> Tours you&apos;ll love
                 </h3>
@@ -500,7 +500,7 @@ export default function BlogPostClient({ blog, relatedPosts, relevantTours = [] 
                   {relevantTours.slice(0, 6).map((t) => {
                     const img = t?.image || (Array.isArray(t?.images) ? t.images[0] : undefined);
                     return (
-                      <Link key={t._id || t.slug} href={tourContentPath(t)} className="group block rounded-xl border overflow-hidden hover:shadow-md transition bg-white">
+                      <Link key={t._id || t.slug} href={tourContentPath(t)} className="blog-card group block rounded-xl border overflow-hidden hover:shadow-md transition bg-white">
                         <div className="relative h-32 bg-slate-100">
                           {img ? (
                             <Image src={img} alt={t.title} fill className="object-cover transition group-hover:scale-105" />
@@ -527,11 +527,11 @@ export default function BlogPostClient({ blog, relatedPosts, relevantTours = [] 
 
             {/* Related posts — horizontal carousel */}
             {relatedPosts && relatedPosts.length > 0 && (
-              <div className="bg-white rounded-2xl shadow p-6">
+              <div className="blog-card bg-white rounded-2xl shadow p-6">
                 <h3 className="font-semibold mb-4">Related Articles</h3>
                 <div className="flex gap-4 overflow-x-auto snap-x snap-mandatory pb-2 -mx-1 px-1">
                   {relatedPosts.map((p) => (
-                    <Link key={p._id} href={`/blog/${p.slug}`} className="snap-start shrink-0 w-64 rounded-xl border overflow-hidden hover:shadow-md transition bg-white">
+                    <Link key={p._id} href={`/blog/${p.slug}`} className="blog-card snap-start shrink-0 w-64 rounded-xl border overflow-hidden hover:shadow-md transition bg-white">
                       <div className="relative h-32 bg-slate-100">
                         {p.featuredImage ? (
                           <Image
@@ -706,6 +706,78 @@ export default function BlogPostClient({ blog, relatedPosts, relevantTours = [] 
           height: 1px;
           background: #ece3d4;
           margin: 2.8em 0;
+        }
+        .blog-content table {
+          width: 100%;
+          border-collapse: collapse;
+          margin: 1.8em 0;
+        }
+        .blog-content th,
+        .blog-content td {
+          border: 1px solid #d6d3d1;
+          padding: 0.75rem;
+          text-align: left;
+          vertical-align: top;
+        }
+        .blog-content th {
+          background: #f5f5f4;
+          color: #1c1917;
+        }
+        .blog-content details {
+          border: 1px solid #d6d3d1;
+          border-radius: 0.75rem;
+          padding: 0.85rem 1rem;
+          margin: 1rem 0;
+          background: #fafaf9;
+        }
+        .blog-content summary {
+          color: #1c1917;
+          cursor: pointer;
+          font-weight: 700;
+        }
+
+        /* The storefront utility bridge recolours standard Tailwind surfaces.
+           Rich article HTML is authored content, so its literal editorial
+           colours need an explicit dark palette as well. Keep every content
+           primitive readable, including future tables and FAQ details. */
+        html[data-storefront-theme="dark"] body.storefront-theme .blog-post-page .blog-card {
+          background-color: #111827;
+          border-color: #334155;
+          color: #e2e8f0;
+          --tw-ring-color: #334155;
+        }
+        html[data-storefront-theme="dark"] body.storefront-theme .blog-post-page .blog-content {
+          color: #e2e8f0;
+        }
+        html[data-storefront-theme="dark"] body.storefront-theme .blog-post-page .blog-content :is(h2, h3, h4, strong, summary) {
+          color: #f8fafc;
+        }
+        html[data-storefront-theme="dark"] body.storefront-theme .blog-post-page .blog-content h2 {
+          border-bottom-color: #475569;
+        }
+        html[data-storefront-theme="dark"] body.storefront-theme .blog-post-page .blog-content a {
+          color: #fbbf24;
+          background-image: linear-gradient(#b45309, #b45309);
+        }
+        html[data-storefront-theme="dark"] body.storefront-theme .blog-post-page .blog-content a:hover {
+          color: #fde68a;
+        }
+        html[data-storefront-theme="dark"] body.storefront-theme .blog-post-page .blog-content blockquote {
+          background: #1e293b;
+          color: #cbd5e1;
+        }
+        html[data-storefront-theme="dark"] body.storefront-theme .blog-post-page .blog-content code:not(pre > code) {
+          background-color: #020617;
+          color: #fbbf24;
+        }
+        html[data-storefront-theme="dark"] body.storefront-theme .blog-post-page .blog-content hr {
+          background: #475569;
+        }
+        html[data-storefront-theme="dark"] body.storefront-theme .blog-post-page .blog-content :is(th, td, details) {
+          border-color: #475569;
+        }
+        html[data-storefront-theme="dark"] body.storefront-theme .blog-post-page .blog-content :is(th, details) {
+          background: #1e293b;
         }
         @media (max-width: 640px) {
           .blog-content {
