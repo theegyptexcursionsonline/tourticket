@@ -34,4 +34,22 @@ describe('blog article dark-mode contrast contract', () => {
     expect(source).toContain('text-wrap: balance');
     expect(source).toContain('overflow-wrap: anywhere');
   });
+
+  it('gives the GetYourGuide partnership story a focused editorial layout', () => {
+    expect(source).toContain("blog.slug === 'egypt-excursions-online-getyourguide-partnership'");
+    expect(source).toContain('partnership-hero');
+    expect(source).toContain('story-metrics');
+    expect(source).toContain('feature-article-body');
+    expect(source).toContain('Success story');
+  });
+
+  it('renders responsive story photography with captions in either theme', () => {
+    expect(source).toContain('.blog-content figure');
+    expect(source).toContain('.blog-content figcaption');
+    expect(source).toContain('.blog-content .story-image-grid');
+    expect(source).toContain('grid-template-columns: repeat(2, minmax(0, 1fr))');
+    expect(source).toContain('grid-template-columns: 1fr');
+    expect(source).toContain('.blog-content .story-pull-quote');
+    expect(source).toContain('.blog-post-page .blog-content figcaption');
+  });
 });

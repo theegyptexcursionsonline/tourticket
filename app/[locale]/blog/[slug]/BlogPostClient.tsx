@@ -379,6 +379,7 @@ function ReadingProgress() {
 /* ---------- Main component ---------- */
 export default function BlogPostClient({ blog, relatedPosts, relevantTours = [] }: Props) {
   const locale = useLocale();
+  const isPartnershipFeature = blog.slug === 'egypt-excursions-online-getyourguide-partnership';
   const authorSlug = getAuthorRouteSlug({
     slug: blog.authorSlug,
     name: blog.author,
@@ -388,63 +389,122 @@ export default function BlogPostClient({ blog, relatedPosts, relevantTours = [] 
     <div className="blog-post-page bg-stone-50 min-h-screen">
       <ReadingProgress />
 
-      {/* Back / breadcrumb */}
-      <div className="bg-white border-b border-stone-200">
-        <div className="container mx-auto px-4 py-3">
-          <Link href="/blog" className="inline-flex items-center gap-2 text-stone-600 hover:text-amber-700">
-            <ChevronLeft className="h-4 w-4" /> Back to articles
-          </Link>
-        </div>
-      </div>
+      {isPartnershipFeature ? (
+        <header className="partnership-hero text-white">
+          <div className="container mx-auto max-w-6xl px-4 pb-12 pt-7 md:pb-16 md:pt-10">
+            <Link href="/blog" className="inline-flex items-center gap-2 text-sm text-slate-300 transition hover:text-white">
+              <ChevronLeft className="h-4 w-4" /> EEO stories
+            </Link>
 
-      {/* Hero */}
-      <header className="relative h-[440px] md:h-[540px]">
-        {blog.featuredImage ? (
-          <Image
-            src={blog.featuredImage}
-            alt={imageMetadataFor(blog.featuredImage, blog.imageMetadata, blog.title).alt}
-            title={imageMetadataFor(blog.featuredImage, blog.imageMetadata, blog.title).title}
-            fill
-            className="object-cover"
-            priority
-          />
-        ) : (
-          <div className="absolute inset-0 bg-gradient-to-br from-amber-700 to-stone-800" />
-        )}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/45 to-black/10"></div>
+            <div className="mt-10 grid items-end gap-10 lg:grid-cols-[minmax(0,1fr)_auto]">
+              <div className="max-w-4xl">
+                <div className="mb-6 flex flex-wrap items-center gap-3 text-sm text-slate-200">
+                  <span className="rounded-full bg-amber-400 px-3 py-1 font-semibold uppercase tracking-[0.12em] text-slate-950">
+                    Success story
+                  </span>
+                  <span>{ReadTimeText(blog)}</span>
+                  <span aria-hidden>•</span>
+                  <span>{formatDate(blog.publishedAt, locale)}</span>
+                </div>
+                <h1 className="text-balance text-4xl font-black leading-[1.02] tracking-[-0.035em] sm:text-5xl lg:text-7xl">
+                  {blog.title}
+                </h1>
+                {blog.excerpt ? (
+                  <p className="mt-7 max-w-3xl text-lg leading-relaxed text-slate-200 md:text-xl">
+                    {blog.excerpt}
+                  </p>
+                ) : null}
+              </div>
 
-        <div className="absolute left-0 right-0 bottom-0 p-6 md:p-12 container mx-auto max-w-4xl text-white">
-          <div className="flex flex-wrap items-center gap-3 mb-5">
-            <span className="px-3 py-1 rounded-full bg-amber-600/95 text-xs font-semibold uppercase tracking-wide">{blog.categoryDisplay || blog.category}</span>
-            {blog.featured && <span className="px-3 py-1 rounded-full bg-yellow-500/95 text-stone-900 text-xs font-semibold inline-flex items-center gap-1"><Sparkles className="h-3 w-3" /> Featured</span>}
-          </div>
-
-          <h1 className="blog-serif text-3xl md:text-5xl font-bold leading-[1.12] mb-5 max-w-4xl">{blog.title}</h1>
-
-          <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-stone-200">
-            <div className="flex items-center gap-2">
-              <User className="h-4 w-4" />
-              {authorSlug ? (
-                <Link href={`/author/${authorSlug}`} className="hover:text-white">
-                  {blog.author}
-                </Link>
-              ) : (
-                <span>{blog.author}</span>
-              )}
+              <div className="feature-share flex flex-col gap-4 lg:items-end">
+                <div className="flex items-center gap-2 text-sm text-slate-200">
+                  <User className="h-4 w-4" />
+                  {authorSlug ? (
+                    <Link href={`/author/${authorSlug}`} className="font-semibold text-white hover:text-amber-300">
+                      {blog.author}
+                    </Link>
+                  ) : <span className="font-semibold text-white">{blog.author}</span>}
+                </div>
+                <ShareAndLike blog={blog} />
+              </div>
             </div>
-            <div className="flex items-center gap-2"><Calendar className="h-4 w-4" /> <span>{formatDate(blog.publishedAt, locale)}</span></div>
-            <div className="flex items-center gap-2"><Clock className="h-4 w-4" /> <span>{ReadTimeText(blog)}</span></div>
-            <div className="flex items-center gap-2"><Eye className="h-4 w-4" /> <span>{blog.views ?? 0} views</span></div>
+
+            {blog.featuredImage ? (
+              <div className="relative mt-12 aspect-[16/9] overflow-hidden rounded-[1.75rem] bg-slate-800 shadow-2xl ring-1 ring-white/10">
+                <Image
+                  src={blog.featuredImage}
+                  alt={imageMetadataFor(blog.featuredImage, blog.imageMetadata, blog.title).alt}
+                  title={imageMetadataFor(blog.featuredImage, blog.imageMetadata, blog.title).title}
+                  fill
+                  className="object-cover"
+                  priority
+                  sizes="(max-width: 768px) 100vw, 1152px"
+                />
+              </div>
+            ) : null}
           </div>
-        </div>
-      </header>
+        </header>
+      ) : (
+        <>
+          {/* Back / breadcrumb */}
+          <div className="bg-white border-b border-stone-200">
+            <div className="container mx-auto px-4 py-3">
+              <Link href="/blog" className="inline-flex items-center gap-2 text-stone-600 hover:text-amber-700">
+                <ChevronLeft className="h-4 w-4" /> Back to articles
+              </Link>
+            </div>
+          </div>
+
+          {/* Standard article hero */}
+          <header className="relative h-[440px] md:h-[540px]">
+            {blog.featuredImage ? (
+              <Image
+                src={blog.featuredImage}
+                alt={imageMetadataFor(blog.featuredImage, blog.imageMetadata, blog.title).alt}
+                title={imageMetadataFor(blog.featuredImage, blog.imageMetadata, blog.title).title}
+                fill
+                className="object-cover"
+                priority
+              />
+            ) : (
+              <div className="absolute inset-0 bg-gradient-to-br from-amber-700 to-stone-800" />
+            )}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/45 to-black/10"></div>
+
+            <div className="absolute left-0 right-0 bottom-0 p-6 md:p-12 container mx-auto max-w-4xl text-white">
+              <div className="flex flex-wrap items-center gap-3 mb-5">
+                <span className="px-3 py-1 rounded-full bg-amber-600/95 text-xs font-semibold uppercase tracking-wide">{blog.categoryDisplay || blog.category}</span>
+                {blog.featured && <span className="px-3 py-1 rounded-full bg-yellow-500/95 text-stone-900 text-xs font-semibold inline-flex items-center gap-1"><Sparkles className="h-3 w-3" /> Featured</span>}
+              </div>
+
+              <h1 className="blog-serif text-3xl md:text-5xl font-bold leading-[1.12] mb-5 max-w-4xl">{blog.title}</h1>
+
+              <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-stone-200">
+                <div className="flex items-center gap-2">
+                  <User className="h-4 w-4" />
+                  {authorSlug ? (
+                    <Link href={`/author/${authorSlug}`} className="hover:text-white">
+                      {blog.author}
+                    </Link>
+                  ) : (
+                    <span>{blog.author}</span>
+                  )}
+                </div>
+                <div className="flex items-center gap-2"><Calendar className="h-4 w-4" /> <span>{formatDate(blog.publishedAt, locale)}</span></div>
+                <div className="flex items-center gap-2"><Clock className="h-4 w-4" /> <span>{ReadTimeText(blog)}</span></div>
+                <div className="flex items-center gap-2"><Eye className="h-4 w-4" /> <span>{blog.views ?? 0} views</span></div>
+              </div>
+            </div>
+          </header>
+        </>
+      )}
 
       {/* Content + Sidebar */}
-      <main className="container mx-auto px-4 py-12 max-w-6xl">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-          <article className="lg:col-span-3 space-y-6">
+      <main className={`container mx-auto px-4 ${isPartnershipFeature ? 'max-w-5xl py-16 md:py-24' : 'max-w-6xl py-12'}`}>
+        <div className={isPartnershipFeature ? '' : 'grid grid-cols-1 lg:grid-cols-4 gap-8'}>
+          <article className={isPartnershipFeature ? 'space-y-8' : 'lg:col-span-3 space-y-6'}>
             {/* Standfirst (lead) + actions */}
-            <div className="flex items-start justify-between gap-6">
+            {!isPartnershipFeature && <div className="flex items-start justify-between gap-6">
               {blog.excerpt ? (
                 <p className="blog-serif text-xl md:text-2xl leading-relaxed text-stone-600 border-l-4 border-amber-500 pl-5">
                   {blog.excerpt}
@@ -453,11 +513,19 @@ export default function BlogPostClient({ blog, relatedPosts, relevantTours = [] 
               <div className="shrink-0 pt-1">
                 <ShareAndLike blog={blog} />
               </div>
-            </div>
+            </div>}
+
+            {isPartnershipFeature ? (
+              <div className="story-metrics" aria-label="Partnership highlights">
+                <div><strong>2011</strong><span>Partnership began</span></div>
+                <div><strong>15 years</strong><span>Growing together</span></div>
+                <div><strong>108%</strong><span>Growth in two years</span></div>
+              </div>
+            ) : null}
 
             {/* Article body — editorial styles live in the global block below */}
             <div
-              className="blog-card bg-white rounded-2xl shadow-sm ring-1 ring-stone-100 p-6 md:p-10 blog-content"
+              className={`blog-card blog-content ${isPartnershipFeature ? 'feature-article-body' : 'bg-white rounded-2xl shadow-sm ring-1 ring-stone-100 p-6 md:p-10'}`}
               dangerouslySetInnerHTML={{ __html: sanitizeRichHtml(blog.content) }}
             />
 
@@ -555,7 +623,7 @@ export default function BlogPostClient({ blog, relatedPosts, relevantTours = [] 
           </article>
 
           {/* Sidebar */}
-          <Sidebar blog={blog} />
+          {!isPartnershipFeature ? <Sidebar blog={blog} /> : null}
         </div>
       </main>
 
@@ -565,6 +633,72 @@ export default function BlogPostClient({ blog, relatedPosts, relevantTours = [] 
       <style jsx global>{`
         .blog-serif {
           font-family: Georgia, "Iowan Old Style", "Times New Roman", serif;
+        }
+
+        .partnership-hero {
+          background:
+            radial-gradient(circle at 85% 8%, rgba(245, 158, 11, 0.2), transparent 28rem),
+            linear-gradient(145deg, #07152f 0%, #101b36 58%, #291609 100%);
+        }
+        .feature-share button {
+          border: 1px solid rgba(255, 255, 255, 0.16);
+          background: rgba(255, 255, 255, 0.1);
+          color: #fff;
+          backdrop-filter: blur(10px);
+        }
+        .feature-share button:hover {
+          background: rgba(255, 255, 255, 0.17);
+        }
+        .story-metrics {
+          display: grid;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          gap: 1px;
+          overflow: hidden;
+          border: 1px solid #e7e5e4;
+          border-radius: 1.25rem;
+          background: #e7e5e4;
+        }
+        .story-metrics > div {
+          display: flex;
+          min-height: 8.5rem;
+          flex-direction: column;
+          justify-content: center;
+          background: #fff;
+          padding: 1.5rem;
+        }
+        .story-metrics strong {
+          color: #0f172a;
+          font-size: clamp(1.8rem, 4vw, 3rem);
+          font-weight: 900;
+          letter-spacing: -0.04em;
+          line-height: 1;
+        }
+        .story-metrics span {
+          margin-top: 0.55rem;
+          color: #57534e;
+          font-size: 0.84rem;
+          font-weight: 600;
+          letter-spacing: 0.06em;
+          text-transform: uppercase;
+        }
+
+        .feature-article-body {
+          background: transparent;
+          box-shadow: none;
+          color: #292524;
+          padding: 0 clamp(0rem, 5vw, 5rem);
+        }
+        .feature-article-body > h2:first-child {
+          max-width: 24ch;
+          border: 0;
+          color: #0f172a;
+          font-family: inherit;
+          font-size: clamp(2rem, 5vw, 4rem);
+          font-weight: 900;
+          letter-spacing: -0.035em;
+          line-height: 1.05;
+          margin-top: 0.65em;
+          padding: 0;
         }
 
         .blog-content {
@@ -699,9 +833,57 @@ export default function BlogPostClient({ blog, relatedPosts, relevantTours = [] 
           line-height: 1.7;
         }
         .blog-content img {
+          display: block;
+          width: 100%;
+          height: auto;
           border-radius: 0.85rem;
           margin: 2em 0;
           box-shadow: 0 10px 24px -8px rgba(0, 0, 0, 0.22);
+        }
+        .blog-content figure {
+          margin: 3.2em 0;
+        }
+        .blog-content figure img {
+          aspect-ratio: 16 / 9;
+          margin: 0;
+          object-fit: cover;
+        }
+        .blog-content figcaption {
+          margin-top: 0.8rem;
+          color: #78716c;
+          font-size: 0.82rem;
+          line-height: 1.5;
+        }
+        .blog-content .story-image-grid {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 1rem;
+          max-width: none;
+          margin: 3.2em 0;
+        }
+        .blog-content .story-image-grid figure {
+          margin: 0;
+        }
+        .blog-content .story-image-grid img {
+          height: 100%;
+          min-height: 19rem;
+        }
+        .blog-content .story-pull-quote {
+          border: 0;
+          border-radius: 1.25rem;
+          background: #0f172a;
+          color: #f8fafc;
+          font-family: inherit;
+          font-size: clamp(1.45rem, 3.5vw, 2.25rem);
+          font-style: normal;
+          font-weight: 800;
+          letter-spacing: -0.025em;
+          line-height: 1.25;
+          max-width: none;
+          padding: clamp(1.5rem, 5vw, 3rem);
+        }
+        .blog-content .story-pull-quote p {
+          max-width: 26ch;
         }
         .blog-content hr {
           border: 0;
@@ -781,6 +963,21 @@ export default function BlogPostClient({ blog, relatedPosts, relevantTours = [] 
         html[data-storefront-theme="dark"] body.storefront-theme .blog-post-page .blog-content :is(th, details) {
           background: #1e293b;
         }
+        html[data-storefront-theme="dark"] body.storefront-theme .blog-post-page .story-metrics {
+          border-color: #334155;
+          background: #334155;
+        }
+        html[data-storefront-theme="dark"] body.storefront-theme .blog-post-page .story-metrics > div {
+          background: #111827;
+        }
+        html[data-storefront-theme="dark"] body.storefront-theme .blog-post-page .story-metrics strong,
+        html[data-storefront-theme="dark"] body.storefront-theme .blog-post-page .feature-article-body > h2:first-child {
+          color: #f8fafc;
+        }
+        html[data-storefront-theme="dark"] body.storefront-theme .blog-post-page .story-metrics span,
+        html[data-storefront-theme="dark"] body.storefront-theme .blog-post-page .blog-content figcaption {
+          color: #cbd5e1;
+        }
         @media (max-width: 640px) {
           .blog-content {
             font-size: 1.05rem;
@@ -790,6 +987,18 @@ export default function BlogPostClient({ blog, relatedPosts, relevantTours = [] 
           }
           .blog-content > p:first-of-type::first-letter {
             font-size: 3em;
+          }
+          .story-metrics {
+            grid-template-columns: 1fr;
+          }
+          .story-metrics > div {
+            min-height: 6.5rem;
+          }
+          .blog-content .story-image-grid {
+            grid-template-columns: 1fr;
+          }
+          .blog-content .story-image-grid img {
+            min-height: 0;
           }
         }
       `}</style>
