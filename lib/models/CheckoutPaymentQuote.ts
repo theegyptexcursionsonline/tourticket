@@ -35,6 +35,8 @@ export interface ICheckoutPaymentQuote extends Document {
   inventoryUpdatedAt?: Date;
   /** One-shot claim: the "payment failed" email is sent once per quote. */
   paymentFailedNotifiedAt?: Date;
+  /** Set before a hosted page is closed for a replacement; its expiry then ends nothing. */
+  checkoutSupersededAt?: Date;
   expiresAt: Date;
 }
 
@@ -85,6 +87,7 @@ const CheckoutPaymentQuoteSchema = new Schema<ICheckoutPaymentQuote>({
   inventoryFailureReason: { type: String },
   inventoryUpdatedAt: { type: Date },
   paymentFailedNotifiedAt: { type: Date },
+  checkoutSupersededAt: { type: Date },
   expiresAt: { type: Date, required: true },
 }, { timestamps: true, minimize: false });
 

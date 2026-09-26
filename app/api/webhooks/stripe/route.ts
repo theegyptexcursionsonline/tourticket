@@ -44,7 +44,7 @@ import {
   refundUnavailablePaidInventory,
   releasePaymentInventory,
 } from '@/lib/checkout/inventoryPaymentRecovery';
-import { loadWebhookPaymentQuote } from '@/lib/checkout/hostedCheckoutQuote';
+import { isHostedCheckoutSuperseded, loadWebhookPaymentQuote } from '@/lib/checkout/hostedCheckoutQuote';
 import { queuePersistedBookingEvent } from '@/lib/integrations/bookingEventProducers';
 
 // Lazy Stripe initialization to avoid build-time errors
@@ -1115,7 +1115,10 @@ export async function POST(request: Request) {
         const reservationKey = expiredSession.metadata.quote_binding;
         const expiredTenant = paidTenantValue(paidTenantId(expiredSession.metadata));
         await dbConnect();
-        if (/^[a-f0-9]{64}$/i.test(reservationKey || '')) {
+        // A page closed for a replacement hands its hold to the new page;
+        // only the current page's expiry frees the seats.
+        const replaced = await isHostedCheckoutSuperseded(expiredSession.id, expiredTenant);
+        if (!replaced && /^[a-f0-9]{64}$/i.test(reservationKey || '')) {
           await releaseInventoryHolds({
             tenantId: expiredTenant,
             reservationKey,

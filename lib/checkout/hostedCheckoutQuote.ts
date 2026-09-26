@@ -64,3 +64,48 @@ export async function loadWebhookPaymentQuote(input: {
     tenantId: input.tenantId,
   }).lean<PersistedWebhookQuote | null>();
 }
+
+export type RecordedHostedCheckout = {
+  checkoutSessionId: string;
+  quoteBinding: string;
+};
+
+/**
+ * Every Stripe page this checkout attempt opened that has not been replaced,
+ * newest first. Paid pages are included so a return to checkout sees them.
+ */
+export async function listHostedCheckoutsForAttempt(input: {
+  checkoutAttemptId: string;
+  tenantId?: string;
+}): Promise<RecordedHostedCheckout[]> {
+  const rows = await CheckoutPaymentQuote.find({
+    tenantId: input.tenantId || 'default',
+    paymentExperience: 'hosted',
+    checkoutAttemptId: input.checkoutAttemptId,
+    checkoutSessionId: { $exists: true },
+    checkoutSupersededAt: { $exists: false },
+  })
+    .sort({ createdAt: -1 })
+    .limit(10)
+    .select({ checkoutSessionId: 1, quoteBinding: 1 })
+    .lean<Array<{ checkoutSessionId?: string; quoteBinding: string }>>();
+  return rows
+    .filter((row): row is RecordedHostedCheckout => typeof row.checkoutSessionId === 'string')
+    .map((row) => ({ checkoutSessionId: row.checkoutSessionId, quoteBinding: row.quoteBinding }));
+}
+
+export async function markHostedCheckoutSuperseded(checkoutSessionId: string, tenantId = 'default') {
+  await CheckoutPaymentQuote.updateOne(
+    { tenantId, checkoutSessionId, checkoutSupersededAt: { $exists: false } },
+    { $set: { checkoutSupersededAt: new Date() } },
+  );
+}
+
+/** A replaced page's expiry must not end the hold its replacement now uses. */
+export async function isHostedCheckoutSuperseded(checkoutSessionId: string, tenantId = 'default') {
+  return Boolean(await CheckoutPaymentQuote.exists({
+    tenantId,
+    checkoutSessionId,
+    checkoutSupersededAt: { $exists: true },
+  }));
+}

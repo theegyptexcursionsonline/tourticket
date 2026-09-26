@@ -21,6 +21,8 @@ export interface ICheckoutInventoryHold extends Document {
   guests: number;
   state: CheckoutInventoryHoldState;
   expiresAt: Date;
+  /** When the seats were last taken through an availability check. */
+  reservedAt?: Date;
   convertedBookingId?: Types.ObjectId;
   releaseReason?: string;
   releasedAt?: Date;
@@ -51,6 +53,7 @@ const CheckoutInventoryHoldSchema = new Schema<ICheckoutInventoryHold>({
   guests: { type: Number, required: true, min: 1, max: 50 },
   state: { type: String, enum: ['active', 'converted', 'released', 'expired'], required: true, default: 'active' },
   expiresAt: { type: Date, required: true },
+  reservedAt: { type: Date },
   convertedBookingId: { type: Schema.Types.ObjectId, ref: 'Booking' },
   releaseReason: { type: String },
   releasedAt: { type: Date },

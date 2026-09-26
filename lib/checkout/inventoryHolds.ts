@@ -395,6 +395,7 @@ async function reserveOne(
           } : {}),
           state: 'active',
           expiresAt: new Date(now.getTime() + holdDurationMs(holdMinutes)),
+          reservedAt: now,
           cleanupAt: new Date(now.getTime() + CLEANUP_MS),
         },
         $unset: {
@@ -621,6 +622,56 @@ export async function bindInventoryHoldsToPayment(reservationKey: string, paymen
     throw new InventoryHoldError('INVENTORY_HOLD_MISSING', 'No active inventory hold exists for this payment.');
   }
   return result.matchedCount;
+}
+
+/** How long one reservation may be carried across replacement checkout pages. */
+export const MAX_CHECKOUT_HOLD_CARRY_MS = 2 * 60 * 60 * 1000;
+
+/**
+ * Keep a reservation's active holds alive until `until`, so a hosted checkout
+ * page never outlives the seats it pays for. Holds are only ever lengthened.
+ * Returns 'stale' when a hold was taken too long ago to carry again: the caller
+ * must release it and reserve afresh through the availability check.
+ */
+export async function coverInventoryHoldsUntil(input: {
+  reservationKey: string;
+  itemCount: number;
+  until: Date;
+  tenantId?: string;
+}): Promise<'covered' | 'stale'> {
+  if (!/^[a-f0-9]{64}$/i.test(input.reservationKey)
+    || !Number.isInteger(input.itemCount)
+    || input.itemCount < 1
+    || !(input.until instanceof Date)
+    || Number.isNaN(input.until.getTime())) {
+    throw new InventoryHoldError('INVALID_INVENTORY_RESERVATION', 'Inventory reservation input is invalid.');
+  }
+  const tenantId = paidTenantValue(input.tenantId || 'default');
+  const now = new Date();
+  const live = { tenantId, reservationKey: input.reservationKey, state: 'active', expiresAt: { $gt: now } };
+  const holds = await CheckoutInventoryHold.find(live).lean<Array<{ reservedAt?: Date; createdAt?: Date }>>();
+  if (holds.length !== input.itemCount) {
+    throw new InventoryHoldError('INVENTORY_HOLD_MISSING', 'The reservation for this checkout has lapsed. Please try again.');
+  }
+  const carryFloor = now.getTime() - MAX_CHECKOUT_HOLD_CARRY_MS;
+  if (holds.some((hold) => new Date(hold.reservedAt || hold.createdAt || 0).getTime() < carryFloor)) {
+    return 'stale';
+  }
+  await CheckoutInventoryHold.updateMany(
+    { ...live, expiresAt: { $gt: now, $lt: input.until } },
+    { $set: { expiresAt: input.until, cleanupAt: new Date(input.until.getTime() + CLEANUP_MS) } },
+  );
+  // A hold that lapsed between the read and the write is not covered.
+  const covered = await CheckoutInventoryHold.countDocuments({
+    tenantId,
+    reservationKey: input.reservationKey,
+    state: 'active',
+    expiresAt: { $gte: input.until },
+  });
+  if (covered !== input.itemCount) {
+    throw new InventoryHoldError('INVENTORY_HOLD_MISSING', 'The reservation for this checkout has lapsed. Please try again.');
+  }
+  return 'covered';
 }
 
 export async function releaseInventoryHolds(input: {
