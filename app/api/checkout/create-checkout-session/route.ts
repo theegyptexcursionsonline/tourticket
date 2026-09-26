@@ -3,13 +3,16 @@ import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import {
   acquireCheckoutInventoryLease,
+  assertCheckoutInventoryLeaseHeld,
   coverInventoryHoldsUntil,
   createInventoryHolds,
   releaseCheckoutInventoryLease,
   releaseInventoryHolds,
 } from '@/lib/checkout/inventoryHolds';
 import {
+  hasPaidCheckoutForAttempt,
   listHostedCheckoutsForAttempt,
+  markHostedCheckoutClosed,
   markHostedCheckoutSuperseded,
 } from '@/lib/checkout/hostedCheckoutQuote';
 import { publicCheckoutOrigin } from '@/lib/checkout/publicCheckoutOrigin';
@@ -47,12 +50,22 @@ const REUSE_MARGIN_SECONDS = 10 * 60;
 // still reaches the webhook with an active reservation.
 const HOLD_GRACE_SECONDS = 60;
 const HOLD_MINUTES = 32;
+// Shorter than the 26-second function limit, so a request that dies never
+// blocks the guest's retry for long.
+const LEASE_MS = 20_000;
 
 class HostedCheckoutRefusal extends Error {
-  constructor(public status: number, public code: string, message: string) {
+  constructor(
+    public status: number,
+    public code: string,
+    message: string,
+    public sessionId?: string,
+  ) {
     super(message);
   }
 }
+
+const ALREADY_PAID_MESSAGE = 'This checkout has already been paid. Your confirmation is on its way by email.';
 
 // Stripe refused the request outright, so no page exists under that key.
 const STRIPE_DEFINITE_REJECTIONS = new Set([
@@ -74,47 +87,78 @@ function alreadyPaid(session: Stripe.Checkout.Session): boolean {
  */
 async function reuseOrRetire(
   stripe: Stripe,
-  prepared: { checkoutAttemptId: string; quoteBinding: string; amountMinor: number },
+  prepared: { checkoutAttemptId: string; quoteBinding: string; amountMinor: number; cart: unknown[] },
 ): Promise<Stripe.Checkout.Session | null> {
+  if (await hasPaidCheckoutForAttempt({ checkoutAttemptId: prepared.checkoutAttemptId })) {
+    throw new HostedCheckoutRefusal(409, 'CHECKOUT_ALREADY_PAID', ALREADY_PAID_MESSAGE);
+  }
   const recorded = await listHostedCheckoutsForAttempt({
     checkoutAttemptId: prepared.checkoutAttemptId,
   });
   const nowSeconds = Math.floor(Date.now() / 1000);
+  let reusable: Stripe.Checkout.Session | null = null;
   for (const quote of recorded) {
     const current = await stripe.checkout.sessions.retrieve(quote.checkoutSessionId);
     if (alreadyPaid(current)) {
-      throw new HostedCheckoutRefusal(409, 'CHECKOUT_ALREADY_PAID', 'This checkout has already been paid. Your confirmation is on its way by email.');
+      throw new HostedCheckoutRefusal(409, 'CHECKOUT_ALREADY_PAID', ALREADY_PAID_MESSAGE, current.id);
     }
     if (
-      current.status === 'open'
+      !reusable
+      && current.status === 'open'
       && quote.quoteBinding === prepared.quoteBinding
       && current.amount_total === prepared.amountMinor
       && current.currency === 'usd'
       && typeof current.expires_at === 'number'
       && current.expires_at - nowSeconds > REUSE_MARGIN_SECONDS
       && isAllowedStripeCheckoutUrl(current.url)
+      && await holdsCoverPage(prepared, current.expires_at)
     ) {
-      return current;
+      reusable = current;
     }
   }
   for (const quote of recorded) {
+    if (quote.checkoutSessionId === reusable?.id) continue;
     // Marked first, so the page's own expiry event never ends the hold that
-    // now belongs to its replacement.
+    // now belongs to its replacement. It stays listed until Stripe confirms
+    // the close, so a request that dies here is finished by the next one.
     await markHostedCheckoutSuperseded(quote.checkoutSessionId);
     let current = await stripe.checkout.sessions.retrieve(quote.checkoutSessionId);
     if (current.status === 'open') current = await stripe.checkout.sessions.expire(quote.checkoutSessionId);
     if (alreadyPaid(current)) {
-      throw new HostedCheckoutRefusal(409, 'CHECKOUT_ALREADY_PAID', 'This checkout has already been paid. Your confirmation is on its way by email.');
+      throw new HostedCheckoutRefusal(409, 'CHECKOUT_ALREADY_PAID', ALREADY_PAID_MESSAGE, current.id);
     }
     if (current.status !== 'expired') {
       throw new Error(`Stripe did not close checkout page ${quote.checkoutSessionId}`);
     }
+    await markHostedCheckoutClosed(quote.checkoutSessionId);
     if (quote.quoteBinding !== prepared.quoteBinding) {
-      // The guest changed the cart: the closed page's seats are no longer wanted.
-      await releaseInventoryHolds({ reservationKey: quote.quoteBinding, reason: 'checkout_session_replaced' });
+      // The guest changed the cart: the closed page's seats are no longer
+      // wanted. Seats already bound to a payment are left to its webhook.
+      await releaseInventoryHolds({
+        reservationKey: quote.quoteBinding,
+        reason: 'checkout_session_replaced',
+        onlyUnbound: true,
+      });
     }
   }
-  return null;
+  return reusable;
+}
+
+/** A recorded page is only handed back while its seats are still held for it. */
+async function holdsCoverPage(
+  prepared: { quoteBinding: string; cart: unknown[] },
+  pageExpiresAt: number,
+): Promise<boolean> {
+  try {
+    return await coverInventoryHoldsUntil({
+      reservationKey: prepared.quoteBinding,
+      itemCount: prepared.cart.length,
+      until: new Date((pageExpiresAt + HOLD_GRACE_SECONDS) * 1000),
+    }) === 'covered';
+  } catch (error) {
+    if ((error as { code?: string }).code === 'INVENTORY_HOLD_MISSING') return false;
+    throw error;
+  }
 }
 
 export async function POST(request: Request) {
@@ -126,7 +170,7 @@ export async function POST(request: Request) {
       paymentExperience: 'hosted',
     });
     const leaseKey = `hosted-checkout:${prepared.checkoutAttemptId}`;
-    lease = { key: leaseKey, token: await acquireCheckoutInventoryLease(leaseKey, 60_000) };
+    lease = { key: leaseKey, token: await acquireCheckoutInventoryLease(leaseKey, LEASE_MS) };
 
     const origin = publicCheckoutOrigin();
     const stripe = getStripe();
@@ -164,6 +208,8 @@ export async function POST(request: Request) {
       }
     }
 
+    // Fencing: a request that outlived its lease must not make a second page.
+    await assertCheckoutInventoryLeaseHeld(lease.key, lease.token);
     try {
       session = await stripe.checkout.sessions.create({
         mode: 'payment',
@@ -238,7 +284,12 @@ export async function POST(request: Request) {
   } catch (error: unknown) {
     if (error instanceof HostedCheckoutRefusal) {
       return NextResponse.json(
-        { success: false, code: error.code, message: error.message },
+        {
+          success: false,
+          code: error.code,
+          message: error.message,
+          ...(error.sessionId ? { sessionId: error.sessionId } : {}),
+        },
         { status: error.status, headers: { 'Cache-Control': 'no-store' } },
       );
     }

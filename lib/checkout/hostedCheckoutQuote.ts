@@ -71,8 +71,10 @@ export type RecordedHostedCheckout = {
 };
 
 /**
- * Every Stripe page this checkout attempt opened that has not been replaced,
- * newest first. Paid pages are included so a return to checkout sees them.
+ * Every Stripe page this checkout attempt opened that Stripe has not confirmed
+ * closed, newest first. A page marked replaced stays listed until the close is
+ * confirmed, so a request that died mid-replacement is finished by the next
+ * one. Paid pages are included so a return to checkout sees them.
  */
 export async function listHostedCheckoutsForAttempt(input: {
   checkoutAttemptId: string;
@@ -83,7 +85,7 @@ export async function listHostedCheckoutsForAttempt(input: {
     paymentExperience: 'hosted',
     checkoutAttemptId: input.checkoutAttemptId,
     checkoutSessionId: { $exists: true },
-    checkoutSupersededAt: { $exists: false },
+    checkoutClosedAt: { $exists: false },
   })
     .sort({ createdAt: -1 })
     .limit(10)
@@ -107,5 +109,21 @@ export async function isHostedCheckoutSuperseded(checkoutSessionId: string, tena
     tenantId,
     checkoutSessionId,
     checkoutSupersededAt: { $exists: true },
+  }));
+}
+
+export async function markHostedCheckoutClosed(checkoutSessionId: string, tenantId = 'default') {
+  await CheckoutPaymentQuote.updateOne(
+    { tenantId, checkoutSessionId },
+    { $set: { checkoutClosedAt: new Date() } },
+  );
+}
+
+/** Whether any payment of this checkout attempt, through any experience, became a booking. */
+export async function hasPaidCheckoutForAttempt(input: { checkoutAttemptId: string; tenantId?: string }) {
+  return Boolean(await CheckoutPaymentQuote.exists({
+    tenantId: input.tenantId || 'default',
+    checkoutAttemptId: input.checkoutAttemptId,
+    inventoryState: 'converted',
   }));
 }

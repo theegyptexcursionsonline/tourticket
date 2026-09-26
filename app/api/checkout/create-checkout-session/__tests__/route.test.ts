@@ -10,6 +10,9 @@ const mockReleaseLease = jest.fn();
 const mockCoverHolds = jest.fn();
 const mockListHosted = jest.fn();
 const mockSupersede = jest.fn();
+const mockMarkClosed = jest.fn();
+const mockHasPaid = jest.fn();
+const mockAssertLease = jest.fn();
 
 jest.mock('next/server', () => ({
   NextResponse: {
@@ -44,6 +47,7 @@ jest.mock('@/lib/checkout/inventoryHolds', () => ({
   acquireCheckoutInventoryLease: (...args: unknown[]) => mockAcquireLease(...args),
   releaseCheckoutInventoryLease: (...args: unknown[]) => mockReleaseLease(...args),
   coverInventoryHoldsUntil: (...args: unknown[]) => mockCoverHolds(...args),
+  assertCheckoutInventoryLeaseHeld: (...args: unknown[]) => mockAssertLease(...args),
   InventoryHoldError: class InventoryHoldError extends Error {
     status = 409;
     constructor(public code: string, message: string) { super(message); }
@@ -52,6 +56,8 @@ jest.mock('@/lib/checkout/inventoryHolds', () => ({
 jest.mock('@/lib/checkout/hostedCheckoutQuote', () => ({
   listHostedCheckoutsForAttempt: (...args: unknown[]) => mockListHosted(...args),
   markHostedCheckoutSuperseded: (...args: unknown[]) => mockSupersede(...args),
+  markHostedCheckoutClosed: (...args: unknown[]) => mockMarkClosed(...args),
+  hasPaidCheckoutForAttempt: (...args: unknown[]) => mockHasPaid(...args),
 }));
 jest.mock('@/lib/checkout/publicCheckoutOrigin', () => ({
   publicCheckoutOrigin: () => 'https://egypt-excursionsonline.com',
@@ -96,6 +102,9 @@ describe('POST /api/checkout/create-checkout-session', () => {
     mockCoverHolds.mockResolvedValue('covered');
     mockListHosted.mockResolvedValue([]);
     mockSupersede.mockResolvedValue(undefined);
+    mockMarkClosed.mockResolvedValue(undefined);
+    mockHasPaid.mockResolvedValue(false);
+    mockAssertLease.mockResolvedValue(undefined);
     process.env.STRIPE_SECRET_KEY = 'sk_test_unit';
   });
 
@@ -261,7 +270,7 @@ describe('POST /api/checkout/create-checkout-session', () => {
     const response = await post();
     expect(response.status).toBe(200);
     expect(mockSessionExpire).toHaveBeenCalledWith('cs_test_previous_1234567890');
-    expect(mockReleaseHolds).toHaveBeenCalledWith({ reservationKey: oldBinding, reason: 'checkout_session_replaced' });
+    expect(mockReleaseHolds).toHaveBeenCalledWith({ reservationKey: oldBinding, reason: 'checkout_session_replaced', onlyUnbound: true });
     expect(mockSessionCreate).toHaveBeenCalledTimes(1);
   });
 
@@ -284,7 +293,7 @@ describe('POST /api/checkout/create-checkout-session', () => {
 
   it('lets only one request at a time prepare a checkout, and always gives the lease back', async () => {
     await post();
-    expect(mockAcquireLease).toHaveBeenCalledWith(`hosted-checkout:${prepared.checkoutAttemptId}`, 60_000);
+    expect(mockAcquireLease).toHaveBeenCalledWith(`hosted-checkout:${prepared.checkoutAttemptId}`, 20_000);
     expect(mockAcquireLease.mock.invocationCallOrder[0]).toBeLessThan(mockSessionCreate.mock.invocationCallOrder[0]);
     expect(mockReleaseLease).toHaveBeenCalledWith(`hosted-checkout:${prepared.checkoutAttemptId}`, 'lease-token');
   });
@@ -296,5 +305,60 @@ describe('POST /api/checkout/create-checkout-session', () => {
     expect(mockReleaseHolds).toHaveBeenCalledWith({ reservationKey: prepared.quoteBinding, reason: 'checkout_hold_renewed' });
     expect(mockCreateHolds).toHaveBeenCalledTimes(2);
     expect(mockCoverHolds).toHaveBeenCalledTimes(2);
+  });
+
+  it('keeps a page visible until Stripe confirms it closed, so a later request retries the close', async () => {
+    mockListHosted.mockResolvedValue([recorded()]);
+    mockSessionRetrieve.mockResolvedValue(stripeSession({ expires_at: nowSeconds() + 60 }));
+    mockSessionExpire.mockRejectedValue(Object.assign(new Error('timeout'), { type: 'StripeConnectionError' }));
+    await post();
+    expect(mockMarkClosed).not.toHaveBeenCalled();
+
+    jest.clearAllMocks();
+    mockSessionExpire.mockResolvedValue(stripeSession({ status: 'expired' }));
+    await post();
+    expect(mockMarkClosed).toHaveBeenCalledWith('cs_test_previous_1234567890');
+    expect(mockSessionExpire.mock.invocationCallOrder[0]).toBeLessThan(mockMarkClosed.mock.invocationCallOrder[0]);
+  });
+
+  it('does not hand back a page whose seats are gone; it closes it and starts a fresh reservation', async () => {
+    mockListHosted.mockResolvedValue([recorded()]);
+    mockSessionRetrieve.mockResolvedValue(stripeSession());
+    mockSessionExpire.mockResolvedValue(stripeSession({ status: 'expired' }));
+    mockCoverHolds
+      .mockRejectedValueOnce(Object.assign(new Error('lapsed'), { code: 'INVENTORY_HOLD_MISSING' }))
+      .mockResolvedValue('covered');
+    const response = await post();
+    expect(response.status).toBe(200);
+    expect(mockCoverHolds.mock.calls[0][0]).toMatchObject({ reservationKey: prepared.quoteBinding, itemCount: 1 });
+    expect(mockSessionExpire).toHaveBeenCalledWith('cs_test_previous_1234567890');
+    expect(mockCreateHolds).toHaveBeenCalled();
+    expect(mockSessionCreate).toHaveBeenCalledTimes(1);
+  });
+
+  it('refuses a new page when this checkout was already paid another way', async () => {
+    mockHasPaid.mockResolvedValue(true);
+    const response = await post();
+    expect(response.status).toBe(409);
+    await expect(response.json()).resolves.toMatchObject({ code: 'CHECKOUT_ALREADY_PAID' });
+    expect(mockSessionCreate).not.toHaveBeenCalled();
+  });
+
+  it('checks it still holds the lease right before creating a page', async () => {
+    mockAssertLease.mockRejectedValue(Object.assign(new Error('lease lost'), { code: 'INVENTORY_BUSY' }));
+    const response = await post();
+    expect(response.status).toBe(500);
+    expect(mockAssertLease).toHaveBeenCalledWith(`hosted-checkout:${prepared.checkoutAttemptId}`, 'lease-token');
+    expect(mockSessionCreate).not.toHaveBeenCalled();
+  });
+
+  it('tells the browser which page was paid, so it can show the booking instead of an error', async () => {
+    mockListHosted.mockResolvedValue([recorded()]);
+    mockSessionRetrieve.mockResolvedValue(stripeSession({ status: 'complete', payment_status: 'paid' }));
+    const response = await post();
+    await expect(response.json()).resolves.toMatchObject({
+      code: 'CHECKOUT_ALREADY_PAID',
+      sessionId: 'cs_test_previous_1234567890',
+    });
   });
 });

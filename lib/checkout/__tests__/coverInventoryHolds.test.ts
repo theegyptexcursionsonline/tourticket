@@ -15,7 +15,7 @@ jest.mock('@/lib/models/CheckoutInventoryHold', () => ({
 jest.mock('@/lib/revenue/sellableDeparture', () => ({ assertRevenuePriceTargetSellable: jest.fn() }));
 jest.mock('@/lib/revenue/pricingResolver', () => ({ normalizePriceDate: jest.fn() }));
 
-import { coverInventoryHoldsUntil, MAX_CHECKOUT_HOLD_CARRY_MS } from '@/lib/checkout/inventoryHolds';
+import { coverInventoryHoldsUntil, MAX_CHECKOUT_HOLD_CARRY_MS, releaseInventoryHolds } from '@/lib/checkout/inventoryHolds';
 
 const reservationKey = 'd'.repeat(64);
 const until = new Date(Date.now() + 32 * 60 * 1000);
@@ -60,5 +60,22 @@ describe('coverInventoryHoldsUntil', () => {
   it('rejects malformed input', async () => {
     await expect(coverInventoryHoldsUntil({ reservationKey: 'nope', itemCount: 1, until }))
       .rejects.toMatchObject({ code: 'INVALID_INVENTORY_RESERVATION' });
+  });
+});
+
+describe('releaseInventoryHolds onlyUnbound', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockHoldUpdateMany.mockResolvedValue({ modifiedCount: 1 });
+  });
+
+  it('leaves seats already bound to a payment for its webhook', async () => {
+    await releaseInventoryHolds({ reservationKey, reason: 'checkout_session_replaced', onlyUnbound: true });
+    expect(mockHoldUpdateMany.mock.calls[0][0]).toMatchObject({ reservationKey, state: 'active', paymentIntentId: { $exists: false } });
+  });
+
+  it('keeps the existing behaviour by default', async () => {
+    await releaseInventoryHolds({ reservationKey, reason: 'checkout_session_expired' });
+    expect(mockHoldUpdateMany.mock.calls[0][0]).not.toHaveProperty('paymentIntentId');
   });
 });

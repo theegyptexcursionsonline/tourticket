@@ -183,6 +183,18 @@ export async function releaseCheckoutInventoryLease(key: string, token: string) 
   ).catch(() => undefined);
 }
 
+/** Fencing check: refuse to act on work whose lease has lapsed or moved on. */
+export async function assertCheckoutInventoryLeaseHeld(key: string, token: string) {
+  const held = await CheckoutInventoryLease.exists({
+    scopeKey: key,
+    leaseToken: token,
+    leaseExpiresAt: { $gt: new Date() },
+  });
+  if (!held) {
+    throw new InventoryHoldError('INVENTORY_BUSY', 'Checkout took too long to prepare. Please try again.');
+  }
+}
+
 async function withInventoryLease<T>(target: InventoryTarget, work: () => Promise<T>) {
   const key = scopeKey(target);
   const token = await acquireCheckoutInventoryLease(key);
@@ -679,6 +691,8 @@ export async function releaseInventoryHolds(input: {
   reservationKey?: string;
   paymentIntentId?: string;
   reason: string;
+  /** Leave holds already bound to a payment for the payment webhook to settle. */
+  onlyUnbound?: boolean;
 }) {
   if (!input.reservationKey && !input.paymentIntentId) return 0;
   const tenantId = paidTenantValue(input.tenantId || 'default');
@@ -689,6 +703,7 @@ export async function releaseInventoryHolds(input: {
       state: 'active',
       ...(input.reservationKey ? { reservationKey: input.reservationKey } : {}),
       ...(input.paymentIntentId ? { paymentIntentId: input.paymentIntentId } : {}),
+      ...(input.onlyUnbound && !input.paymentIntentId ? { paymentIntentId: { $exists: false } } : {}),
     },
     {
       $set: {

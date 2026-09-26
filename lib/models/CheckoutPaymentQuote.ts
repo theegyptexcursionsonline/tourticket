@@ -37,6 +37,8 @@ export interface ICheckoutPaymentQuote extends Document {
   paymentFailedNotifiedAt?: Date;
   /** Set before a hosted page is closed for a replacement; its expiry then ends nothing. */
   checkoutSupersededAt?: Date;
+  /** Set once Stripe confirms the hosted page can no longer take payment. */
+  checkoutClosedAt?: Date;
   expiresAt: Date;
 }
 
@@ -88,10 +90,16 @@ const CheckoutPaymentQuoteSchema = new Schema<ICheckoutPaymentQuote>({
   inventoryUpdatedAt: { type: Date },
   paymentFailedNotifiedAt: { type: Date },
   checkoutSupersededAt: { type: Date },
+  checkoutClosedAt: { type: Date },
   expiresAt: { type: Date, required: true },
 }, { timestamps: true, minimize: false });
 
 CheckoutPaymentQuoteSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
+// Every hosted checkout request looks up its attempt's earlier pages.
+CheckoutPaymentQuoteSchema.index(
+  { tenantId: 1, checkoutAttemptId: 1, createdAt: -1 },
+  { name: 'checkout_attempt_pages' },
+);
 
 const CheckoutPaymentQuote: Model<ICheckoutPaymentQuote> =
   (mongoose.models.CheckoutPaymentQuote as Model<ICheckoutPaymentQuote> | undefined)

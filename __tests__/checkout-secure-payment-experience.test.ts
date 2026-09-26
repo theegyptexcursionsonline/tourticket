@@ -12,6 +12,8 @@ describe('checkout secure payment experience', () => {
     const webhook = source('app/api/webhooks/stripe/route.ts');
 
     expect(checkout).toContain('<ConfiguredStripePaymentForm');
+    // A checkout that was already paid opens its return page instead of an error.
+    expect(payment).toContain('paidCheckoutReturnPath(response.status, payload, locale)');
     expect(checkout).toContain('isOpen={isPaymentOpen}');
     expect(checkout).toContain('onOpenChange={setIsPaymentOpen}');
     expect(checkout).toContain('onExperienceResolved={onPaymentExperienceChange}');

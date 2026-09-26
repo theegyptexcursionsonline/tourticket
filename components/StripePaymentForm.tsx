@@ -25,6 +25,7 @@ import { useSettings } from '@/hooks/useSettings';
 import { getErrorMessage, isRecord } from './componentTypes';
 import { getOrCreateCheckoutAttemptId } from '@/lib/checkout/checkoutAttempt';
 import { isAllowedStripeCheckoutUrl } from '@/lib/checkout/stripeCheckoutDestination';
+import { paidCheckoutReturnPath } from '@/lib/checkout/hostedCheckoutResponse';
 import {
   isAuthoritativePriceQuote,
   type AuthoritativePriceQuote,
@@ -787,12 +788,18 @@ const StripeHostedCheckoutLauncher: React.FC<Omit<StripePaymentFormProps, 'isOpe
         code?: string;
         message?: string;
         quote?: unknown;
+        sessionId?: unknown;
       };
 
       if (response.status === 409 && payload.code === 'PRICE_CHANGED' && isAuthoritativePriceQuote(payload.quote)) {
         setPendingPriceChange(payload.quote);
         setPriceChangeError('');
         setIsRedirecting(false);
+        return;
+      }
+      const paidReturnPath = paidCheckoutReturnPath(response.status, payload, locale);
+      if (paidReturnPath) {
+        window.location.assign(paidReturnPath);
         return;
       }
       if (!response.ok || payload.success !== true || typeof payload.url !== 'string') {
