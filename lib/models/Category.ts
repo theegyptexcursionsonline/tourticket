@@ -12,6 +12,8 @@ export interface ICategory extends Document {
   tenantId?: string;
   // Internal crash-recovery provenance; never selected in customer reads.
   contentEnginePublishReceiptId?: string;
+  // Temporary crash-recovery fence for one in-flight Content Engine update.
+  contentEngineUpdateReceiptId?: string;
   archivedAt?: Date | null;
   archivedBy?: string;
   createdBy?: AuditActor;
@@ -128,6 +130,11 @@ const CategorySchema: Schema<ICategory> = new Schema({
   // `default`, while network records carry their explicit brand tenant id.
   tenantId: { type: String, trim: true, default: 'default', index: true },
   contentEnginePublishReceiptId: {
+    type: String,
+    trim: true,
+    select: false,
+  },
+  contentEngineUpdateReceiptId: {
     type: String,
     trim: true,
     select: false,
@@ -329,6 +336,7 @@ CategorySchema.index({ order: 1 });
 CategorySchema.index({ tenantId: 1, name: 1 }, { unique: true });
 CategorySchema.index({ tenantId: 1, slug: 1 }, { unique: true });
 CategorySchema.index({ contentEnginePublishReceiptId: 1 }, { unique: true, sparse: true });
+CategorySchema.index({ contentEngineUpdateReceiptId: 1 }, { unique: true, sparse: true });
 
 // Pre-save middleware
 CategorySchema.pre('save', function(next) {

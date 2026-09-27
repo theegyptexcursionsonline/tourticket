@@ -1,6 +1,6 @@
 // app/api/admin/content/blog/route.ts
 // Adapter route for the foxes-content-engine.
-// Auth: Bearer token in Authorization header (CONTENT_ENGINE_API_KEY).
+// Auth: bearer token plus an exact receiver grant and target headers.
 // POST creates a new blog post; PUT updates an existing one by slug.
 
 import { withAdminAudit } from '@/lib/admin/adminAudit';
@@ -8,10 +8,11 @@ import { NextRequest, NextResponse } from "next/server";
 import dbConnect from "@/lib/dbConnect";
 import Blog from "@/lib/models/Blog";
 import {
-  verifyContentEngine,
+  authenticateContentEngineMutation,
+  verifyContentEngineMutationTarget,
   verifyContentEngineTenant,
 } from "@/lib/auth/verifyContentEngine";
-import { tenantSlugFilter } from "@/lib/tenant/tenantScope";
+import { tenantFilter, tenantSlugFilter } from "@/lib/tenant/tenantScope";
 import {
   filterSupportedTranslations,
   resolveBaseLocale,
@@ -22,8 +23,10 @@ import {
   beginPublish,
   completePublish,
   hashPublishRequest,
+  readExpectedRevision,
   readIdempotencyKey,
   releasePublishClaim,
+  updateReceiptScope,
   type PublishClaim,
 } from "@/lib/content/publishIdempotency";
 import { revalidateStorefrontContent } from "@/lib/storefront/revalidateTourStorefront";
@@ -94,6 +97,7 @@ type IncomingBody = {
   tenantId?: string;
   // Language the base `payload` is written in; defaults to this site's default.
   defaultLocale?: string;
+  expectedRevision?: unknown;
   payload?: IncomingPayload;
   translations?: Record<string, Record<string, unknown>>;
 };
@@ -153,8 +157,8 @@ function validate(payload: IncomingPayload | undefined): string | null {
 }
 
 async function POSTHandler(req: NextRequest) {
-  const authError = verifyContentEngine(req);
-  if (authError) return authError;
+  const authentication = authenticateContentEngineMutation(req);
+  if (!authentication.ok) return authentication.response;
 
   let body: IncomingBody;
   try {
@@ -172,6 +176,14 @@ async function POSTHandler(req: NextRequest) {
   if (!isTranslationEnvelope(body.translations)) {
     return NextResponse.json({ error: "translations must be an object map" }, { status: 400 });
   }
+
+  const targetError = verifyContentEngineMutationTarget(req, authentication.credential, {
+    method: "POST",
+    receiverType: "blog",
+    tenantId: body.tenantId,
+    locale: body.defaultLocale,
+  });
+  if (targetError) return targetError;
 
   const tenant = verifyContentEngineTenant(body.tenantId);
   if (!tenant.ok) return tenant.response;
@@ -274,6 +286,8 @@ async function POSTHandler(req: NextRequest) {
           slug: recovered.slug,
           liveUrl: liveUrlForBlog(recovered.slug, base.baseLocale),
           droppedLocales,
+          status: "published",
+          requiresManualPublish: false,
         };
         revalidateStorefrontContent();
         await completePublish(claim, 201, adopted);
@@ -316,6 +330,8 @@ async function POSTHandler(req: NextRequest) {
       slug: doc.slug,
       liveUrl: liveUrlForBlog(doc.slug, base.baseLocale),
       droppedLocales,
+      status: "published",
+      requiresManualPublish: false,
     };
 
     revalidateStorefrontContent();
@@ -354,8 +370,8 @@ async function POSTHandler(req: NextRequest) {
 }
 
 async function PUTHandler(req: NextRequest) {
-  const authError = verifyContentEngine(req);
-  if (authError) return authError;
+  const authentication = authenticateContentEngineMutation(req);
+  if (!authentication.ok) return authentication.response;
 
   let body: IncomingBody;
   try {
@@ -374,6 +390,14 @@ async function PUTHandler(req: NextRequest) {
     return NextResponse.json({ error: "translations must be an object map" }, { status: 400 });
   }
 
+  const targetError = verifyContentEngineMutationTarget(req, authentication.credential, {
+    method: "PUT",
+    receiverType: "blog",
+    tenantId: body.tenantId,
+    locale: body.defaultLocale,
+  });
+  if (targetError) return targetError;
+
   const tenant = verifyContentEngineTenant(body.tenantId);
   if (!tenant.ok) return tenant.response;
   body.tenantId = tenant.tenantId;
@@ -384,6 +408,15 @@ async function PUTHandler(req: NextRequest) {
 
   const base = resolveBaseLocale(body.defaultLocale);
   if (!base.ok) return NextResponse.json({ error: base.error }, { status: 400 });
+
+  const { key: idempotencyKey, error: keyError } = readIdempotencyKey(
+    req.headers.get("idempotency-key"),
+  );
+  if (keyError) return NextResponse.json({ error: keyError }, { status: 400 });
+  const { revision: expectedRevision, error: revisionError } = readExpectedRevision(
+    body.expectedRevision,
+  );
+  if (revisionError) return NextResponse.json({ error: revisionError }, { status: 400 });
 
   let connection: Awaited<ReturnType<typeof dbConnect>>;
   try {
@@ -402,59 +435,177 @@ async function PUTHandler(req: NextRequest) {
     return NextResponse.json({ error: "Content receiver indexes are not ready" }, { status: 503 });
   }
 
+  if (!idempotencyKey || expectedRevision === null) {
+    return NextResponse.json({ error: "Update contract is incomplete" }, { status: 400 });
+  }
+
+  let begun: Awaited<ReturnType<typeof beginPublish>>;
   try {
-    const existing = await Blog.findOne(tenantSlugFilter(payload.slug!, body.tenantId));
-    if (!existing) {
-      return NextResponse.json(
-        { error: `No blog post with slug "${payload.slug}"` },
-        { status: 404 },
+    begun = await beginPublish({
+      idempotencyKey,
+      tenantId: body.tenantId,
+      contentType: updateReceiptScope("blog"),
+      requestHash: hashPublishRequest(body),
+    });
+  } catch (error) {
+    console.error("[content-receiver] update receipt claim failed", {
+      contentType: "blog",
+      errorName: error instanceof Error ? error.name : "UnknownError",
+    });
+    return NextResponse.json({ error: "Content update is temporarily unavailable" }, { status: 503 });
+  }
+  if (begun.outcome === "replay") {
+    try {
+      await Blog.updateOne(
+        {
+          ...tenantFilter(body.tenantId),
+          contentEngineUpdateReceiptId: begun.receiptId,
+        },
+        { $unset: { contentEngineUpdateReceiptId: 1 } },
       );
+    } catch {
+      return NextResponse.json({ error: "Content update recovery is temporarily unavailable" }, { status: 503 });
     }
+    return NextResponse.json(begun.body, { status: begun.status });
+  }
+  if (begun.outcome === "error") {
+    return NextResponse.json({ error: begun.error }, { status: begun.status });
+  }
+  const claim: PublishClaim = begun;
 
-    const tags = Array.isArray(payload.tags)
-      ? payload.tags
-          .filter((t): t is string => typeof t === "string" && t.trim().length > 0)
-          .slice(0, 10)
-      : existing.tags;
-
-    existing.title = payload.title!;
-    existing.excerpt = payload.excerpt!;
-    existing.content = payload.content!;
-    existing.category = payload.category!;
-    existing.tags = tags;
-    if (Array.isArray(payload.faqs)) existing.faqs = sanitizeFaqs(payload.faqs);
-    if (payload.metaTitle) existing.metaTitle = payload.metaTitle;
-    if (payload.metaDescription) existing.metaDescription = payload.metaDescription;
-    if (payload.featuredImage) existing.featuredImage = payload.featuredImage;
-    if (payload.author) existing.author = payload.author;
-    if (typeof payload.featured === "boolean") existing.featured = payload.featured;
-    let droppedLocales: string[] = [];
-    if (body.translations) {
-      const filtered = filterSupportedTranslations(body.translations);
-      droppedLocales = filtered.droppedLocales;
-      existing.translations = withBaseLocaleBucket(
+  const tags = (payload.tags as string[]).map((tag) => tag.trim());
+  const filtered = filterSupportedTranslations(body.translations);
+  const translations = body.translations
+    ? withBaseLocaleBucket(
         filtered.translations,
         base.baseLocale,
         baseLocaleBucket(payload),
-      ) as typeof existing.translations;
+      )
+    : undefined;
+  const droppedLocales = filtered.droppedLocales;
+  const update = {
+    title: payload.title,
+    excerpt: payload.excerpt,
+    content: payload.content,
+    category: payload.category,
+    tags,
+    faqs: sanitizeFaqs(payload.faqs),
+    metaTitle: payload.metaTitle,
+    metaDescription: payload.metaDescription,
+    featuredImage: payload.featuredImage,
+    author: payload.author,
+    readTime: payload.readTime,
+    featured: payload.featured,
+    ...(translations ? { translations } : {}),
+    contentEngineUpdateReceiptId: claim.receiptId,
+  };
+  const naturalFilter = tenantSlugFilter(payload.slug!, body.tenantId);
+
+  let contentCommitted = false;
+
+  try {
+    if (claim.resumed) {
+      const recovered = await Blog.findOne({
+        ...tenantFilter(body.tenantId),
+        contentEngineUpdateReceiptId: claim.receiptId,
+      });
+      if (recovered) {
+        contentCommitted = true;
+        const response = {
+          id: String(recovered._id),
+          slug: recovered.slug,
+          liveUrl: liveUrlForBlog(recovered.slug, base.baseLocale),
+          revision: recovered.__v,
+          droppedLocales,
+          status: "published",
+          requiresManualPublish: false,
+        };
+        await completePublish(claim, 200, response);
+        await Blog.updateOne(
+          { _id: recovered._id, contentEngineUpdateReceiptId: claim.receiptId },
+          { $unset: { contentEngineUpdateReceiptId: 1 } },
+        );
+        return NextResponse.json(response);
+      }
     }
 
-    await existing.save();
-    revalidateStorefrontContent();
-    return NextResponse.json({
-      id: String(existing._id),
-      slug: existing.slug,
-      liveUrl: liveUrlForBlog(existing.slug, base.baseLocale),
+    const updated = await Blog.findOneAndUpdate(
+      {
+        ...naturalFilter,
+        status: "published",
+        __v: expectedRevision,
+        contentEngineUpdateReceiptId: { $exists: false },
+      },
+      { $set: update, $inc: { __v: 1 } },
+      { new: true, runValidators: true, context: "query" },
+    );
+    if (!updated) {
+      const current = await Blog.findOne(naturalFilter).select("+contentEngineUpdateReceiptId");
+      if (!current) {
+        const response = { error: `No blog post with slug "${payload.slug}"` };
+        await completePublish(claim, 404, response);
+        return NextResponse.json(response, { status: 404 });
+      }
+      if (current.contentEngineUpdateReceiptId) {
+        await releasePublishClaim(claim);
+        return NextResponse.json(
+          { error: "Another update is awaiting durable receipt reconciliation" },
+          { status: 503 },
+        );
+      }
+      const response = {
+        error: current.status === "published"
+          ? "Expected revision does not match the current blog revision"
+          : "Only a published blog post may be updated",
+        expectedRevision,
+        currentRevision: current.__v,
+      };
+      await completePublish(claim, 409, response);
+      return NextResponse.json(response, { status: 409 });
+    }
+    contentCommitted = true;
+
+    const response = {
+      id: String(updated._id),
+      slug: updated.slug,
+      liveUrl: liveUrlForBlog(updated.slug, base.baseLocale),
+      revision: updated.__v,
       droppedLocales,
-    });
+      status: "published",
+      requiresManualPublish: false,
+    };
+    revalidateStorefrontContent();
+    await completePublish(claim, 200, response);
+    const cleared = await Blog.updateOne(
+      { _id: updated._id, contentEngineUpdateReceiptId: claim.receiptId },
+      { $unset: { contentEngineUpdateReceiptId: 1 } },
+    );
+    if (cleared.modifiedCount !== 1) {
+      throw new Error("Content update recovery marker was not cleared");
+    }
+    return NextResponse.json(response);
   } catch (err) {
     const duplicate =
       Boolean(err) && typeof err === "object" && (err as { code?: number }).code === 11000;
     if (duplicate) {
-      return NextResponse.json({ error: "A blog post with this identity already exists" }, { status: 409 });
+      const response = { error: "A blog post with this identity already exists" };
+      try {
+        await completePublish(claim, 409, response);
+      } catch {
+        return NextResponse.json({ error: "Content update is temporarily unavailable" }, { status: 503 });
+      }
+      return NextResponse.json(response, { status: 409 });
+    }
+    if (!contentCommitted) {
+      try {
+        await releasePublishClaim(claim);
+      } catch {
+        // Preserve the original failure response; a stale claim remains safely retryable.
+      }
     }
     console.error("[content-receiver] update failed", {
       contentType: "blog",
+      stage: contentCommitted ? "receipt-completion" : "content-write",
       errorName: err instanceof Error ? err.name : "UnknownError",
     });
     return NextResponse.json({ error: "Content update failed; retry shortly" }, { status: 503 });

@@ -14,6 +14,8 @@ export interface IBlog extends Document {
   tenantId?: string;
   // Internal crash-recovery provenance; never selected in customer reads.
   contentEnginePublishReceiptId?: string;
+  // Temporary crash-recovery fence for one in-flight Content Engine update.
+  contentEngineUpdateReceiptId?: string;
 
   // Media
   featuredImage: string;
@@ -112,6 +114,11 @@ const BlogSchema: Schema<IBlog> = new Schema({
     index: true,
   },
   contentEnginePublishReceiptId: {
+    type: String,
+    trim: true,
+    select: false,
+  },
+  contentEngineUpdateReceiptId: {
     type: String,
     trim: true,
     select: false,
@@ -316,6 +323,7 @@ const BlogSchema: Schema<IBlog> = new Schema({
 // before two tenants can share a slug.
 BlogSchema.index({ slug: 1, tenantId: 1 }, { unique: true });
 BlogSchema.index({ contentEnginePublishReceiptId: 1 }, { unique: true, sparse: true });
+BlogSchema.index({ contentEngineUpdateReceiptId: 1 }, { unique: true, sparse: true });
 BlogSchema.index({ title: 'text', excerpt: 'text', content: 'text' });
 BlogSchema.index({ status: 1, publishedAt: -1 });
 BlogSchema.index({ category: 1, status: 1 });

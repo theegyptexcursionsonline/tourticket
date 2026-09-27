@@ -22,7 +22,7 @@ export async function GET(
   if (!tenant.ok) return tenant.response;
   const tenantId = tenant.tenantId;
   let doc:
-    | { _id: unknown; slug?: string; name?: string; tenantId?: string; isPublished?: boolean; updatedAt?: Date }
+    | { _id: unknown; slug?: string; name?: string; tenantId?: string; isPublished?: boolean; __v?: number; updatedAt?: Date }
     | null;
   try {
     await dbConnect();
@@ -43,6 +43,7 @@ export async function GET(
     name: doc.name,
     tenantId: doc.tenantId ?? null,
     isPublished: doc.isPublished,
+    revision: doc.__v,
     updatedAt: doc.updatedAt,
   });
 }

@@ -19,6 +19,7 @@ const mapStats = {
   setDataCalls: 0,
   fitBoundsCalls: 0,
   stallNextBuilds: 0,
+  workerUrl: '',
 };
 
 jest.mock('maplibre-gl', () => {
@@ -34,6 +35,9 @@ jest.mock('maplibre-gl', () => {
     private layers = new Set<string>();
 
     constructor(_options: unknown) {
+      if (mapStats.workerUrl !== '/maplibre/maplibre-gl-worker.mjs') {
+        throw new Error('MapLibre worker URL must be configured before constructing the map');
+      }
       mapStats.constructed += 1;
       // When the tile host stalls, `style.load` simply never arrives.
       if (mapStats.stallNextBuilds > 0) {
@@ -78,8 +82,9 @@ jest.mock('maplibre-gl', () => {
     Marker: FakeMarker,
     NavigationControl: class { },
     LngLatBounds: class { extend() { /* no-op */ } },
+    setWorkerUrl: (url: string) => { mapStats.workerUrl = url; },
   };
-});
+}, { virtual: true });
 
 // The shared jest.setup stub never reports an intersection, so the map would
 // stay lazy forever. Report one immediately, as a real viewport does when the
@@ -168,6 +173,7 @@ describe('InteractiveItineraryMap recovery from a stalled tile host', () => {
     mapStats.setDataCalls = 0;
     mapStats.fitBoundsCalls = 0;
     mapStats.stallNextBuilds = 0;
+    mapStats.workerUrl = '';
   });
 
   it('offers a working retry instead of stranding the customer with a dead map', async () => {
@@ -207,6 +213,7 @@ describe('InteractiveItineraryMap stability under parent re-renders', () => {
     mapStats.setDataCalls = 0;
     mapStats.fitBoundsCalls = 0;
     mapStats.stallNextBuilds = 0;
+    mapStats.workerUrl = '';
   });
 
   it('builds the map once and never rebuilds it when the parent re-renders with equal data', async () => {
