@@ -233,6 +233,7 @@ async function migrate() {
   }
 
   let changes = 0;
+  const pendingWrites: Array<() => Promise<unknown>> = [];
   for (const plan of PLANS) {
     const collections = await db.listCollections({ name: plan.collection }).toArray();
     if (collections.length === 0) {
@@ -243,11 +244,11 @@ async function migrate() {
       }
       changes += 1;
       console.log(`${tag()} ${plan.collection}: CREATE COLLECTION`);
-      if (apply) await db.createCollection(plan.collection);
+      if (apply) pendingWrites.push(() => db.createCollection(plan.collection));
     }
 
     const collection = db.collection(plan.collection);
-    const existing = collections.length === 0 && !apply ? [] : await collection.indexes();
+    const existing = collections.length === 0 ? [] : await collection.indexes();
     await assertNoLogicalDefaultDuplicates(
       collection,
       plan.logicalDefaultUniqueFields ?? [],
@@ -280,15 +281,20 @@ async function migrate() {
       changes += 1;
       console.log(`${tag()} ${plan.collection}: CREATE ${required.name}`);
       if (apply) {
-        await collection.createIndex(required.key, {
-          name: required.name,
-          unique: required.unique,
-          sparse: required.sparse,
-          expireAfterSeconds: required.expireAfterSeconds,
-        });
+        // The driver can serialize undefined options as null. In particular,
+        // expireAfterSeconds:null is an invalid TTL index. Keep zero and false.
+        const options = Object.fromEntries(
+          Object.entries(required).filter(([key, value]) => key !== 'key' && value !== undefined),
+        );
+        pendingWrites.push(() => collection.createIndex(required.key, options));
       }
     }
   }
+
+  // Validate every collection before the first write, including late plan
+  // entries. Runtime/provider failures can still leave additive partial work;
+  // a repeated invocation checks exact existing specs before continuing.
+  for (const write of pendingWrites) await write();
 
   console.log(
     `${tag()} ${changes === 0 ? 'Nothing to do; exact indexes are present.' : `${changes} non-destructive change(s) ${apply ? 'applied' : 'pending'}.`}`,

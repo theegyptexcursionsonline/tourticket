@@ -28,7 +28,7 @@ beforeEach(async () => {
   process.env.CONTENT_ENGINE_ALLOWED_TENANTS = 'default';
   process.env.CONTENT_ENGINE_API_KEY = 'test-draft-credential';
   process.env.CONTENT_ENGINE_API_KEY_NEXT = 'test-other-credential';
-  process.env.CONTENT_ENGINE_RECEIVER_GRANTS_JSON = JSON.stringify({ version: 3, grants: ['first', 'second'].map((id, index) => ({ id,
+  process.env.CONTENT_ENGINE_RECEIVER_GRANTS_JSON = JSON.stringify({ version: 3, grants: ['first', 'second'].map((id, index) => ({ id, expiresAt: '2099-01-01T00:00:00.000Z',
     secretEnv: index ? 'CONTENT_ENGINE_API_KEY_NEXT' : 'CONTENT_ENGINE_API_KEY',
     targets: [{ method: 'PATCH', receiverType: 'blog', tenantId: 'default', locale: 'en', publicationMode: 'draft' }],
   })) });

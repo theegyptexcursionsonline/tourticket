@@ -110,6 +110,7 @@ describe('content engine mutation grants', () => {
   });
 
   afterEach(() => {
+    jest.restoreAllMocks();
     for (const name of envNames) {
       const value = prior[name];
       if (value === undefined) delete process.env[name];
@@ -118,7 +119,7 @@ describe('content engine mutation grants', () => {
   });
 
   it.each(['draft', 'published'])('admits explicit v3 %s POST mode', mode => {
-    process.env.CONTENT_ENGINE_RECEIVER_GRANTS_JSON = JSON.stringify({ version: 3, grants: [{
+    process.env.CONTENT_ENGINE_RECEIVER_GRANTS_JSON = JSON.stringify({ version: 3, grants: [{ expiresAt: '2099-01-01T00:00:00.000Z',
       ...methodGrant('primary', 'CONTENT_ENGINE_API_KEY', 'POST'),
       targets: [{ method: 'POST', receiverType: 'blog', tenantId: 'default', locale: 'en', publicationMode: mode }],
     }] });
@@ -128,7 +129,7 @@ describe('content engine mutation grants', () => {
   });
 
   it('admits only explicitly scoped draft archive PATCH', () => {
-    process.env.CONTENT_ENGINE_RECEIVER_GRANTS_JSON = JSON.stringify({ version: 3, grants: [{
+    process.env.CONTENT_ENGINE_RECEIVER_GRANTS_JSON = JSON.stringify({ version: 3, grants: [{ expiresAt: '2099-01-01T00:00:00.000Z',
       id: 'primary', secretEnv: 'CONTENT_ENGINE_API_KEY',
       targets: [{ method: 'PATCH', receiverType: 'blog', tenantId: 'default', locale: 'en', publicationMode: 'draft' }],
     }] });
@@ -148,13 +149,46 @@ describe('content engine mutation grants', () => {
     { method: 'PATCH', publicationMode: 'published' },
     { method: 'POST', publicationMode: 'draft', receiverType: 'category' },
   ])('fails closed on unsupported v3 mode target %j', overrides => {
-    process.env.CONTENT_ENGINE_RECEIVER_GRANTS_JSON = JSON.stringify({ version: 3, grants: [{
+    process.env.CONTENT_ENGINE_RECEIVER_GRANTS_JSON = JSON.stringify({ version: 3, grants: [{ expiresAt: '2099-01-01T00:00:00.000Z',
       id: 'primary', secretEnv: 'CONTENT_ENGINE_API_KEY',
       targets: [{ receiverType: 'blog', tenantId: 'default', locale: 'en', ...overrides }],
     }] });
     const result = authenticateContentEngineMutation(request('Bearer receiver-primary-secret'));
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.response.status).toBe(503);
+  });
+
+  it.each([undefined, null, 42, '', '2099-01-01', '2099-01-01T00:00:00Z', '2099-01-01T00:00:00.000+00:00', '2099-02-30T00:00:00.000Z'])('fails closed for noncanonical v3 expiry %p', expiresAt => {
+    process.env.CONTENT_ENGINE_RECEIVER_GRANTS_JSON = JSON.stringify({ version: 3, grants: [{
+      id: 'primary', secretEnv: 'CONTENT_ENGINE_API_KEY', expiresAt,
+      targets: [{ method: 'POST', receiverType: 'blog', tenantId: 'default', locale: 'en', publicationMode: 'draft' }],
+    }] });
+    const result = authenticateContentEngineMutation(request('Bearer receiver-primary-secret'));
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.response.status).toBe(503);
+    expect(verifyContentEngine(request('Bearer receiver-primary-secret'))?.status).toBe(503);
+  });
+
+  it('expires unchanged historical environment at the exact deadline while another grant stays active', () => {
+    const deadline = Date.parse('2050-01-01T00:00:00.000Z');
+    process.env.CONTENT_ENGINE_RECEIVER_GRANTS_JSON = JSON.stringify({ version: 3, grants: [
+      { id: 'primary', secretEnv: 'CONTENT_ENGINE_API_KEY', expiresAt: new Date(deadline).toISOString(), targets: [{ method: 'POST', receiverType: 'blog', tenantId: 'default', locale: 'en', publicationMode: 'draft' }] },
+      { id: 'next', secretEnv: 'CONTENT_ENGINE_API_KEY_NEXT', expiresAt: new Date(deadline + 60_000).toISOString(), targets: [{ method: 'PATCH', receiverType: 'blog', tenantId: 'default', locale: 'en', publicationMode: 'draft' }] },
+    ] });
+    const frozenEnvironment = process.env.CONTENT_ENGINE_RECEIVER_GRANTS_JSON;
+    const clock = jest.spyOn(Date, 'now').mockReturnValue(deadline - 1);
+    expect(authenticateContentEngineMutation(request('Bearer receiver-primary-secret')).ok).toBe(true);
+    expect(verifyContentEngine(request('Bearer receiver-primary-secret'))).toBeNull();
+    clock.mockReturnValue(deadline);
+    const expired = authenticateContentEngineMutation(request('Bearer receiver-primary-secret'));
+    expect(expired.ok).toBe(false);
+    if (!expired.ok) expect(expired.response.status).toBe(401);
+    expect(verifyContentEngine(request('Bearer receiver-primary-secret'))?.status).toBe(401);
+    expect(authenticateContentEngineMutation(request('Bearer receiver-next-secret')).ok).toBe(true);
+    expect(verifyContentEngine(request('Bearer receiver-next-secret'))).toBeNull();
+    clock.mockReturnValue(deadline + 60_000);
+    expect(verifyContentEngine(request('Bearer receiver-next-secret'))?.status).toBe(401);
+    expect(process.env.CONTENT_ENGINE_RECEIVER_GRANTS_JSON).toBe(frozenEnvironment);
   });
 
   it('accepts the exact blog/default/en header, body and grant tuple', () => {

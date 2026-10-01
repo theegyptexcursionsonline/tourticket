@@ -37,6 +37,8 @@ export type VerifiedContentEngineMutationCredential = {
   targets: readonly ReceiverGrantTarget[];
 };
 
+type ResolvedReceiverGrant = VerifiedContentEngineMutationCredential & { secret: string; expiresAtMs?: number };
+
 export type ContentEngineMutationAuthentication =
   | { ok: true; credential: VerifiedContentEngineMutationCredential }
   | { ok: false; response: NextResponse };
@@ -52,7 +54,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function parseReceiverGrants():
-  | { ok: true; grants: Array<VerifiedContentEngineMutationCredential & { secret: string }> }
+  | { ok: true; grants: Array<ResolvedReceiverGrant> }
   | { ok: false } {
   const raw = process.env[RECEIVER_GRANTS_ENV];
   if (!raw?.trim() || raw.length > 16_384) return { ok: false };
@@ -74,11 +76,18 @@ function parseReceiverGrants():
   const ids = new Set<string>();
   const secretEnvs = new Set<string>();
   const resolvedSecrets = new Set<string>();
-  const grants: Array<VerifiedContentEngineMutationCredential & { secret: string }> = [];
+  const grants: Array<ResolvedReceiverGrant> = [];
 
   for (const candidate of parsed.grants) {
-    if (!isRecord(candidate) || !hasExactKeys(candidate, ["id", "secretEnv", "targets"])) return { ok: false };
+    const grantKeys = parsed.version === 3 ? ["id", "secretEnv", "targets", "expiresAt"] : ["id", "secretEnv", "targets"];
+    if (!isRecord(candidate) || !hasExactKeys(candidate, grantKeys)) return { ok: false };
     const { id, secretEnv, targets } = candidate;
+    let expiresAtMs: number | undefined;
+    if (parsed.version === 3) {
+      if (typeof candidate.expiresAt !== "string" || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(candidate.expiresAt)) return { ok: false };
+      expiresAtMs = Date.parse(candidate.expiresAt);
+      if (!Number.isFinite(expiresAtMs) || new Date(expiresAtMs).toISOString() !== candidate.expiresAt) return { ok: false };
+    }
     if (
       typeof id !== "string" || !GRANT_ID_PATTERN.test(id) || ids.has(id)
       || typeof secretEnv !== "string" || !SECRET_ENV_PATTERN.test(secretEnv) || secretEnvs.has(secretEnv)
@@ -131,7 +140,7 @@ function parseReceiverGrants():
     ids.add(id);
     secretEnvs.add(secretEnv);
     resolvedSecrets.add(secret);
-    grants.push({ grantId: id, secret, targets: normalizedTargets });
+    grants.push({ grantId: id, secret, targets: normalizedTargets, ...(expiresAtMs !== undefined ? { expiresAtMs } : {}) });
   }
 
   return { ok: true, grants };
@@ -152,12 +161,15 @@ function tokensEqual(presented: string, expected: string): boolean {
 
 function matchingGrant(
   presented: string,
-  grants: Array<VerifiedContentEngineMutationCredential & { secret: string }>,
+  grants: Array<ResolvedReceiverGrant>,
 ): (typeof grants)[number] | undefined {
   let match: (typeof grants)[number] | undefined;
   for (const candidate of grants) {
     if (tokensEqual(presented, candidate.secret)) match = candidate;
   }
+  // Evaluate on every request, including historical deployments retaining the
+  // same environment. Expiry bounds validity; it is not immediate revocation.
+  if (match?.expiresAtMs !== undefined && Date.now() >= match.expiresAtMs) return undefined;
   return match;
 }
 
