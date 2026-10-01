@@ -100,13 +100,22 @@ async function DELETEHandler(
       }, { status: 400 });
     }
     
-    const blog = await Blog.findByIdAndDelete(id);
+    // Keep receiver receipt ownership and archived natural-key tombstones durable.
+    // The predicate is atomic with deletion, including when archive races this call.
+    const blog = await Blog.findOneAndDelete({
+      _id: id,
+      archivedAt: null,
+      contentEnginePublishReceiptId: null,
+      contentEngineUpdateReceiptId: null,
+      contentEngineGrantId: null,
+      contentEngineArchiveOperationId: null,
+    });
     
     if (!blog) {
-      return NextResponse.json({ 
-        success: false, 
-        error: 'Blog post not found' 
-      }, { status: 404 });
+      if (await Blog.exists({ _id: id })) {
+        return NextResponse.json({ success: false, error: 'Receiver-owned or archived content must be retained. Use the receiver archive workflow for a private draft.' }, { status: 409 });
+      }
+      return NextResponse.json({ success: false, error: 'Blog post not found' }, { status: 404 });
     }
 
     revalidateStorefrontContent();

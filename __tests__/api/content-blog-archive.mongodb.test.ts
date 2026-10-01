@@ -5,13 +5,14 @@ import { randomUUID } from 'node:crypto';
 import { NextRequest } from 'next/server';
 import Blog from '@/lib/models/Blog';
 import Receipt from '@/lib/models/ContentPublishReceipt';
+jest.mock('@/lib/algolia', () => ({ syncBlogToAlgolia: jest.fn(), deleteBlogFromAlgolia: jest.fn() }));
 jest.mock('@/lib/admin/adminAudit', () => ({ withAdminAudit: (handler: unknown) => handler, registerAdminAuditActor: jest.fn() }));
 jest.mock('@/lib/auth/verifyAdmin', () => ({ verifyAdmin: async () => ({}) }));
 jest.mock('@/lib/dbConnect', () => ({ __esModule: true, default: async () => ({ connection: mongoose.connection }) }));
 jest.mock('@/lib/content/receiverIndexReadiness', () => ({ contentReceiverIndexesReady: async () => true }));
 jest.mock('@/lib/storefront/revalidateTourStorefront', () => ({ revalidateStorefrontContent: jest.fn() }));
 import { PATCH } from '@/app/api/admin/content/blog/archive/route';
-import { PUT } from '@/app/api/admin/blog/[id]/route';
+import { PUT, DELETE } from '@/app/api/admin/blog/[id]/route';
 import { GET as listBlogs } from '@/app/api/admin/blog/route';
 
 let server: MongoMemoryServer;
@@ -84,5 +85,34 @@ it('refuses cross-grant replay and excludes archived content from active admin l
   expect((await PATCH(archiveRequest(blog, op, 'test-other-credential'))).status).toBe(409);
   const response = await listBlogs(new NextRequest('https://example.test/api/admin/blog'));
   expect((await response.json()).data).toEqual([]);
+  expect(await Blog.countDocuments({ _id: blog._id })).toBe(1);
+});
+
+it('atomically refuses admin deletion racing archive and retains the owned tombstone', async () => {
+  const blog = await seed();
+  const deletion = new NextRequest('https://example.test/api/admin/blog/id', { method: 'DELETE' });
+  const context = { params: Promise.resolve({ id: String(blog._id) }) };
+  const [archive, remove] = await Promise.all([PATCH(archiveRequest(blog, randomUUID())), DELETE(deletion, context)]);
+  expect(archive.status).toBe(200);
+  expect(remove.status).toBe(409);
+  expect((await Blog.findById(blog._id))?.archivedAt).toBeTruthy();
+  expect((await DELETE(deletion, context)).status).toBe(409);
+  expect(await Blog.countDocuments({ _id: blog._id })).toBe(1);
+});
+it('preserves ordinary unrelated deletion and missing-record behavior', async () => {
+  const blog = await seed();
+  await Blog.updateOne({ _id: blog._id }, { $unset: { contentEnginePublishReceiptId: 1, contentEngineGrantId: 1 } });
+  const deletion = new NextRequest('https://example.test/api/admin/blog/id', { method: 'DELETE' });
+  const context = { params: Promise.resolve({ id: String(blog._id) }) };
+  expect((await DELETE(deletion, context)).status).toBe(200);
+  expect(await Blog.countDocuments({ _id: blog._id })).toBe(0);
+  expect((await DELETE(deletion, context)).status).toBe(404);
+});
+
+it('retains an archived row even if it has no receiver receipt', async () => {
+  const blog = await seed();
+  await Blog.updateOne({ _id: blog._id }, { $set: { archivedAt: new Date() }, $unset: { contentEnginePublishReceiptId: 1, contentEngineGrantId: 1 } });
+  const response = await DELETE(new NextRequest('https://example.test/api/admin/blog/id', { method: 'DELETE' }), { params: Promise.resolve({ id: String(blog._id) }) });
+  expect(response.status).toBe(409);
   expect(await Blog.countDocuments({ _id: blog._id })).toBe(1);
 });
