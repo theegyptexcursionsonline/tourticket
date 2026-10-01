@@ -27,9 +27,13 @@ async function PUTHandler(
       }, { status: 400 });
     }
     
-    const blog = await Blog.findByIdAndUpdate(
-      id, 
-      data, 
+    if (!data || typeof data !== 'object' || Array.isArray(data)
+      || Object.keys(data).some(key => key.startsWith('$') || key.includes('.') || key.startsWith('contentEngine') || key === 'archivedAt' || key === 'tenantId' || key === '__v' || key === '_id')) {
+      return NextResponse.json({ success: false, error: 'Protected blog fields cannot be changed' }, { status: 400 });
+    }
+    const blog = await Blog.findOneAndUpdate(
+      { _id: id, archivedAt: null },
+      { $set: data, $inc: { __v: 1 } },
       { 
         new: true, 
         runValidators: true 
@@ -96,13 +100,22 @@ async function DELETEHandler(
       }, { status: 400 });
     }
     
-    const blog = await Blog.findByIdAndDelete(id);
+    // Keep receiver receipt ownership and archived natural-key tombstones durable.
+    // The predicate is atomic with deletion, including when archive races this call.
+    const blog = await Blog.findOneAndDelete({
+      _id: id,
+      archivedAt: null,
+      contentEnginePublishReceiptId: null,
+      contentEngineUpdateReceiptId: null,
+      contentEngineGrantId: null,
+      contentEngineArchiveOperationId: null,
+    });
     
     if (!blog) {
-      return NextResponse.json({ 
-        success: false, 
-        error: 'Blog post not found' 
-      }, { status: 404 });
+      if (await Blog.exists({ _id: id })) {
+        return NextResponse.json({ success: false, error: 'Receiver-owned or archived content must be retained. Use the receiver archive workflow for a private draft.' }, { status: 409 });
+      }
+      return NextResponse.json({ success: false, error: 'Blog post not found' }, { status: 404 });
     }
 
     revalidateStorefrontContent();

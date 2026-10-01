@@ -78,6 +78,8 @@ jest.mock('@/lib/models/ContentPublishReceipt', () => ({
 
 import { POST, PUT } from '@/app/api/admin/content/blog/route';
 import { GET } from '@/app/api/admin/content/blog/[slug]/route';
+import { revalidateStorefrontContent } from '@/lib/storefront/revalidateTourStorefront';
+import { authenticateContentEngineMutation } from '@/lib/auth/verifyContentEngine';
 import {
   verifyContentEngineMutationTarget,
   verifyContentEngineTenant,
@@ -156,6 +158,43 @@ beforeEach(() => {
   tenantVerifier.mockReset().mockImplementation(tenantResult);
   targetVerifier.mockClear();
   mockReceiptStore.current = createReceiptStore();
+});
+
+describe('draft-only receiver contract', () => {
+  function admitDraft() {
+    jest.mocked(authenticateContentEngineMutation).mockReturnValueOnce({ ok: true, credential: {
+      grantId: 'draft-canary', targets: [{ method: 'POST', receiverType: 'blog', tenantId: 'default', locale: 'en', publicationMode: 'draft' }],
+    } });
+  }
+  it('forces a published request into a private draft without public cache effects', async () => {
+    admitDraft();
+    blogFindOne.mockResolvedValue(null);
+    blogCreate.mockImplementation(async doc => ({ ...doc, _id: 'draft-1' }));
+    const response = await POST(request({ payload: validPayload, defaultLocale: 'en' }));
+    expect(response.status).toBe(201);
+    expect(blogCreate).toHaveBeenCalledWith(expect.objectContaining({ status: 'draft', contentEngineGrantId: 'draft-canary' }));
+    expect(await response.json()).toEqual(expect.objectContaining({ status: 'draft', requiresManualPublish: true, publishReceiptId: expect.any(String) }));
+    expect(await response.json()).not.toHaveProperty('liveUrl');
+    expect(revalidateStorefrontContent).not.toHaveBeenCalled();
+  });
+  it('returns archived state on a create replay without recreating or publishing', async () => {
+    admitDraft();
+    blogFindOne.mockResolvedValue(null);
+    blogCreate.mockImplementation(async doc => ({ ...doc, _id: 'draft-1' }));
+    await POST(request({ payload: validPayload, defaultLocale: 'en' }));
+    admitDraft();
+    blogFindOne.mockResolvedValue({ _id: 'draft-1', slug: validPayload.slug, status: 'draft', archivedAt: new Date() });
+    const retry = await POST(request({ payload: validPayload, defaultLocale: 'en' }));
+    expect(await retry.json()).toEqual(expect.objectContaining({ status: 'archived' }));
+    expect(blogCreate).toHaveBeenCalledTimes(1);
+    expect(blogFindOne).toHaveBeenLastCalledWith(expect.objectContaining({ contentEngineGrantId: 'draft-canary', contentEnginePublishReceiptId: expect.any(String) }));
+  });
+});
+
+it('reports an archived tombstone truthfully during slug lookup', async () => {
+  blogFindOne.mockReturnValue({ lean: async () => ({ _id: 'draft-1', slug: 'qa-draft', status: 'draft', archivedAt: new Date(), __v: 1 }) });
+  const response = await GET(lookupRequest('default'), { params: Promise.resolve({ slug: 'qa-draft' }) });
+  expect(await response.json()).toMatchObject({ status: 'archived', revision: 1 });
 });
 
 describe('POST /api/admin/content/blog', () => {

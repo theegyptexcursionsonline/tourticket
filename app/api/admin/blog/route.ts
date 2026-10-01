@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
 
   try {
     await dbConnect();
-    const posts = await Blog.find({ ...DEFAULT_TENANT_FILTER }).sort({ createdAt: -1 }).lean();
+    const posts = await Blog.find({ ...DEFAULT_TENANT_FILTER, archivedAt: null }).sort({ createdAt: -1 }).lean();
     return NextResponse.json({ success: true, data: posts }, { status: 200 });
   } catch (error) {
     console.error('Error listing blog posts:', error);

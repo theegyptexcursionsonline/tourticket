@@ -184,6 +184,14 @@ async function POSTHandler(req: NextRequest) {
     locale: body.defaultLocale,
   });
   if (targetError) return targetError;
+  const draftOnly = authentication.credential.targets.some(target =>
+    target.method === "POST" && target.receiverType === "blog"
+    && target.tenantId === body.tenantId && target.locale === body.defaultLocale
+    && target.publicationMode === "draft");
+  const outcome = (record: { _id: unknown; slug: string; status?: string; archivedAt?: Date | null }) => draftOnly
+    ? { id: String(record._id), slug: record.slug, status: Boolean(record.archivedAt) ? "archived" : "draft", requiresManualPublish: true }
+    : { id: String(record._id), slug: record.slug, liveUrl: liveUrlForBlog(record.slug, body.defaultLocale!), status: "published", requiresManualPublish: false };
+
 
   const tenant = verifyContentEngineTenant(body.tenantId);
   if (!tenant.ok) return tenant.response;
@@ -235,7 +243,7 @@ async function POSTHandler(req: NextRequest) {
       idempotencyKey,
       tenantId: body.tenantId,
       contentType: "blog",
-      requestHash: hashPublishRequest(body),
+      requestHash: hashPublishRequest(draftOnly ? { ...body, publicationMode: "draft" } : body),
     });
   } catch (error) {
     console.error("[content-receiver] receipt claim failed", {
@@ -245,6 +253,15 @@ async function POSTHandler(req: NextRequest) {
     return NextResponse.json({ error: "Content publish is temporarily unavailable" }, { status: 503 });
   }
   if (begun.outcome === "replay") {
+    if (draftOnly) {
+      try {
+        const retained = await Blog.findOne({ ...tenantFilter(body.tenantId), contentEnginePublishReceiptId: begun.receiptId, contentEngineGrantId: authentication.credential.grantId });
+        if (!retained || retained.status !== "draft") return NextResponse.json({ error: "Receiver draft is unavailable" }, { status: 409 });
+        return NextResponse.json({ ...outcome(retained), publishReceiptId: begun.receiptId }, { status: begun.status });
+      } catch {
+        return NextResponse.json({ error: "Receiver draft lookup is temporarily unavailable" }, { status: 503 });
+      }
+    }
     return NextResponse.json(begun.body, { status: begun.status });
   }
   if (begun.outcome === "error") {
@@ -277,19 +294,18 @@ async function POSTHandler(req: NextRequest) {
         ? await Blog.findOne({
             ...tenantSlugFilter(payload.slug!, body.tenantId),
             contentEnginePublishReceiptId: claim.receiptId,
+            ...(draftOnly ? { contentEngineGrantId: authentication.credential.grantId } : {}),
           })
         : null;
       if (recovered) {
+        if (draftOnly && recovered.status !== "draft") return NextResponse.json({ error: "Receiver draft is unavailable" }, { status: 409 });
         contentCommitted = true;
         const adopted = {
-          id: String(recovered._id),
-          slug: recovered.slug,
-          liveUrl: liveUrlForBlog(recovered.slug, base.baseLocale),
           droppedLocales,
-          status: "published",
-          requiresManualPublish: false,
+          ...outcome(recovered),
+          ...(draftOnly ? { publishReceiptId: claim.receiptId } : {}),
         };
-        revalidateStorefrontContent();
+        if (!draftOnly) revalidateStorefrontContent();
         await completePublish(claim, 201, adopted);
         return NextResponse.json(adopted, { status: 201 });
       }
@@ -317,7 +333,8 @@ async function POSTHandler(req: NextRequest) {
       metaTitle: payload.metaTitle,
       metaDescription: payload.metaDescription,
       readTime: payload.readTime,
-      status: "published",
+      status: draftOnly ? "draft" : "published",
+      ...(draftOnly ? { contentEngineGrantId: authentication.credential.grantId } : {}),
       featured: payload.featured === true,
       tenantId: tenant.tenantId,
       contentEnginePublishReceiptId: claim.receiptId,
@@ -326,15 +343,12 @@ async function POSTHandler(req: NextRequest) {
     contentCommitted = true;
 
     const created = {
-      id: String(doc._id),
-      slug: doc.slug,
-      liveUrl: liveUrlForBlog(doc.slug, base.baseLocale),
       droppedLocales,
-      status: "published",
-      requiresManualPublish: false,
+      ...outcome(doc),
+      ...(draftOnly ? { publishReceiptId: claim.receiptId } : {}),
     };
 
-    revalidateStorefrontContent();
+    if (!draftOnly) revalidateStorefrontContent();
 
     // Mark processed only after the post and cache invalidation succeed. A
     // retry can safely repeat invalidation after response loss.

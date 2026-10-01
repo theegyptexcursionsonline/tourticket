@@ -13,7 +13,7 @@ const RECEIVER_GRANTS_ENV = "CONTENT_ENGINE_RECEIVER_GRANTS_JSON";
 const SECRET_ENV_PATTERN = /^CONTENT_ENGINE_API_KEY(?:_[A-Z0-9]+)*$/;
 const GRANT_ID_PATTERN = /^[a-z0-9][a-z0-9_-]{0,63}$/;
 const MUTATION_RECEIVER_TYPES = ["blog", "destination", "category"] as const;
-const MUTATION_METHODS = ["POST", "PUT"] as const;
+const MUTATION_METHODS = ["POST", "PUT", "PATCH"] as const;
 
 export const CONTENT_ENGINE_MUTATION_HEADERS = {
   receiverType: "X-Content-Engine-Receiver-Type",
@@ -29,12 +29,15 @@ type ReceiverGrantTarget = {
   receiverType: ContentEngineMutationReceiverType;
   tenantId: typeof DEFAULT_CONTENT_TENANT;
   locale: "en";
+  publicationMode?: "draft" | "published";
 };
 
 export type VerifiedContentEngineMutationCredential = {
   grantId: string;
   targets: readonly ReceiverGrantTarget[];
 };
+
+type ResolvedReceiverGrant = VerifiedContentEngineMutationCredential & { secret: string; expiresAtMs?: number };
 
 export type ContentEngineMutationAuthentication =
   | { ok: true; credential: VerifiedContentEngineMutationCredential }
@@ -51,7 +54,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function parseReceiverGrants():
-  | { ok: true; grants: Array<VerifiedContentEngineMutationCredential & { secret: string }> }
+  | { ok: true; grants: Array<ResolvedReceiverGrant> }
   | { ok: false } {
   const raw = process.env[RECEIVER_GRANTS_ENV];
   if (!raw?.trim() || raw.length > 16_384) return { ok: false };
@@ -63,7 +66,7 @@ function parseReceiverGrants():
     return { ok: false };
   }
   if (!isRecord(parsed) || !hasExactKeys(parsed, ["version", "grants"])) return { ok: false };
-  if ((parsed.version !== 1 && parsed.version !== 2)
+  if ((parsed.version !== 1 && parsed.version !== 2 && parsed.version !== 3)
     || !Array.isArray(parsed.grants)
     || parsed.grants.length < 1
     || parsed.grants.length > 8) {
@@ -73,11 +76,18 @@ function parseReceiverGrants():
   const ids = new Set<string>();
   const secretEnvs = new Set<string>();
   const resolvedSecrets = new Set<string>();
-  const grants: Array<VerifiedContentEngineMutationCredential & { secret: string }> = [];
+  const grants: Array<ResolvedReceiverGrant> = [];
 
   for (const candidate of parsed.grants) {
-    if (!isRecord(candidate) || !hasExactKeys(candidate, ["id", "secretEnv", "targets"])) return { ok: false };
+    const grantKeys = parsed.version === 3 ? ["id", "secretEnv", "targets", "expiresAt"] : ["id", "secretEnv", "targets"];
+    if (!isRecord(candidate) || !hasExactKeys(candidate, grantKeys)) return { ok: false };
     const { id, secretEnv, targets } = candidate;
+    let expiresAtMs: number | undefined;
+    if (parsed.version === 3) {
+      if (typeof candidate.expiresAt !== "string" || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(candidate.expiresAt)) return { ok: false };
+      expiresAtMs = Date.parse(candidate.expiresAt);
+      if (!Number.isFinite(expiresAtMs) || new Date(expiresAtMs).toISOString() !== candidate.expiresAt) return { ok: false };
+    }
     if (
       typeof id !== "string" || !GRANT_ID_PATTERN.test(id) || ids.has(id)
       || typeof secretEnv !== "string" || !SECRET_ENV_PATTERN.test(secretEnv) || secretEnvs.has(secretEnv)
@@ -94,7 +104,9 @@ function parseReceiverGrants():
     for (const target of targets) {
       const targetKeysForVersion = parsed.version === 1
         ? ["receiverType", "tenantId", "locale"]
-        : ["method", "receiverType", "tenantId", "locale"];
+        : parsed.version === 3
+          ? ["method", "receiverType", "tenantId", "locale", "publicationMode"]
+          : ["method", "receiverType", "tenantId", "locale"];
       if (!isRecord(target) || !hasExactKeys(target, targetKeysForVersion)) return { ok: false };
       const method = parsed.version === 1 ? "POST" : target.method;
       if (
@@ -103,6 +115,10 @@ function parseReceiverGrants():
         || typeof target.receiverType !== "string"
         || !MUTATION_RECEIVER_TYPES.includes(target.receiverType as ContentEngineMutationReceiverType)
         || (method === "PUT" && target.receiverType === "destination")
+        || (parsed.version !== 3 && method === "PATCH")
+        || (parsed.version === 3 && target.publicationMode !== "draft" && target.publicationMode !== "published")
+        || (parsed.version === 3 && target.publicationMode === "draft" && (target.receiverType !== "blog" || method === "PUT"))
+        || (method === "PATCH" && (target.receiverType !== "blog" || target.publicationMode !== "draft"))
         || target.tenantId !== DEFAULT_CONTENT_TENANT
         || target.locale !== "en"
       ) {
@@ -113,6 +129,7 @@ function parseReceiverGrants():
         receiverType: target.receiverType as ContentEngineMutationReceiverType,
         tenantId: DEFAULT_CONTENT_TENANT,
         locale: "en",
+        ...(parsed.version === 3 ? { publicationMode: target.publicationMode as "draft" | "published" } : {}),
       };
       const targetKey = `${normalized.method}\u0000${normalized.receiverType}\u0000${normalized.tenantId}\u0000${normalized.locale}`;
       if (targetKeys.has(targetKey)) return { ok: false };
@@ -123,7 +140,7 @@ function parseReceiverGrants():
     ids.add(id);
     secretEnvs.add(secretEnv);
     resolvedSecrets.add(secret);
-    grants.push({ grantId: id, secret, targets: normalizedTargets });
+    grants.push({ grantId: id, secret, targets: normalizedTargets, ...(expiresAtMs !== undefined ? { expiresAtMs } : {}) });
   }
 
   return { ok: true, grants };
@@ -144,12 +161,15 @@ function tokensEqual(presented: string, expected: string): boolean {
 
 function matchingGrant(
   presented: string,
-  grants: Array<VerifiedContentEngineMutationCredential & { secret: string }>,
+  grants: Array<ResolvedReceiverGrant>,
 ): (typeof grants)[number] | undefined {
   let match: (typeof grants)[number] | undefined;
   for (const candidate of grants) {
     if (tokensEqual(presented, candidate.secret)) match = candidate;
   }
+  // Evaluate on every request, including historical deployments retaining the
+  // same environment. Expiry bounds validity; it is not immediate revocation.
+  if (match?.expiresAtMs !== undefined && Date.now() >= match.expiresAtMs) return undefined;
   return match;
 }
 
