@@ -36,15 +36,15 @@ const requestFor = (input: string) => {
   const url = new URL(input) as URL & { clone: () => URL };
   url.clone = () => new URL(url.toString());
   return {
-    headers: { get: (name: string) => name.toLowerCase() === 'host' ? url.host : null },
+    headers: new Headers({ host: url.host }),
     cookies: { get: (name: string) => (name === 'authToken' ? { value: adminSession } : undefined) },
     nextUrl: url,
   } as never;
 };
 
 describe('dashboard tour routes', () => {
-  it('rewrites /tours/new to the admin creation page without treating new as a public slug', () => {
-    const response = proxy(requestFor('https://dashboard2.egypt-excursionsonline.com/tours/new'));
+  it('rewrites /tours/new to the admin creation page without treating new as a public slug', async () => {
+    const response = await proxy(requestFor('https://dashboard2.egypt-excursionsonline.com/tours/new'));
 
     expect(response.status).toBe(200);
     expect(response.headers.get('location')).toBeNull();
@@ -53,8 +53,8 @@ describe('dashboard tour routes', () => {
     );
   });
 
-  it('keeps redirecting legacy storefront tour links to their canonical root URL', () => {
-    const response = proxy(requestFor('https://egypt-excursionsonline.com/tours/example-tour'));
+  it('keeps redirecting legacy storefront tour links to their canonical root URL', async () => {
+    const response = await proxy(requestFor('https://egypt-excursionsonline.com/tours/example-tour'));
 
     expect(response.status).toBe(308);
     expect(response.headers.get('location')).toBe('https://egypt-excursionsonline.com/example-tour');

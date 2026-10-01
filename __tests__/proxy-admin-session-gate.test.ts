@@ -48,7 +48,7 @@ const requestFor = (input: string, cookie?: string) => {
   const url = new URL(input) as URL & { clone: () => URL };
   url.clone = () => new URL(url.toString());
   return {
-    headers: { get: (name: string) => (name.toLowerCase() === 'host' ? url.host : null) },
+    headers: new Headers({ host: url.host }),
     cookies: { get: (name: string) => (name === 'authToken' && cookie !== undefined ? { value: cookie } : undefined) },
     nextUrl: url,
   } as never;
@@ -66,8 +66,8 @@ describe('admin session gate — dashboard hosts', () => {
     'https://dashboard2.egypt-excursionsonline.com/admin/blog',
     'https://dashboard.egypt-excursionsonline.com/destinations',
     'https://admin.egypt-excursionsonline.com/blog',
-  ])('renders the data-free sign-in screen for an anonymous request: %s', (input) => {
-    const response = proxy(requestFor(input));
+  ])('renders the data-free sign-in screen for an anonymous request: %s', async (input) => {
+    const response = await proxy(requestFor(input));
 
     expect(rewriteOf(response)).toBe(`${new URL(input).origin}${ADMIN_SIGN_IN_PATH}`);
     expect(response.headers.get('cache-control')).toBe('private, no-store');
@@ -79,35 +79,35 @@ describe('admin session gate — dashboard hosts', () => {
     ['an expired admin session', expiredSession],
     ['a customer session (same cookie name)', customerSession],
     ['a token with an unreadable payload', 'aaa.!!!.bbb'],
-  ])('treats %s as signed out', (_label, cookie) => {
-    const response = proxy(requestFor('https://dashboard2.egypt-excursionsonline.com/blog', cookie));
+  ])('treats %s as signed out', async (_label, cookie) => {
+    const response = await proxy(requestFor('https://dashboard2.egypt-excursionsonline.com/blog', cookie));
 
     expect(rewriteOf(response)).toBe(`https://dashboard2.egypt-excursionsonline.com${ADMIN_SIGN_IN_PATH}`);
   });
 
-  it('renders the requested admin page for a plausible admin session', () => {
-    const response = proxy(requestFor('https://dashboard2.egypt-excursionsonline.com/blog', adminSession));
+  it('renders the requested admin page for a plausible admin session', async () => {
+    const response = await proxy(requestFor('https://dashboard2.egypt-excursionsonline.com/blog', adminSession));
 
     expect(rewriteOf(response)).toBe('https://dashboard2.egypt-excursionsonline.com/admin/blog');
     // The shared shell stays edge-cacheable for signed-in admins.
     expect(response.headers.get('cache-control')).toBeNull();
   });
 
-  it('lets a two-factor enrollment session reach the security page', () => {
-    const response = proxy(requestFor('https://dashboard2.egypt-excursionsonline.com/security', enrollmentSession));
+  it('lets a two-factor enrollment session reach the security page', async () => {
+    const response = await proxy(requestFor('https://dashboard2.egypt-excursionsonline.com/security', enrollmentSession));
 
     expect(rewriteOf(response)).toBe('https://dashboard2.egypt-excursionsonline.com/admin/security');
   });
 
-  it('passes /admin paths through for a plausible session', () => {
-    const response = proxy(requestFor('https://dashboard2.egypt-excursionsonline.com/admin/blog', adminSession));
+  it('passes /admin paths through for a plausible session', async () => {
+    const response = await proxy(requestFor('https://dashboard2.egypt-excursionsonline.com/admin/blog', adminSession));
 
     expect(rewriteOf(response)).toBeNull();
     expect(response.headers.get('x-middleware-next')).toBe('1');
   });
 
-  it('serves the sign-in screen itself without a session', () => {
-    const response = proxy(requestFor('https://dashboard2.egypt-excursionsonline.com/sign-in'));
+  it('serves the sign-in screen itself without a session', async () => {
+    const response = await proxy(requestFor('https://dashboard2.egypt-excursionsonline.com/sign-in'));
 
     expect(rewriteOf(response)).toBe(`https://dashboard2.egypt-excursionsonline.com${ADMIN_SIGN_IN_PATH}`);
   });
@@ -118,24 +118,24 @@ describe('admin session gate — dashboard hosts', () => {
     'https://dashboard2.egypt-excursionsonline.com/accept-invitation',
     'https://dashboard2.egypt-excursionsonline.com/_next/data/build/x.json',
     'https://dashboard2.egypt-excursionsonline.com/monitoring',
-  ])('leaves APIs, invitations and runtime assets to their own handling: %s', (input) => {
-    const response = proxy(requestFor(input));
+  ])('leaves APIs, invitations and runtime assets to their own handling: %s', async (input) => {
+    const response = await proxy(requestFor(input));
 
     expect(rewriteOf(response) ?? '').not.toContain(ADMIN_SIGN_IN_PATH);
   });
 });
 
 describe('admin session gate — other hosts', () => {
-  it('gates /admin pages on localhost too', () => {
-    const anonymous = proxy(requestFor('http://localhost:3000/admin/destinations'));
-    const signedIn = proxy(requestFor('http://localhost:3000/admin/destinations', adminSession));
+  it('gates /admin pages on localhost too', async () => {
+    const anonymous = await proxy(requestFor('http://localhost:3000/admin/destinations'));
+    const signedIn = await proxy(requestFor('http://localhost:3000/admin/destinations', adminSession));
 
     expect(rewriteOf(anonymous)).toBe(`http://localhost:3000${ADMIN_SIGN_IN_PATH}`);
     expect(rewriteOf(signedIn)).toBeNull();
   });
 
-  it('still sends storefront /admin links to the dashboard host', () => {
-    const response = proxy(requestFor('https://egypt-excursionsonline.com/admin/blog'));
+  it('still sends storefront /admin links to the dashboard host', async () => {
+    const response = await proxy(requestFor('https://egypt-excursionsonline.com/admin/blog'));
 
     expect(response.status).toBe(307);
     expect(response.headers.get('location')).toBe('https://dashboard2.egypt-excursionsonline.com/blog');
@@ -143,7 +143,7 @@ describe('admin session gate — other hosts', () => {
 });
 
 describe('hasPlausibleAdminSession', () => {
-  it('accepts unexpired admin and enrollment sessions', () => {
+  it('accepts unexpired admin and enrollment sessions', async () => {
     expect(hasPlausibleAdminSession(adminSession)).toBe(true);
     expect(hasPlausibleAdminSession(` ${adminSession} `)).toBe(true);
     expect(hasPlausibleAdminSession(enrollmentSession)).toBe(true);
@@ -164,18 +164,18 @@ describe('hasPlausibleAdminSession', () => {
     ['no scope', token({ sub: 'x', exp: NOW_S + 60 })],
     ['an array payload', `${base64Url({})}.${base64Url([1])}.sig`],
     ['a non-JSON payload', `${base64Url({})}.${btoa('nope')}.sig`],
-  ])('rejects a token that is %s', (_label, value) => {
+  ])('rejects a token that is %s', async (_label, value) => {
     expect(hasPlausibleAdminSession(value as string | undefined | null)).toBe(false);
   });
 
-  it('is evaluated against the supplied clock', () => {
+  it('is evaluated against the supplied clock', async () => {
     const exp = NOW_S + 60;
     const session = token({ sub: 'x', scope: 'admin', exp });
     expect(hasPlausibleAdminSession(session, exp * 1000 - 1)).toBe(true);
     expect(hasPlausibleAdminSession(session, exp * 1000)).toBe(false);
   });
 
-  it('only classifies /admin and its children as admin pages', () => {
+  it('only classifies /admin and its children as admin pages', async () => {
     expect(isAdminPagePath('/admin')).toBe(true);
     expect(isAdminPagePath('/admin/blog')).toBe(true);
     expect(isAdminPagePath('/administrator')).toBe(false);

@@ -1,8 +1,14 @@
 import createMiddleware from 'next-intl/middleware';
 import { routing } from './i18n/routing';
-import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { isInvitationAcceptPath } from './lib/routing/invitationRoute';
+import {
+  EDGE_VISITOR_HEADER,
+  edgeConnectionAddress,
+  runsOnNetlifyEdge,
+  visitorSigningSecret,
+  vouchForVisitor,
+} from './lib/security/visitorAddress';
 import {
   ADMIN_SESSION_COOKIE,
   ADMIN_SIGN_IN_PATH,
@@ -23,19 +29,62 @@ function shouldRenderAdminPage(request: NextRequest, adminPathname: string): boo
   );
 }
 
-function adminSignInRewrite(request: NextRequest) {
+function adminSignInRewrite(request: NextRequest, forwarded: Headers) {
   const url = request.nextUrl.clone();
   url.pathname = ADMIN_SIGN_IN_PATH;
-  const response = NextResponse.rewrite(url);
+  const response = NextResponse.rewrite(url, { request: { headers: forwarded } });
   // The same URL renders the sign-in screen or the page depending on the
   // session, so no shared cache may keep either answer.
   response.headers.set('Cache-Control', 'private, no-store');
   return response;
 }
 
-export function proxy(request: NextRequest) {
+// This proxy runs as Netlify's edge function: the only place that still sees the
+// visitor's connection. The server functions behind it see the edge as their client, so
+// every request it passes on carries the edge's signed word for the visitor
+// (lib/security/visitorAddress.ts), and never a copy the request arrived with.
+async function edgeVisitor(request: NextRequest): Promise<string | null> {
+  const secret = visitorSigningSecret();
+  const connection = edgeConnectionAddress();
+  const vouched = await vouchForVisitor(request.headers, secret, connection).catch(() => null);
+  if (!vouched && runsOnNetlifyEdge()) {
+    warnUnvouchedVisitors(
+      !secret
+        ? 'no signing secret (ABUSE_LIMIT_HASH_SECRET or JWT_SECRET) is available to it'
+        : !connection
+          ? 'Netlify gave it no connection address'
+          : 'it could not read or sign the connection address',
+    );
+  }
+  return vouched;
+}
+
+let unvouchedVisitorsWarned = false;
+
+/** Once per edge instance: without the edge's word, abuse limits and audit rows count every
+ *  visitor as the edge itself. */
+function warnUnvouchedVisitors(reason: string) {
+  if (unvouchedVisitorsWarned) return;
+  unvouchedVisitorsWarned = true;
+  console.error(
+    `[visitor-address] The site's edge cannot vouch for visitors' addresses (${reason}): `
+    + 'abuse limits and audit rows count every visitor as the edge.',
+  );
+}
+
+/** The request's headers as passed on: the edge's word for the visitor, never a copy the
+ *  request arrived with. */
+function forwardedHeaders(request: NextRequest, visitor: string | null): Headers {
+  const headers = new Headers(request.headers);
+  headers.delete(EDGE_VISITOR_HEADER);
+  if (visitor) headers.set(EDGE_VISITOR_HEADER, visitor);
+  return headers;
+}
+
+export async function proxy(request: NextRequest) {
   const hostname = request.headers.get('host') || '';
   const pathname = request.nextUrl.pathname;
+  const forwarded = forwardedHeaders(request, await edgeVisitor(request));
 
   const isDashboardSubdomain =
     hostname.startsWith('dashboard.') ||
@@ -86,7 +135,7 @@ export function proxy(request: NextRequest) {
     const url = request.nextUrl.clone();
     url.pathname = `/admin${pathname === '/' ? '' : pathname}`;
     if (!shouldRenderAdminPage(request, url.pathname)) {
-      return adminSignInRewrite(request);
+      return adminSignInRewrite(request, forwarded);
     }
     // Most admin pages are a public client shell whose private data comes from
     // cookie-authenticated, no-store API routes; the few that render data on
@@ -94,7 +143,7 @@ export function proxy(request: NextRequest) {
     // per request. Do not force this HTML rewrite through a no-store response,
     // otherwise Netlify cannot serve the prerendered shells from the edge and
     // every first visit pays a cold server-render.
-    return NextResponse.rewrite(url);
+    return NextResponse.rewrite(url, { request: { headers: forwarded } });
   }
 
   // Admin pages are served directly at /admin/* on the dashboard hosts and on
@@ -104,7 +153,7 @@ export function proxy(request: NextRequest) {
     && isAdminPagePath(pathname)
     && !shouldRenderAdminPage(request, pathname)
   ) {
-    return adminSignInRewrite(request);
+    return adminSignInRewrite(request, forwarded);
   }
 
   // Redirect main domain /admin to dashboard subdomain
@@ -136,17 +185,20 @@ export function proxy(request: NextRequest) {
   );
 
   if (shouldSkipLocale) {
-    return NextResponse.next();
+    return NextResponse.next({ request: { headers: forwarded } });
   }
 
   // Skip for files with extensions (images, fonts, etc.)
   if (pathname.includes('.') && !pathname.endsWith('/')) {
-    return NextResponse.next();
+    return NextResponse.next({ request: { headers: forwarded } });
   }
 
   // Apply next-intl middleware for all other routes
-  // Handles locale detection, cookie persistence, and redirects
-  return intlMiddleware(request);
+  // Handles locale detection, cookie persistence, and redirects. next-intl passes
+  // the request on with a copy of the headers of the request it is given, so it is
+  // given the forwarded headers (and no body: it reads only the URL, headers and
+  // cookies, and the original request's method and body still reach the page).
+  return intlMiddleware(new NextRequest(request.url, { headers: forwarded }));
 }
 
 export const config = {
