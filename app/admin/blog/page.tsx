@@ -8,7 +8,7 @@ import BlogManager from './BlogManager';
 async function getBlogs(): Promise<IBlog[]> {
   try {
     await dbConnect();
-    const blogs = await Blog.find({ ...DEFAULT_TENANT_FILTER })
+    const blogs = await Blog.find({ ...DEFAULT_TENANT_FILTER, archivedAt: null })
       .sort({ createdAt: -1 })
       .populate('relatedDestinations', 'name slug')
       .populate('relatedTours', 'title slug')
