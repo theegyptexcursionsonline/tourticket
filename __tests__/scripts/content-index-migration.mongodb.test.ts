@@ -2,8 +2,11 @@
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import { MongoClient } from 'mongodb';
 import { spawnSync } from 'node:child_process';
-import path from 'node:path';
 
+// A case can launch three bounded Node subprocesses. Under a parallel full
+// suite their startup exceeded Jest's default five seconds; keep assertions
+// unchanged and give the integration case a budget above its child timeouts.
+jest.setTimeout(120_000);
 let server: MongoMemoryServer;
 let client: MongoClient;
 const database = 'receiver_index_migration_test';
@@ -18,8 +21,8 @@ beforeEach(async () => {
   for (const name of names) await client.db().createCollection(name);
 });
 function migrate(apply = true, confirmedDatabase = database) {
-  return spawnSync(path.resolve('node_modules/.bin/tsx'), [
-    'scripts/migrate-blog-slug-tenant-index.ts',
+  return spawnSync(process.execPath, [
+    '--import', 'tsx', 'scripts/migrate-blog-slug-tenant-index.ts',
     ...(apply ? ['--apply', '--confirm', confirmedDatabase, '--confirm-host', '127.0.0.1'] : []),
   ], { encoding: 'utf8', timeout: 30_000, env: {
     ...process.env, MONGODB_URI: server.getUri(database),

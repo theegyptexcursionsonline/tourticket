@@ -1,3 +1,4 @@
+jest.mock('@/lib/auth/adminPageAccess', () => ({ authorizeAdminPage: async () => ({ granted: true }) }));
 jest.mock('@/lib/dbConnect', () => ({ __esModule: true, default: jest.fn() }));
 jest.mock('@/app/admin/blog/BlogManager', () => ({ __esModule: true, default: () => null }));
 const mockFind = jest.fn();
