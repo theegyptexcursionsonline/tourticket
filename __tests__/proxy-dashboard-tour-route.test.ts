@@ -22,11 +22,22 @@ jest.mock('next-intl/middleware', () => ({
   default: () => jest.fn(),
 }));
 
+// Dashboard pages are only rendered for a plausible admin session (see
+// proxy-admin-session-gate.test.ts); routing is what this suite checks.
+const base64Url = (value: unknown) =>
+  btoa(JSON.stringify(value)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+const adminSession = `${base64Url({ alg: 'HS256' })}.${base64Url({
+  sub: 'a'.repeat(24),
+  scope: 'admin',
+  exp: Math.floor(Date.now() / 1000) + 3600,
+})}.c2lnbmF0dXJl`;
+
 const requestFor = (input: string) => {
   const url = new URL(input) as URL & { clone: () => URL };
   url.clone = () => new URL(url.toString());
   return {
     headers: { get: (name: string) => name.toLowerCase() === 'host' ? url.host : null },
+    cookies: { get: (name: string) => (name === 'authToken' ? { value: adminSession } : undefined) },
     nextUrl: url,
   } as never;
 };
