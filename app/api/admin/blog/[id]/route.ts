@@ -27,9 +27,13 @@ async function PUTHandler(
       }, { status: 400 });
     }
     
-    const blog = await Blog.findByIdAndUpdate(
-      id, 
-      data, 
+    if (!data || typeof data !== 'object' || Array.isArray(data)
+      || Object.keys(data).some(key => key.startsWith('$') || key.includes('.') || key.startsWith('contentEngine') || key === 'archivedAt' || key === 'tenantId' || key === '__v' || key === '_id')) {
+      return NextResponse.json({ success: false, error: 'Protected blog fields cannot be changed' }, { status: 400 });
+    }
+    const blog = await Blog.findOneAndUpdate(
+      { _id: id, archivedAt: null },
+      { $set: data, $inc: { __v: 1 } },
       { 
         new: true, 
         runValidators: true 

@@ -38,6 +38,10 @@ export interface IBlog extends Document {
   
   // Status & Publishing
   status: 'draft' | 'published' | 'scheduled';
+  contentEngineGrantId?: string;
+  contentEngineArchiveOperationId?: string;
+  contentEngineArchiveFingerprint?: string;
+  archivedAt?: Date;
   publishedAt?: Date;
   scheduledFor?: Date;
   
@@ -227,6 +231,10 @@ const BlogSchema: Schema<IBlog> = new Schema({
     }
   },
   
+  contentEngineGrantId: { type: String, select: false },
+  contentEngineArchiveOperationId: { type: String, select: false },
+  contentEngineArchiveFingerprint: { type: String, select: false },
+  archivedAt: { type: Date },
   // Status & Publishing
   status: {
     type: String,

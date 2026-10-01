@@ -13,7 +13,7 @@ const RECEIVER_GRANTS_ENV = "CONTENT_ENGINE_RECEIVER_GRANTS_JSON";
 const SECRET_ENV_PATTERN = /^CONTENT_ENGINE_API_KEY(?:_[A-Z0-9]+)*$/;
 const GRANT_ID_PATTERN = /^[a-z0-9][a-z0-9_-]{0,63}$/;
 const MUTATION_RECEIVER_TYPES = ["blog", "destination", "category"] as const;
-const MUTATION_METHODS = ["POST", "PUT"] as const;
+const MUTATION_METHODS = ["POST", "PUT", "PATCH"] as const;
 
 export const CONTENT_ENGINE_MUTATION_HEADERS = {
   receiverType: "X-Content-Engine-Receiver-Type",
@@ -29,6 +29,7 @@ type ReceiverGrantTarget = {
   receiverType: ContentEngineMutationReceiverType;
   tenantId: typeof DEFAULT_CONTENT_TENANT;
   locale: "en";
+  publicationMode?: "draft" | "published";
 };
 
 export type VerifiedContentEngineMutationCredential = {
@@ -63,7 +64,7 @@ function parseReceiverGrants():
     return { ok: false };
   }
   if (!isRecord(parsed) || !hasExactKeys(parsed, ["version", "grants"])) return { ok: false };
-  if ((parsed.version !== 1 && parsed.version !== 2)
+  if ((parsed.version !== 1 && parsed.version !== 2 && parsed.version !== 3)
     || !Array.isArray(parsed.grants)
     || parsed.grants.length < 1
     || parsed.grants.length > 8) {
@@ -94,7 +95,9 @@ function parseReceiverGrants():
     for (const target of targets) {
       const targetKeysForVersion = parsed.version === 1
         ? ["receiverType", "tenantId", "locale"]
-        : ["method", "receiverType", "tenantId", "locale"];
+        : parsed.version === 3
+          ? ["method", "receiverType", "tenantId", "locale", "publicationMode"]
+          : ["method", "receiverType", "tenantId", "locale"];
       if (!isRecord(target) || !hasExactKeys(target, targetKeysForVersion)) return { ok: false };
       const method = parsed.version === 1 ? "POST" : target.method;
       if (
@@ -103,6 +106,10 @@ function parseReceiverGrants():
         || typeof target.receiverType !== "string"
         || !MUTATION_RECEIVER_TYPES.includes(target.receiverType as ContentEngineMutationReceiverType)
         || (method === "PUT" && target.receiverType === "destination")
+        || (parsed.version !== 3 && method === "PATCH")
+        || (parsed.version === 3 && target.publicationMode !== "draft" && target.publicationMode !== "published")
+        || (parsed.version === 3 && target.publicationMode === "draft" && (target.receiverType !== "blog" || method === "PUT"))
+        || (method === "PATCH" && (target.receiverType !== "blog" || target.publicationMode !== "draft"))
         || target.tenantId !== DEFAULT_CONTENT_TENANT
         || target.locale !== "en"
       ) {
@@ -113,6 +120,7 @@ function parseReceiverGrants():
         receiverType: target.receiverType as ContentEngineMutationReceiverType,
         tenantId: DEFAULT_CONTENT_TENANT,
         locale: "en",
+        ...(parsed.version === 3 ? { publicationMode: target.publicationMode as "draft" | "published" } : {}),
       };
       const targetKey = `${normalized.method}\u0000${normalized.receiverType}\u0000${normalized.tenantId}\u0000${normalized.locale}`;
       if (targetKeys.has(targetKey)) return { ok: false };

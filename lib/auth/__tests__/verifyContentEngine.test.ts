@@ -117,6 +117,46 @@ describe('content engine mutation grants', () => {
     }
   });
 
+  it.each(['draft', 'published'])('admits explicit v3 %s POST mode', mode => {
+    process.env.CONTENT_ENGINE_RECEIVER_GRANTS_JSON = JSON.stringify({ version: 3, grants: [{
+      ...methodGrant('primary', 'CONTENT_ENGINE_API_KEY', 'POST'),
+      targets: [{ method: 'POST', receiverType: 'blog', tenantId: 'default', locale: 'en', publicationMode: mode }],
+    }] });
+    const result = authenticateContentEngineMutation(request('Bearer receiver-primary-secret'));
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.credential.targets[0].publicationMode).toBe(mode);
+  });
+
+  it('admits only explicitly scoped draft archive PATCH', () => {
+    process.env.CONTENT_ENGINE_RECEIVER_GRANTS_JSON = JSON.stringify({ version: 3, grants: [{
+      id: 'primary', secretEnv: 'CONTENT_ENGINE_API_KEY',
+      targets: [{ method: 'PATCH', receiverType: 'blog', tenantId: 'default', locale: 'en', publicationMode: 'draft' }],
+    }] });
+    const result = authenticateContentEngineMutation(request('Bearer receiver-primary-secret'));
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(verifyContentEngineMutationTarget(request('Bearer receiver-primary-secret', exactTargetHeaders, 'PATCH'), result.credential,
+      { method: 'PATCH', receiverType: 'blog', tenantId: 'default', locale: 'en' })).toBeNull();
+    expect(verifyContentEngineMutationTarget(request('Bearer receiver-primary-secret', exactTargetHeaders, 'POST'), result.credential,
+      { method: 'POST', receiverType: 'blog', tenantId: 'default', locale: 'en' })?.status).toBe(403);
+  });
+
+  it.each([
+    { method: 'POST' },
+    { method: 'POST', publicationMode: 'automatic' },
+    { method: 'PUT', publicationMode: 'draft' },
+    { method: 'PATCH', publicationMode: 'published' },
+    { method: 'POST', publicationMode: 'draft', receiverType: 'category' },
+  ])('fails closed on unsupported v3 mode target %j', overrides => {
+    process.env.CONTENT_ENGINE_RECEIVER_GRANTS_JSON = JSON.stringify({ version: 3, grants: [{
+      id: 'primary', secretEnv: 'CONTENT_ENGINE_API_KEY',
+      targets: [{ receiverType: 'blog', tenantId: 'default', locale: 'en', ...overrides }],
+    }] });
+    const result = authenticateContentEngineMutation(request('Bearer receiver-primary-secret'));
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.response.status).toBe(503);
+  });
+
   it('accepts the exact blog/default/en header, body and grant tuple', () => {
     const authenticated = authenticateContentEngineMutation(
       request('Bearer receiver-primary-secret', exactTargetHeaders),

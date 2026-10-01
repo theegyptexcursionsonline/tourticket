@@ -41,7 +41,7 @@ export async function GET(
     id: String(blog._id),
     slug: blog.slug,
     title: blog.title,
-    status: blog.status,
+    status: blog.archivedAt ? "archived" : blog.status,
     revision: blog.__v,
     tenantId: blog.tenantId ?? null,
     updatedAt: blog.updatedAt,
