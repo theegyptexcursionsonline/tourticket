@@ -3,8 +3,35 @@ import { routing } from './i18n/routing';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { isInvitationAcceptPath } from './lib/routing/invitationRoute';
+import {
+  ADMIN_SESSION_COOKIE,
+  ADMIN_SIGN_IN_PATH,
+  hasPlausibleAdminSession,
+  isAdminPagePath,
+  isAdminSignInPath,
+} from './lib/routing/adminSessionGate';
 
 const intlMiddleware = createMiddleware(routing);
+
+// Admin pages are only rendered for requests that carry a plausible admin
+// session; everything else gets the data-free sign-in screen. The page and API
+// guards remain the authority (see lib/routing/adminSessionGate.ts).
+function shouldRenderAdminPage(request: NextRequest, adminPathname: string): boolean {
+  return (
+    isAdminSignInPath(adminPathname)
+    || hasPlausibleAdminSession(request.cookies.get(ADMIN_SESSION_COOKIE)?.value)
+  );
+}
+
+function adminSignInRewrite(request: NextRequest) {
+  const url = request.nextUrl.clone();
+  url.pathname = ADMIN_SIGN_IN_PATH;
+  const response = NextResponse.rewrite(url);
+  // The same URL renders the sign-in screen or the page depending on the
+  // session, so no shared cache may keep either answer.
+  response.headers.set('Cache-Control', 'private, no-store');
+  return response;
+}
 
 export function proxy(request: NextRequest) {
   const hostname = request.headers.get('host') || '';
@@ -58,12 +85,26 @@ export function proxy(request: NextRequest) {
   if (isDashboardSubdomain && !isDashboardPassthrough) {
     const url = request.nextUrl.clone();
     url.pathname = `/admin${pathname === '/' ? '' : pathname}`;
-    // Admin pages contain only a public client shell; all private data still
-    // comes from cookie-authenticated, no-store API routes. Do not force the
-    // HTML rewrite through a no-store response, otherwise Netlify cannot serve
-    // the prerendered shell from the edge and every first visit pays a cold
-    // server-render before authentication can even begin.
+    if (!shouldRenderAdminPage(request, url.pathname)) {
+      return adminSignInRewrite(request);
+    }
+    // Most admin pages are a public client shell whose private data comes from
+    // cookie-authenticated, no-store API routes; the few that render data on
+    // the server authorize themselves first (authorizeAdminPage) and render
+    // per request. Do not force this HTML rewrite through a no-store response,
+    // otherwise Netlify cannot serve the prerendered shells from the edge and
+    // every first visit pays a cold server-render.
     return NextResponse.rewrite(url);
+  }
+
+  // Admin pages are served directly at /admin/* on the dashboard hosts and on
+  // localhost; apply the same session gate there.
+  if (
+    (isDashboardSubdomain || isLocalhost)
+    && isAdminPagePath(pathname)
+    && !shouldRenderAdminPage(request, pathname)
+  ) {
+    return adminSignInRewrite(request);
   }
 
   // Redirect main domain /admin to dashboard subdomain

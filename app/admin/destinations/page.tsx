@@ -1,6 +1,4 @@
 // app/admin/destinations/page.tsx
-// Add this line at the top of the file after the imports
-export const dynamic = 'force-dynamic';
 import dbConnect from '@/lib/dbConnect';
 import Destination from '@/lib/models/Destination';
 import Tour from '@/lib/models/Tour';
@@ -8,6 +6,14 @@ import { IDestination } from '@/lib/models/Destination';
 import DestinationManager from './DestinationManager';
 import { dedupeAdminDestinations } from '@/lib/admin/destinationDeduplication';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
+import { authorizeAdminPage } from '@/lib/auth/adminPageAccess';
+import type { AdminPermission } from '@/lib/constants/adminPermissions';
+import AdminPageAccessState from '@/components/admin/AdminPageAccessState';
+
+// Rendered per request: the response depends on who is asking.
+export const dynamic = 'force-dynamic';
+
+const REQUIRED_PERMISSIONS: AdminPermission[] = ['manageContent'];
 
 type LeanDestination = Record<string, unknown> & {
   _id?: { toString: () => string } | string;
@@ -68,6 +74,11 @@ async function getDestinations(): Promise<IDestination[]> {
 }
 
 export default async function DestinationsPage() {
+  const access = await authorizeAdminPage(REQUIRED_PERMISSIONS);
+  if (!access.granted) {
+    return <AdminPageAccessState denial={access.denial} requiredPermissions={REQUIRED_PERMISSIONS} />;
+  }
+
   const destinations = await getDestinations();
 
   return (
