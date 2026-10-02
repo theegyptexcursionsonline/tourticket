@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
-import { TourOptionCard } from '../BookingSidebar';
+import { TourOptionCard, CalendarWidget } from '../BookingSidebar';
 
 jest.mock('next-intl', () => ({ useTranslations: () => (key: string) => key, useLocale: () => 'en' }));
 jest.mock('next/navigation', () => ({ useRouter: () => ({ push: jest.fn() }) }));
@@ -85,5 +85,36 @@ describe('opening an option reveals its departure section', () => {
     rerender(<TourOptionCard {...props} collapsible expanded={false} />);
     rerender(<TourOptionCard {...props} collapsible expanded />);
     expect(frame).toBeUndefined();
+  });
+});
+
+describe('calendar admission states', () => {
+  beforeEach(() => { jest.useFakeTimers().setSystemTime(new Date('2026-10-02T12:00:00Z')); });
+  afterEach(() => jest.useRealTimers());
+  it('disables a fully unavailable day and exposes a future selectable day', () => {
+    const onDateSelect = jest.fn();
+    render(<CalendarWidget selectedDate={null} onDateSelect={onDateSelect} availabilityData={{ '2026-10-02': 'full', '2026-10-03': 'high' }} />);
+    const closed = screen.getByRole('button', { name: '2 — booking.unavailable' });
+    expect(closed).toBeDisabled();
+    expect(screen.getByText('No departures are available today. Please choose another available date.')).toBeInTheDocument();
+    fireEvent.click(closed);
+    expect(onDateSelect).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: '3' }));
+    expect(onDateSelect).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole('button', { name: '4' })).toBeDisabled();
+  });
+  it('moves from January 31 to February and offers only loaded next dates', () => {
+    jest.setSystemTime(new Date('2026-01-31T12:00:00Z'));
+    const onMonthChange = jest.fn();
+    render(<CalendarWidget selectedDate={null} onDateSelect={jest.fn()} onMonthChange={onMonthChange} availabilityData={{ '2026-01-31': 'high' }} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Next month' }));
+    expect(onMonthChange.mock.calls[0][0].getMonth()).toBe(1);
+    expect(onMonthChange.mock.calls[0][0].getDate()).toBe(1);
+    expect(screen.queryByRole('button', { name: /Next available date:/ })).not.toBeInTheDocument();
+  });
+  it('does not offer calendar dates while availability is loading', () => {
+    render(<CalendarWidget selectedDate={null} onDateSelect={jest.fn()} hasLoadedStopSales={false} />);
+    expect(screen.getByLabelText('Loading availability')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '3' })).not.toBeInTheDocument();
   });
 });

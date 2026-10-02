@@ -378,7 +378,7 @@ export async function POST(request: NextRequest) {
       }
       try {
         for (const item of cart) departureAdmissionTime({
-          date: item.selectedDate || '', time: item.selectedTime || '',
+          date: item.selectedDate || '', time: item.selectedTime || '', bookingCutoffMinutes: item.bookingCutoffMinutes,
           paymentIntentId: verifiedPaymentIntent.id, reservationKey: expectedBinding,
         });
       } catch (error) {
@@ -604,7 +604,7 @@ export async function POST(request: NextRequest) {
         }
 
         try {
-          departureAdmissionTime({ date: cartItem.selectedDate || '', time: cartItem.selectedTime || '',
+          departureAdmissionTime({ date: cartItem.selectedDate || '', time: cartItem.selectedTime || '', bookingCutoffMinutes: isCardPayment ? cartItem.bookingCutoffMinutes : tour.bookingCutoffMinutes,
             paymentIntentId: isCardPayment ? paymentResult.paymentId : undefined });
         } catch (error) {
           if (isCardPayment && error instanceof DepartureAdmissionError && error.code === 'PAYMENT_TIME_UNPROVEN') {

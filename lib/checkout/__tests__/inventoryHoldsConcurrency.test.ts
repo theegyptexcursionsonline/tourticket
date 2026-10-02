@@ -1,3 +1,4 @@
+jest.mock('@/lib/checkout/currentBookingCutoff', () => ({ currentBookingDeadline: jest.fn(async () => Date.now() + 3600000) }));
 const mockLeaseFindOneAndUpdate = jest.fn();
 const mockLeaseUpdateOne = jest.fn();
 const mockHoldFindOne = jest.fn();
@@ -173,6 +174,16 @@ describe('checkout inventory lease concurrency', () => {
       }
       return { modifiedCount };
     });
+  });
+
+  it('rechecks an active unpaid hold after the administrator changes cutoff', async () => {
+    const reservationKey = 'f'.repeat(64);
+    await createInventoryHolds({ reservationKey, cart: [item] });
+    const previousWrites = mockHoldFindOneAndUpdate.mock.calls.length;
+    const cutoff = jest.requireMock('@/lib/checkout/currentBookingCutoff').currentBookingDeadline;
+    cutoff.mockRejectedValueOnce(Object.assign(new Error('Bookings closed'), { code: 'DEPARTURE_NOT_FUTURE' }));
+    await expect(createInventoryHolds({ reservationKey, cart: [item] })).rejects.toMatchObject({ code: 'DEPARTURE_NOT_FUTURE' });
+    expect(mockHoldFindOneAndUpdate.mock.calls.length).toBe(previousWrites);
   });
 
   it('serializes concurrent last-seat holds so exactly one reservation wins', async () => {

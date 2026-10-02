@@ -1,3 +1,4 @@
+import { resolveBookingCutoff } from '@/lib/bookings/bookingCutoff';
 import mongoose from 'mongoose';
 import Tour from '@/lib/models/Tour';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
@@ -66,6 +67,7 @@ interface LeanAddOn {
 }
 
 interface LeanTour {
+  bookingCutoffMinutes?: number;
   _id: mongoose.Types.ObjectId;
   title: string;
   discountPrice: number;
@@ -99,6 +101,7 @@ export interface SecureAddOnDetail {
 }
 
 export interface SecureCartItem extends Record<string, unknown> {
+  bookingCutoffMinutes?: number;
   _id: string;
   id: string;
   title: string;
@@ -159,7 +162,7 @@ export async function secureCartPricing(
       _id: tourId,
       isPublished: true,
       ...DEFAULT_TENANT_FILTER,
-    }).select('_id title discountPrice discountPercent originalPrice revenueGuestPrices bookingOptions addOns availability').lean() as unknown as LeanTour | null;
+    }).select('_id title discountPrice discountPercent originalPrice revenueGuestPrices bookingOptions addOns availability bookingCutoffMinutes').lean() as unknown as LeanTour | null;
     if (!tour) throw new Error('Tour unavailable');
 
     const optionId = rawItem?.selectedBookingOption?.id
@@ -353,6 +356,7 @@ export async function secureCartPricing(
 
     return {
       ...rawItem,
+      bookingCutoffMinutes: resolveBookingCutoff(tour.bookingCutoffMinutes),
       _id: tour._id.toString(),
       id: tour._id.toString(),
       title: tour.title,

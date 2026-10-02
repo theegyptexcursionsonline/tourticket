@@ -1,3 +1,4 @@
+const mockRecheckDeadlines = jest.fn();
 const mockPrepare = jest.fn();
 const mockPersist = jest.fn();
 const mockCreateHolds = jest.fn();
@@ -13,6 +14,10 @@ const mockSupersede = jest.fn();
 const mockMarkClosed = jest.fn();
 const mockHasPaid = jest.fn();
 const mockAssertLease = jest.fn();
+
+jest.mock('@/lib/checkout/currentBookingCutoff', () => ({
+  recheckQuotedBookingDeadlines: (...args: unknown[]) => mockRecheckDeadlines(...args),
+}));
 
 jest.mock('next/server', () => ({
   NextResponse: {
@@ -63,6 +68,8 @@ jest.mock('@/lib/checkout/publicCheckoutOrigin', () => ({
   publicCheckoutOrigin: () => 'https://egypt-excursionsonline.com',
 }));
 
+import { quotedDepartureDeadlines, DepartureAdmissionError } from '@/lib/checkout/departureAdmission';
+
 import { POST } from '@/app/api/checkout/create-checkout-session/route';
 
 const prepared = {
@@ -87,6 +94,7 @@ describe('POST /api/checkout/create-checkout-session', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockRecheckDeadlines.mockImplementation(async cart => quotedDepartureDeadlines(cart));
     mockPrepare.mockResolvedValue(prepared);
     mockCreateHolds.mockResolvedValue([]);
     mockSessionCreate.mockResolvedValue({
@@ -125,6 +133,15 @@ describe('POST /api/checkout/create-checkout-session', () => {
     expect(mockSessionCreate).not.toHaveBeenCalled();
     expect(mockPersist).not.toHaveBeenCalled();
     expect(mockReleaseHolds).toHaveBeenCalledWith(expect.objectContaining({ reservationKey: prepared.quoteBinding, onlyUnbound: true }));
+  });
+
+  it('rejects a changed authoritative cutoff before creating a provider page', async () => {
+    mockRecheckDeadlines.mockRejectedValueOnce(new DepartureAdmissionError('DEPARTURE_NOT_FUTURE', 'The booking cutoff changed.'));
+    const response = await POST(new Request('https://example.com/api/checkout/create-checkout-session', { method: 'POST', body: '{}' }));
+    expect(response.status).not.toBe(200);
+    expect(mockRecheckDeadlines).toHaveBeenCalledWith(prepared.cart);
+    expect(mockSessionCreate).not.toHaveBeenCalled();
+    expect(mockPersist).not.toHaveBeenCalled();
   });
 
   it('creates a hosted Session from the server-authoritative total and preserves webhook metadata', async () => {

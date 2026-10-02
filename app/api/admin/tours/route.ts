@@ -1,3 +1,4 @@
+import { bookingCutoffPayloadError, cutoffScheduleError } from '@/lib/bookings/bookingCutoff';
 // app/api/admin/tours/route.ts
 import { withAdminAudit } from '@/lib/admin/adminAudit';
 import dbConnect from '@/lib/dbConnect';
@@ -118,6 +119,12 @@ async function POSTHandler(request: NextRequest) {
   
   try {
     const body = await request.json();
+        if (!body || typeof body !== 'object' || Array.isArray(body)) return NextResponse.json({ error: 'A tour update object is required.' }, { status: 400 });
+        const cutoffError = bookingCutoffPayloadError(body);
+        if (cutoffError) return NextResponse.json({ error: cutoffError }, { status: 400 });
+        const scheduleError = cutoffScheduleError(body);
+        if (scheduleError) return NextResponse.json({ error: scheduleError }, { status: 400 });
+
     Object.assign(body, sanitizeContentNavigation(body));
     const tourId = randomBytes(12).toString('hex');
     body._id = tourId;

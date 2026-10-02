@@ -1,4 +1,5 @@
-import { quotedDepartureDeadlines, DepartureAdmissionError } from '@/lib/checkout/departureAdmission';
+import { recheckQuotedBookingDeadlines } from '@/lib/checkout/currentBookingCutoff';
+import { DepartureAdmissionError } from '@/lib/checkout/departureAdmission';
 import { randomUUID } from 'crypto';
 import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
@@ -142,7 +143,7 @@ async function reuseOrRetire(
       });
     }
   }
-  if (reusable) quotedDepartureDeadlines(prepared.cart);
+  if (reusable) await recheckQuotedBookingDeadlines(prepared.cart);
   return reusable;
 }
 
@@ -213,7 +214,7 @@ export async function POST(request: Request) {
     // Fencing: a request that outlived its lease must not make a second page.
     await assertCheckoutInventoryLeaseHeld(lease.key, lease.token);
     try {
-      quotedDepartureDeadlines(prepared.cart);
+      await recheckQuotedBookingDeadlines(prepared.cart);
       session = await stripe.checkout.sessions.create({
         mode: 'payment',
         ui_mode: 'hosted',

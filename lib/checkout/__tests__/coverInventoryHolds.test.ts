@@ -1,3 +1,4 @@
+jest.mock('@/lib/checkout/currentBookingCutoff', () => ({ currentBookingDeadline: jest.fn(async () => Date.now() + 3600000) }));
 const mockHoldFind = jest.fn();
 const mockHoldUpdateMany = jest.fn();
 const mockHoldCount = jest.fn();

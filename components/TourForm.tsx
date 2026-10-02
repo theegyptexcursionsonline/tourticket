@@ -1,6 +1,8 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useRef } from 'react';
+import BookingCutoffFields from '@/components/admin/BookingCutoffFields';
+import { cutoffAwareTourPayload, isValidBookingCutoff } from '@/lib/bookings/bookingCutoff';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
@@ -156,6 +158,7 @@ interface AddOn {
 }
 
 interface TourFormData {
+    bookingCutoffMinutes: number;
     title: string;
     slug: string;
     urlType: UrlType;
@@ -531,7 +534,9 @@ export default function TourForm({ tourToEdit, onSave }: { tourToEdit?: Tour, on
     // The urlType the tour was loaded with — keeps a legacy shape selectable
     // for that tour while new tours only ever offer Direct.
     const [savedUrlType, setSavedUrlType] = useState<string | null>(null);
+    const [loadedForm, setLoadedForm] = useState<TourFormData | null>(null);
     const [formData, setFormData] = useState<TourFormData>({
+        bookingCutoffMinutes: 0,
         title: '',
         slug: '',
         urlType: 'direct',
@@ -601,6 +606,7 @@ export default function TourForm({ tourToEdit, onSave }: { tourToEdit?: Tour, on
             setSavedUrlType((tourToEdit.urlType as UrlType) || 'default');
             
             const initialData: Partial<TourFormData> = {
+                bookingCutoffMinutes: tourToEdit.bookingCutoffMinutes ?? 0,
                 title: tourToEdit.title || '',
                 slug: tourToEdit.slug || '',
                 urlType: (tourToEdit.urlType as UrlType) || 'default',
@@ -755,6 +761,7 @@ export default function TourForm({ tourToEdit, onSave }: { tourToEdit?: Tour, on
             initialData.attractions = attractionIds;
             initialData.interests = interestIds;
 
+            setLoadedForm(initialData as TourFormData);
             setFormData(initialData as TourFormData);
             
             // On edit, expand the first item in each collapsible section if they exist
@@ -814,7 +821,9 @@ export default function TourForm({ tourToEdit, onSave }: { tourToEdit?: Tour, on
 
     const resetForm = () => {
         setSavedUrlType(null);
+        setLoadedForm(null);
         setFormData({
+            bookingCutoffMinutes: 0,
             title: '',
             slug: '',
             urlType: 'direct',
@@ -1332,10 +1341,36 @@ const addItineraryItem = () => {
         }));
     };
 
+    const pendingCutoffPayload = cutoffAwareTourPayload({ ...formData }, { ...formData }, tourToEdit && loadedForm ? { ...loadedForm } : null);
+    const isCutoffOnlyChange = Boolean(tourToEdit && isValidBookingCutoff(formData.bookingCutoffMinutes) && Object.keys(pendingCutoffPayload).length === 1 && 'bookingCutoffMinutes' in pendingCutoffPayload);
+
    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsSubmitting(true);
 
+        if (!isValidBookingCutoff(formData.bookingCutoffMinutes)) {
+            toast.error('Enter a valid booking cutoff, up to 30 days.');
+            setActiveTab('settings');
+            setIsSubmitting(false);
+            return;
+        }
+        const narrowPayload = cutoffAwareTourPayload({ ...formData }, { ...formData }, tourToEdit && loadedForm ? { ...loadedForm } : null);
+        if (tourToEdit && Object.keys(narrowPayload).length === 1 && 'bookingCutoffMinutes' in narrowPayload) {
+            try {
+                const response = await fetch(`/api/admin/tours/${tourToEdit._id}`, {
+                    method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(narrowPayload),
+                });
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.error || 'Could not save the booking cutoff.');
+                toast.success('Booking cutoff updated.');
+                setLoadedForm({ ...formData });
+                if (onSave) onSave();
+                router.refresh();
+            } catch (error) {
+                toast.error(error instanceof Error ? error.message : 'Could not save the booking cutoff.');
+            } finally { setIsSubmitting(false); }
+            return;
+        }
         // Enhanced validation
         if (
             !formData.title?.trim() ||
@@ -1387,6 +1422,7 @@ const addItineraryItem = () => {
             );
 
             const payload = {
+                bookingCutoffMinutes: cleanedData.bookingCutoffMinutes,
                 title: cleanedData.title.trim(),
                 slug: cleanedData.slug.trim(),
                 urlType: cleanedData.urlType || 'default',
@@ -1492,7 +1528,7 @@ const addItineraryItem = () => {
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify(payload),
+                body: JSON.stringify(cutoffAwareTourPayload(payload, { ...formData }, tourToEdit && loadedForm ? { ...loadedForm } : null)),
             });
 
             const responseData = await response.json();
@@ -1992,6 +2028,7 @@ const addItineraryItem = () => {
                                                     Set operating days and universal time slots here. Each booking option can use all or only some slots and may override a slot price.
                                                 </p>
                                             </div>
+                                            <BookingCutoffFields value={formData.bookingCutoffMinutes} onChange={bookingCutoffMinutes => setFormData(prev => ({ ...prev, bookingCutoffMinutes }))} />
                                             {formData.availability && (
                                             <AvailabilityManager
                                                 availability={formData.availability}
@@ -3286,12 +3323,12 @@ const addItineraryItem = () => {
                                     disabled={
                                         isSubmitting || 
                                         isUploading || 
-                                        !formData.title?.trim() ||
+                                        (!isCutoffOnlyChange && (!formData.title?.trim() ||
                                         !formData.description?.trim() ||
                                         !formData.duration?.trim() ||
                                         !formData.discountPrice ||
                                         !formData.destination ||
-                                        !formData.category?.length
+                                        !formData.category?.length))
                                     }
                                     className="flex-1 inline-flex justify-center items-center gap-3 px-6 py-3 text-white font-bold bg-gradient-to-r from-indigo-600 to-purple-600 rounded-xl hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-105 active:scale-95 disabled:transform-none"
                                 >

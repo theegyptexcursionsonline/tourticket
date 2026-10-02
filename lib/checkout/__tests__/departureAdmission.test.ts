@@ -13,7 +13,7 @@ describe('paid departure admission', () => {
     expect(departureAdmissionTime({ ...input, paymentSuccess: proof(deadline - 1) }).getTime()).toBe(deadline - 1);
   });
   it.each([deadline, deadline + 1])('denies actual payment completion at or after cutoff %s', time => {
-    expect(() => departureAdmissionTime({ ...input, paymentSuccess: proof(time) })).toThrow('already started when payment completed');
+    expect(() => departureAdmissionTime({ ...input, paymentSuccess: proof(time) })).toThrow('booking cutoff had passed when payment completed');
   });
   it('does not infer payment time from a succeeded intent alone', () => {
     expect(() => departureAdmissionTime(input)).toThrow('still being reconciled');
@@ -45,7 +45,7 @@ describe('paid departure admission', () => {
     jest.useFakeTimers().setSystemTime(deadline - 1);
     expect(quotedDepartureDeadlines([{ selectedDate: input.date, selectedTime: input.time }])).toEqual([deadline]);
     jest.setSystemTime(deadline);
-    expect(() => quotedDepartureDeadlines([{ selectedDate: input.date, selectedTime: input.time }])).toThrow('already started');
+    expect(() => quotedDepartureDeadlines([{ selectedDate: input.date, selectedTime: input.time }])).toThrow('Bookings for this departure are closed');
     jest.useRealTimers();
   });
 });

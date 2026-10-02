@@ -211,6 +211,7 @@ export interface ITour extends Document {
 
   // Relationships
   reviews?: mongoose.Schema.Types.ObjectId[];
+  bookingCutoffMinutes?: number;
   availability: IAvailability;
   attractions?: mongoose.Schema.Types.ObjectId[]; // Link to AttractionPage
   interests?: mongoose.Schema.Types.ObjectId[]; // Link to AttractionPage (interest type)
@@ -949,6 +950,7 @@ const TourSchema: Schema<ITour> = new Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Review'
   }],
+  bookingCutoffMinutes: { type: Number, default: 0, min: 0, max: 43200, validate: Number.isInteger },
   availability: {
     type: AvailabilitySchema,
     required: true,

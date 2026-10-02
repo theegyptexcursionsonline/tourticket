@@ -93,3 +93,10 @@ describe('the save pipeline preserves capacities end to end', () => {
     expect(saved).not.toHaveProperty('maxCapacity');
   });
 });
+it('keeps the isolated cutoff editor open after saving and updates its baseline', () => {
+  const start = form.indexOf("toast.success('Booking cutoff updated.')");
+  expect(start).toBeGreaterThan(-1);
+  const success = form.slice(start, form.indexOf('} catch', start));
+  expect(success).toContain('setLoadedForm({ ...formData })');
+  expect(success).not.toContain('setIsPanelOpen(false)');
+});

@@ -1,3 +1,4 @@
+import { bookingCutoffPayloadError, cutoffScheduleError } from '@/lib/bookings/bookingCutoff';
 import { withAdminAudit } from '@/lib/admin/adminAudit';
 import { NextRequest, NextResponse } from "next/server";
 import dbConnect from "@/lib/dbConnect";
@@ -120,6 +121,27 @@ async function PUTHandler(
         await dbConnect();
         const { id } = await params;
         const body = await request.json();
+        if (!body || typeof body !== 'object' || Array.isArray(body)) return NextResponse.json({ error: 'A tour update object is required.' }, { status: 400 });
+        const cutoffError = bookingCutoffPayloadError(body);
+        if (cutoffError) return NextResponse.json({ error: cutoffError }, { status: 400 });
+        const cutoffOnly = Object.keys(body).length === 1 && Object.prototype.hasOwnProperty.call(body, 'bookingCutoffMinutes');
+        if (cutoffOnly || Object.prototype.hasOwnProperty.call(body, 'bookingCutoffMinutes') || Object.prototype.hasOwnProperty.call(body, 'availability') || Object.prototype.hasOwnProperty.call(body, 'bookingOptions')) {
+            const currentTour = await Tour.findOne({ _id: id, ...DEFAULT_TENANT_FILTER }).select('bookingCutoffMinutes availability bookingOptions').lean();
+            if (!currentTour) return NextResponse.json({ error: 'Tour not found' }, { status: 404 });
+            const scheduleError = cutoffScheduleError({
+                bookingCutoffMinutes: body.bookingCutoffMinutes ?? currentTour.bookingCutoffMinutes,
+                availability: Object.prototype.hasOwnProperty.call(body, 'availability') ? body.availability : currentTour.availability,
+                bookingOptions: Object.prototype.hasOwnProperty.call(body, 'bookingOptions') ? body.bookingOptions : currentTour.bookingOptions,
+            });
+            if (scheduleError) return NextResponse.json({ error: scheduleError }, { status: 400 });
+            if (cutoffOnly) {
+                const updated = await Tour.findOneAndUpdate({ _id: id, ...DEFAULT_TENANT_FILTER }, { $set: { bookingCutoffMinutes: body.bookingCutoffMinutes, updatedBy: auditStamp(auth) } }, { new: true, runValidators: true });
+                if (!updated) return NextResponse.json({ error: 'Tour not found' }, { status: 404 });
+                revalidateTourStorefront();
+                return NextResponse.json({ success: true, data: updated });
+            }
+        }
+
         Object.assign(body, sanitizeContentNavigation(body));
         delete body.tenantId;
         delete body.$set;

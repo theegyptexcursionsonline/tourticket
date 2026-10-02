@@ -15,7 +15,7 @@ const TOUR_COPY_FIELDS = [
   'transportationDetails', 'mealInfo', 'weatherPolicy', 'photoPolicy',
   'tipPolicy', 'healthSafety', 'culturalInfo', 'seasonalVariations',
   'localCustoms', 'notSuitableFor', 'needToKnow', 'meetingPoint', 'languages',
-  'ageRestriction', 'cancellationPolicy', 'operatedBy', 'availability',
+  'ageRestriction', 'cancellationPolicy', 'operatedBy', 'availability', 'bookingCutoffMinutes',
   'attractions', 'interests', 'metaTitle', 'metaDescription', 'keywords',
   'translations',
 ] as const;

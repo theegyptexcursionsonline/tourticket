@@ -41,3 +41,8 @@ describe('shared departure admission boundary', () => {
     expect(()=>evaluateDepartureSellability({scheduled:true,startsAtUtc:instant.toISOString(),now:instant,slots:[{time:'08:00',capacity:10}],time:'08:00',explicitStopSale:false,fullStopSale:false,optionStopSale:false,booked:0})).toThrow('This departure has already started');
   });
 });
+it('closes the prior day for a long lead time without moving the departure clock', () => {
+  expect(isFutureDeparture('2026-10-03', '01:00', new Date('2026-10-02T19:59:59Z'), 120)).toBe(true);
+  expect(isFutureDeparture('2026-10-03', '01:00', new Date('2026-10-02T20:00:00Z'), 120)).toBe(false);
+  expect(isFutureDeparture('2026-10-03', '01:00', new Date('2026-10-02T20:00:00Z'), 0)).toBe(true);
+});

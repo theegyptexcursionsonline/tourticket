@@ -1,3 +1,4 @@
+jest.mock('@/lib/checkout/currentBookingCutoff', () => ({ currentBookingDeadline: jest.fn(async () => Date.now() + 3600000) }));
 jest.mock('@/lib/models/Booking', () => ({
   __esModule: true,
   default: { updateMany: jest.fn() },

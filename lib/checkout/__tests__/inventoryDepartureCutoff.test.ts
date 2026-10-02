@@ -1,4 +1,5 @@
 /** @jest-environment node */
+jest.mock('@/lib/checkout/currentBookingCutoff', () => ({ currentBookingDeadline: jest.fn(async () => Date.now() + 3600000) }));
 jest.mock('@/lib/models/Booking', () => ({
   __esModule: true,
   default: { findOne: jest.fn() },

@@ -303,6 +303,7 @@ function quoteVersion(item: SecureCartItem, target: MobileCommerceTarget): strin
     .map(([id, quantity]) => ({ id, quantity, detail: item.selectedAddOnDetails[id] }));
   return `mqv1_${createHash('sha256').update(JSON.stringify({
     target,
+    bookingCutoffMinutes: item.bookingCutoffMinutes ?? 0,
     pricingKey: item.selectedBookingOption.pricingKey,
     prices: item.guestPrices,
     // Unit size and unit price change the charge without changing the guest

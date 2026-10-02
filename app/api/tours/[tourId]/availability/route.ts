@@ -1,101 +1,61 @@
-// app/api/tours/[tourId]/availability/route.ts
 import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
 import Tour from '@/lib/models/Tour';
 import Booking from '@/lib/models/Booking';
-import { isFutureDeparture } from '@/lib/revenue/departureSchedule';
+import Availability from '@/lib/models/Availability';
+import CheckoutInventoryHold from '@/lib/models/CheckoutInventoryHold';
+import StopSale from '@/lib/models/StopSale';
+import { stopSaleAliasesForOption } from '@/lib/revenue/departureSellability';
+import { isFutureDeparture, isTourScheduled } from '@/lib/revenue/departureSchedule';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 
-export async function GET(
-  request: Request,
-  { params }: { params: Promise<{ tourId: string }> }
-) {
-  await dbConnect();
+export async function GET(request: Request, { params }: { params: Promise<{ tourId: string }> }) {
   try {
     const { tourId } = await params;
-    const { searchParams } = new URL(request.url);
-    const month = searchParams.get('month'); // e.g., "2025-09"
-
-    if (!month) {
-      return NextResponse.json({ message: 'Month parameter is required' }, { status: 400 });
-    }
-
-    if (!/^\d{4}-(?:0[1-9]|1[0-2])$/.test(month)) {
-      return NextResponse.json({ message: 'Select a valid month.' }, { status: 400 });
-    }
-
-    const tour = await Tour.findOne({ _id: tourId, ...DEFAULT_TENANT_FILTER })
-      .select('availability tenantId');
-    if (!tour || !tour.availability) {
-      return NextResponse.json({ message: 'Tour or availability rules not found' }, { status: 404 });
-    }
-
-    // --- Date Calculation Logic ---
+    const month = new URL(request.url).searchParams.get('month');
+    if (!month || !/^\d{4}-(?:0[1-9]|1[0-2])$/.test(month)) return NextResponse.json({ message: 'Select a valid month.' }, { status: 400 });
+    await dbConnect();
+    const tour = await Tour.findOne({ _id: tourId, isPublished: true, ...DEFAULT_TENANT_FILTER }).select('availability bookingOptions bookingCutoffMinutes tenantId');
+    if (!tour?.availability) return NextResponse.json({ message: 'Tour or availability rules not found' }, { status: 404 });
     const [year, monthIndex] = month.split('-').map(Number);
-    const startDate = new Date(Date.UTC(year, monthIndex - 1, 1));
-    const endDate = new Date(Date.UTC(year, monthIndex, 0, 23, 59, 59));
-
-    // --- Get all bookings for the tour in the given month ---
-    const existingBookings = await Booking.find({
-      tour: tourId,
-      tenantId: tour.tenantId || 'default',
-      date: { $gte: startDate, $lte: endDate },
-    }).select('date time guests');
-
-    // --- Process bookings into a quick-lookup map ---
-    // Structure: { 'YYYY-MM-DD': { 'HH:MM AM/PM': totalGuests } }
-    const bookingsMap = new Map<string, Map<string, number>>();
-    for (const booking of existingBookings) {
-      const dateString = booking.date.toISOString().split('T')[0];
-      if (!bookingsMap.has(dateString)) {
-        bookingsMap.set(dateString, new Map());
-      }
-      const timeMap = bookingsMap.get(dateString)!;
-      const currentGuests = timeMap.get(booking.time) || 0;
-      timeMap.set(booking.time, currentGuests + booking.guests);
-    }
-    
-    const { availableDays, slots } = tour.availability;
+    const start = new Date(Date.UTC(year, monthIndex - 1, 1));
+    const end = new Date(Date.UTC(year, monthIndex, 0, 23, 59, 59, 999));
+    // One bounded monthly read per source, never one query per calendar cell.
+    const [bookings, overrides, stops, holds] = await Promise.all([
+      Booking.find({ tour: tourId, status: { $in: ['Confirmed', 'Pending'] }, $and: [DEFAULT_TENANT_FILTER, { $or: [{ date: { $gte: start, $lte: end } }, { dateString: { $gte: start.toISOString().slice(0, 10), $lte: end.toISOString().slice(0, 10) } }] }] }).select('date dateString time guests adultGuests childGuests infantGuests'),
+      Availability.find({ tour: tourId, date: { $gte: start, $lte: end }, ...DEFAULT_TENANT_FILTER }).select('date slots stopSale'),
+      StopSale.find({ tourId, startDate: { $lte: end }, endDate: { $gte: start }, ...DEFAULT_TENANT_FILTER }).select('startDate endDate optionIds'),
+      CheckoutInventoryHold.find({ tourId, tenantId: 'default', state: 'active', expiresAt: { $gt: new Date() }, dateString: { $gte: start.toISOString().slice(0, 10), $lte: end.toISOString().slice(0, 10) } }).select('dateString time guests'),
+    ]);
     const availableSlotsByDate: Record<string, Array<{ time: string; remaining: number }>> = {};
     const fullyBookedDates: string[] = [];
-
     const now = new Date();
-
-    // --- Iterate through each day of the month to check availability ---
-    for (let d = new Date(startDate); d <= endDate; d.setUTCDate(d.getUTCDate() + 1)) {
-        const dayOfWeek = d.getUTCDay();
-        const dateString = d.toISOString().split('T')[0];
-
-        // Check if the day is an available day of the week
-        if (availableDays?.includes(dayOfWeek)) {
-            const timeSlotsForDay = [];
-            let allSlotsFull = true;
-
-            for (const slot of slots) {
-                if (!isFutureDeparture(dateString, slot.time, now)) continue;
-                const bookedGuests = bookingsMap.get(dateString)?.get(slot.time) || 0;
-                const remainingCapacity = slot.capacity - bookedGuests;
-                
-                if (remainingCapacity > 0) {
-                    timeSlotsForDay.push({ time: slot.time, remaining: remainingCapacity });
-                    allSlotsFull = false;
-                }
-            }
-
-            if (timeSlotsForDay.length > 0) {
-                availableSlotsByDate[dateString] = timeSlotsForDay;
-            }
-
-            if (allSlotsFull) {
-                fullyBookedDates.push(dateString);
-            }
-        }
+    for (let date = new Date(start); date <= end; date.setUTCDate(date.getUTCDate() + 1)) {
+      const key = date.toISOString().slice(0, 10);
+      const override = overrides.find(row => new Date(row.date).toISOString().slice(0, 10) === key);
+      const dayStops = stops.filter(row => new Date(row.startDate).toISOString().slice(0, 10) <= key && new Date(row.endDate).toISOString().slice(0, 10) >= key);
+      const stopped = new Set(dayStops.flatMap(row => (row.optionIds || []).map(String)));
+      const fullStop = dayStops.some(row => !row.optionIds?.length);
+      const slots: Array<{ time: string; capacity?: number; extraCapacity?: number; booked?: number; blocked?: boolean }> = override?.slots?.length ? override.slots : tour.availability.slots || [];
+      const options = tour.bookingOptions || [];
+      const available = slots.filter(slot => {
+        if (!isTourScheduled(tour, date) || override?.stopSale || fullStop || slot.blocked || !isFutureDeparture(key, slot.time, now, tour.bookingCutoffMinutes)) return false;
+        if (!options.length) return !stopped.has('standard') && !stopped.has('standard-default');
+        return options.some((option, index) => {
+          const legacyId = (option as unknown as { id?: string }).id;
+          const aliases = stopSaleAliasesForOption(options, option.pricingKey || legacyId || String(option._id || `option-${index}`));
+          return !aliases.some(alias => stopped.has(String(alias))) && (!option.timeSlots?.length || option.timeSlots.some(item => item.time === slot.time));
+        });
+      }).map(slot => {
+        const sold = bookings.filter(row => (row.dateString || new Date(row.date).toISOString().slice(0, 10)) === key && row.time === slot.time).reduce((sum, row) => sum + (Number(row.adultGuests || 0) + Number(row.childGuests || 0) + Number(row.infantGuests || 0) || Number(row.guests || 0)), 0);
+        const held = holds.filter(row => row.dateString === key && row.time === slot.time).reduce((sum, row) => sum + Number(row.guests || 0), 0);
+        return { time: slot.time, remaining: Math.max(0, Number(slot.capacity || 0) + Number(slot.extraCapacity || 0) - Math.max(Number(slot.booked || 0), sold) - held) };
+      }).filter(slot => slot.remaining > 0);
+      if (available.length) availableSlotsByDate[key] = available;
+      else fullyBookedDates.push(key);
     }
-
     return NextResponse.json({ availableSlotsByDate, fullyBookedDates }, { headers: { 'Cache-Control': 'no-store' } });
-
-  } catch (error) {
-    console.error('Failed to get availability:', error);
-    return NextResponse.json({ message: 'Failed to get availability' }, { status: 500 });
+  } catch {
+    return NextResponse.json({ message: 'Availability could not be checked. Please try again.' }, { status: 500, headers: { 'Cache-Control': 'no-store' } });
   }
 }

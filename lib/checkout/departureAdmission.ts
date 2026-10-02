@@ -1,3 +1,4 @@
+import { resolveBookingCutoff } from '@/lib/bookings/bookingCutoff';
 import { localDepartureToUtc, isValidDepartureDate } from '@/lib/revenue/departureSchedule';
 
 export type PaymentSuccessProof = {
@@ -16,7 +17,7 @@ export class DepartureAdmissionError extends Error {
 
 /** No provider intent/charge creation or browser clock can establish payment completion. */
 export function departureAdmissionTime(input: {
-  date: string; time: string; now?: Date;
+  date: string; time: string; now?: Date; bookingCutoffMinutes?: unknown;
   paymentIntentId?: string; reservationKey?: string;
   paymentSuccess?: PaymentSuccessProof;
 }): Date {
@@ -24,7 +25,7 @@ export function departureAdmissionTime(input: {
   let startsAt: number;
   try {
     if (!isValidDepartureDate(input.date) || !/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(input.time)) throw new Error();
-    startsAt = proof?.departureDeadlineUtc === undefined ? new Date(localDepartureToUtc(input.date, input.time)).getTime() : proof.departureDeadlineUtc;
+    startsAt = proof?.departureDeadlineUtc === undefined ? new Date(localDepartureToUtc(input.date, input.time)).getTime() - (proof ? 0 : resolveBookingCutoff(input.bookingCutoffMinutes)) * 60000 : proof.departureDeadlineUtc;
   }
   catch { throw new DepartureAdmissionError('INVALID_DEPARTURE', 'Select a valid departure date and time.'); }
   const now = input.now || new Date();
@@ -43,24 +44,24 @@ export function departureAdmissionTime(input: {
       throw new DepartureAdmissionError('PAYMENT_TIME_UNPROVEN', 'Payment confirmation is still being reconciled.');
     }
     if (proof.succeededAt.getTime() >= startsAt) {
-      throw new DepartureAdmissionError('DEPARTURE_NOT_FUTURE', 'This departure had already started when payment completed.');
+      throw new DepartureAdmissionError('DEPARTURE_NOT_FUTURE', 'The booking cutoff had passed when payment completed.');
     }
     return proof.succeededAt;
   }
   if (now.getTime() >= startsAt) {
     throw new DepartureAdmissionError(input.paymentIntentId ? 'PAYMENT_TIME_UNPROVEN' : 'DEPARTURE_NOT_FUTURE',
-      input.paymentIntentId ? 'Payment confirmation is still being reconciled.' : 'This departure has already started. Choose another time or date.');
+      input.paymentIntentId ? 'Payment confirmation is still being reconciled.' : 'Bookings for this departure are closed. Choose another time or date.');
   }
   return now;
 }
 
 export function quotedDepartureDeadlines(cart: readonly unknown[]) {
   return cart.map(raw => {
-    const item = raw as { selectedDate?: string; selectedTime?: string };
+    const item = raw as { selectedDate?: string; selectedTime?: string; bookingCutoffMinutes?: unknown };
     const date = item?.selectedDate || '';
     const time = item?.selectedTime || '';
-    departureAdmissionTime({ date, time });
-    return new Date(localDepartureToUtc(date, time)).getTime();
+    departureAdmissionTime({ date, time, bookingCutoffMinutes: item.bookingCutoffMinutes });
+    return new Date(localDepartureToUtc(date, time)).getTime() - resolveBookingCutoff(item.bookingCutoffMinutes) * 60000;
   });
 }
 

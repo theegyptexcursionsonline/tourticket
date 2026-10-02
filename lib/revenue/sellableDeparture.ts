@@ -1,3 +1,4 @@
+import { resolveBookingCutoff } from '@/lib/bookings/bookingCutoff';
 import Availability from '@/lib/models/Availability';
 import Booking from '@/lib/models/Booking';
 import StopSale from '@/lib/models/StopSale';
@@ -16,6 +17,7 @@ import { RevenuePricingWriteError } from '@/lib/revenue/priceWriteGate';
 import type { Types } from 'mongoose';
 
 type SellableTour = {
+  bookingCutoffMinutes?: number;
   _id: Types.ObjectId;
   availability?: {
     type?: string;
@@ -39,6 +41,7 @@ type BookingRow = { adultGuests?: number; childGuests?: number; infantGuests?: n
 
 export type SellableDepartureEvidence = {
   startsAtUtc: string;
+  bookingClosesAtUtc?: string;
   capacity: number;
   booked: number;
   available: number;
@@ -55,7 +58,7 @@ export async function assertRevenuePriceTargetSellable(target: {
   const tenantId = paidTenantId({ tenant_id: target.tenantId || '' });
   const tenantFilter = tenantId === 'default' ? DEFAULT_TENANT_FILTER : paidTenantFilter(tenantId);
   const tour = await Tour.findOne({ _id: target.tourId, isPublished: true, ...tenantFilter })
-    .select('_id availability bookingOptions')
+    .select('_id availability bookingOptions bookingCutoffMinutes')
     .lean<SellableTour | null>();
   if (!tour) throw new RevenuePricingWriteError(422, 'TOUR_UNAVAILABLE', 'The approved tour is not published or is outside the EEO tenant.');
 
@@ -94,6 +97,8 @@ export async function assertRevenuePriceTargetSellable(target: {
     return sum + (explicitGuests || Number(booking.guests || 0));
   }, 0);
   const startsAtUtc = localDepartureToUtc(target.date, target.time);
+  const bookingClosesAtUtc = new Date(new Date(startsAtUtc).getTime() - resolveBookingCutoff(tour.bookingCutoffMinutes) * 60000).toISOString();
+  if (Date.now() >= new Date(bookingClosesAtUtc).getTime()) throw new RevenuePricingWriteError(422, 'DEPARTURE_NOT_FUTURE', 'Bookings for this departure are closed. Choose another time or date.');
   const result = evaluateDepartureSellability({
     scheduled: isTourScheduled(tour, date),
     startsAtUtc,
@@ -104,7 +109,7 @@ export async function assertRevenuePriceTargetSellable(target: {
     optionStopSale,
     booked,
   });
-  return { ...result, optionId: aliases.find((alias) => alias !== target.optionKey) || aliases[0] };
+  return { ...result, bookingClosesAtUtc, optionId: aliases.find((alias) => alias !== target.optionKey) || aliases[0] };
 }
 
 /** Capacity recovery for an immutable, verified on-time paid departure.

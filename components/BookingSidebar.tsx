@@ -51,6 +51,7 @@ import {
 
 // Enhanced Types with database compatibility
 interface Tour {
+  bookingCutoffMinutes?: number;
   id?: string;
   _id?: string;
   pricingKey?: string;
@@ -357,8 +358,14 @@ const StepsIndicator: React.FC<{
   );
 };
 
+function egyptCalendarDate() {
+  const parts = new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Cairo', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date());
+  const value = (type: string) => Number(parts.find(part => part.type === type)?.value);
+  return new Date(value('year'), value('month') - 1, value('day'));
+}
+
 // Enhanced Calendar Component with availability indicators
-const CalendarWidget: React.FC<{
+export const CalendarWidget: React.FC<{
   selectedDate: Date | null;
   onDateSelect: (date: Date) => void;
   availabilityData?: { [key: string]: 'high' | 'medium' | 'low' | 'full' };
@@ -370,17 +377,19 @@ const CalendarWidget: React.FC<{
   hasLoadedStopSales?: boolean;
   stopSaleLoadFailed?: boolean;
   onRetryStopSales?: () => void;
-}> = ({ selectedDate, onDateSelect, availabilityData = {}, availableDays, hasLoadedStopSales = true, stopSaleLoadFailed = false, onRetryStopSales }) => {
+  onMonthChange?: (month: Date) => void;
+  visibleMonth?: Date;
+}> = ({ selectedDate, onDateSelect, availabilityData = {}, availableDays, hasLoadedStopSales = true, stopSaleLoadFailed = false, onRetryStopSales, onMonthChange, visibleMonth }) => {
   const t = useTranslations();
   const locale = useLocale();
   const rtl = isRTL(locale);
   const PrevMonthIcon = rtl ? ChevronRight : ChevronLeft;
   const NextMonthIcon = rtl ? ChevronLeft : ChevronRight;
-  const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [currentMonth, setCurrentMonth] = useState(() => visibleMonth || egyptCalendarDate());
 
   const daysInMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0).getDate();
   const firstDayOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1).getDay();
-  const today = new Date();
+  const today = egyptCalendarDate();
 
   const monthNames = [
     'January', 'February', 'March', 'April', 'May', 'June',
@@ -388,24 +397,25 @@ const CalendarWidget: React.FC<{
   ];
 
   const dayNames = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
+  const nextAvailableKey = Object.keys(availabilityData).sort().find(key =>
+    key >= toDateOnlyString(today) && availabilityData[key] !== 'full'
+    && (!availableDays?.length || availableDays.includes(new Date(`${key}T12:00:00`).getDay()))
+    && key.startsWith(`${currentMonth.getFullYear()}-${String(currentMonth.getMonth() + 1).padStart(2, '0')}`));
+
 
   const navigateMonth = (direction: 'prev' | 'next') => {
-    setCurrentMonth(prev => {
-      const newMonth = new Date(prev);
-      if (direction === 'prev') {
-        newMonth.setMonth(prev.getMonth() - 1);
-      } else {
-        newMonth.setMonth(prev.getMonth() + 1);
-      }
-      return newMonth;
-    });
+    const nextMonth = new Date(currentMonth);
+    nextMonth.setDate(1);
+    nextMonth.setMonth(currentMonth.getMonth() + (direction === 'prev' ? -1 : 1));
+    setCurrentMonth(nextMonth);
+    onMonthChange?.(nextMonth);
   };
 
   const getAvailabilityColor = (availability: string) => {
     switch (availability) {
       case 'high': return 'bg-green-100 border-green-300 text-green-800';
-      case 'medium': return 'bg-yellow-100 border-yellow-300 text-yellow-800';
-      case 'low': return 'bg-orange-100 border-orange-300 text-orange-800';
+      case 'medium': return 'bg-green-100 border-green-300 text-green-800';
+      case 'low': return 'bg-green-100 border-green-300 text-green-800';
       case 'full': return 'bg-red-100 border-red-300 text-red-800 cursor-not-allowed';
       default: return 'bg-gray-50 border-gray-200 text-gray-700';
     }
@@ -441,7 +451,7 @@ const CalendarWidget: React.FC<{
       // Check if day of week is available (if availableDays is provided)
       const dayOfWeek = currentDate.getDay();
       const isDayUnavailable = availableDays && availableDays.length > 0 && !availableDays.includes(dayOfWeek);
-      const isUnavailable = isPast || isFull || isDayUnavailable;
+      const isUnavailable = isPast || isFull || isDayUnavailable || !availability;
 
       const unavailableTitle = isPast
         ? undefined
@@ -454,28 +464,28 @@ const CalendarWidget: React.FC<{
           key={day}
           onClick={() => !isUnavailable && onDateSelect(currentDate)}
           disabled={isUnavailable}
+          aria-pressed={Boolean(isSelected && !isUnavailable)}
+          aria-current={isToday ? 'date' : undefined}
           title={unavailableTitle}
           aria-label={unavailableTitle ? `${day} — ${unavailableTitle}` : String(day)}
           whileHover={{ scale: isUnavailable ? 1 : 1.1 }}
           whileTap={{ scale: isUnavailable ? 1 : 0.95 }}
           className={`relative w-10 h-10 text-sm rounded-full border-2 transition-all font-medium ${
-            isSelected
+            isSelected && !isUnavailable
               ? 'bg-gradient-to-br from-red-500 to-orange-600 text-white border-red-600 shadow-lg scale-110'
-              : isToday && !isDayUnavailable && !isFull
+              : isToday && !isUnavailable
               ? 'bg-gradient-to-br from-red-100 to-red-200 text-red-700 border-red-300 font-bold'
-              : isPast || isDayUnavailable || isFull
-              ? 'text-gray-300 bg-gray-50 border-gray-100 cursor-not-allowed line-through'
+              : isUnavailable
+              ? 'text-gray-400 bg-gray-50 border-gray-200 cursor-not-allowed line-through'
               : availability
               ? getAvailabilityColor(availability) + ' hover:scale-105'
               : 'bg-white border-gray-200 text-gray-700 hover:border-gray-300 hover:scale-105'
           }`}
         >
           {day}
-          {availability && availability !== 'full' && !isDayUnavailable && (
+          {availability && !isUnavailable && (
             <div className={`absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-2 h-2 rounded-full ${
-              availability === 'high' ? 'bg-green-400' :
-              availability === 'medium' ? 'bg-yellow-400' :
-              'bg-orange-400'
+              'bg-green-400'
             }`} />
           )}
         </motion.button>
@@ -503,6 +513,7 @@ const CalendarWidget: React.FC<{
           <motion.button
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
+            aria-label="Previous month"
             onClick={() => navigateMonth('prev')}
             className="p-2 hover:bg-gray-100 rounded-full transition-colors"
           >
@@ -511,6 +522,7 @@ const CalendarWidget: React.FC<{
           <motion.button
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
+            aria-label="Next month"
             onClick={() => navigateMonth('next')}
             className="p-2 hover:bg-gray-100 rounded-full transition-colors"
           >
@@ -541,15 +553,7 @@ const CalendarWidget: React.FC<{
           <div className="flex items-center justify-center gap-2 sm:gap-4 mb-4 text-xs">
             <div className="flex items-center gap-1">
               <div className="w-3 h-3 rounded-full bg-green-400"></div>
-              <span className="text-gray-600">High</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <div className="w-3 h-3 rounded-full bg-yellow-400"></div>
-              <span className="text-gray-600">Medium</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <div className="w-3 h-3 rounded-full bg-orange-400"></div>
-              <span className="text-gray-600">Low</span>
+              <span className="text-gray-600">Available</span>
             </div>
             <div className="flex items-center gap-1">
               <div className="w-3 h-3 rounded-full bg-red-400"></div>
@@ -557,6 +561,14 @@ const CalendarWidget: React.FC<{
             </div>
           </div>
 
+          <p role="status" className="mb-3 rounded-lg bg-slate-50 p-3 text-xs text-slate-600">{availabilityData[toDateOnlyString(today)] === 'full' ? 'No departures are available today. Please choose another available date.' : 'Unavailable dates cannot be selected. Choose a date with an available departure.'}</p>
+          {nextAvailableKey && (
+            <button type="button" className="mb-3 w-full rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-semibold text-red-700" onClick={() => {
+              const [year, month, day] = nextAvailableKey.split('-').map(Number);
+              onDateSelect(new Date(year, month - 1, day));
+            }}>Next available date: {new Date(`${nextAvailableKey}T12:00:00`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</button>
+          )}
+          {!nextAvailableKey && <p className="mb-3 text-xs text-slate-600">No departures are available this month. Please try another month.</p>}
           {/* Day names */}
           <div className="grid grid-cols-7 gap-1 mb-3">
             {dayNames.map(day => (
@@ -1595,41 +1607,59 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
   // this is true so stop-saled dates can't briefly render as "available".
   // If we got server-prefetched data we're already "loaded" on first paint.
   const [stopSaleLoadFailed, setStopSaleLoadFailed] = useState(false);
-  const [hasLoadedStopSales, setHasLoadedStopSales] = useState(
-    !!initialStopSaleDates,
-  );
+  const [hasLoadedStopSales, setHasLoadedStopSales] = useState(false);
+  const [monthAvailability, setMonthAvailability] = useState<Record<string, 'high' | 'full'>>({});
 
+  const [calendarMonth, setCalendarMonth] = useState(egyptCalendarDate);
+  const availabilityRequest = useRef(0);
+  const availabilityReads = useRef(new Map<string, Promise<{ data?: { days?: Record<string, StopSaleDayInfo> }; availableSlotsByDate?: Record<string, unknown[]>; fullyBookedDates?: string[] } | null>>());
+  const readAvailability = useCallback((url: string): Promise<{ data?: { days?: Record<string, StopSaleDayInfo> }; availableSlotsByDate?: Record<string, unknown[]>; fullyBookedDates?: string[] } | null> => {
+    const pending = availabilityReads.current.get(url);
+    if (pending) return pending;
+    const request = fetch(url, { cache: 'no-store' }).then(r => r.ok ? r.json() : null).catch(() => null).finally(() => availabilityReads.current.delete(url));
+    availabilityReads.current.set(url, request);
+    return request;
+  }, []);
   const stopSaleTourId = tour?.id || tour?._id;
   const fetchStopSaleDates = useCallback(async (monthsOverride?: Array<{ month: number; year: number }>) => {
+    const requestId = ++availabilityRequest.current;
+    setHasLoadedStopSales(false);
     const tourId = stopSaleTourId;
-    if (!tourId) return { days: {} as Record<string, StopSaleDayInfo>, failed: false };
+    if (!tourId) return { days: {} as Record<string, StopSaleDayInfo>, failed: true, requestId };
 
     try {
       const monthsToFetch = monthsOverride && monthsOverride.length > 0
         ? monthsOverride
-        : (() => {
-            const today = new Date();
-            const months: Array<{ month: number; year: number }> = [];
-            for (let offset = 0; offset < 6; offset += 1) {
-              const d = new Date(today.getFullYear(), today.getMonth() + offset, 1);
-              months.push({ month: d.getMonth() + 1, year: d.getFullYear() });
-            }
-            return months;
-          })();
+        : [{ month: calendarMonth.getMonth() + 1, year: calendarMonth.getFullYear() }];
 
       const responses = await Promise.all(
         monthsToFetch.map(({ month, year }) =>
-          fetch(`/api/tours/${tourId}/stop-sales?month=${month}&year=${year}`, {
-            cache: 'no-store',
-          })
-            .then((r) => (r.ok ? r.json() : null))
-            .catch(() => null),
+          Promise.all([
+            readAvailability(`/api/tours/${tourId}/stop-sales?month=${month}&year=${year}`),
+            readAvailability(`/api/tours/${tourId}/availability?month=${year}-${String(month).padStart(2, '0')}`),
+          ]).then(([stops, capacity]) => stops && capacity && capacity.availableSlotsByDate && Array.isArray(capacity.fullyBookedDates) ? { ...stops, capacity } : null).catch(() => null),
         ),
       );
 
       // A month we could not load is NOT a month with no stop-sales. Reporting
       // it as available is how blocked dates were offered for booking.
       const failed = responses.some((res) => res === null);
+      const monthMap: Record<string, 'high' | 'full'> = {};
+      for (const response of responses) {
+        if (!response) continue;
+        for (const date of (response.capacity.fullyBookedDates || [])) monthMap[date] = 'full';
+        for (const [date, slots] of Object.entries(response.capacity.availableSlotsByDate || {})) {
+          monthMap[date] = Array.isArray(slots) && slots.length > 0 ? 'high' : 'full';
+        }
+      }
+      if (requestId === availabilityRequest.current) {
+        setMonthAvailability(monthMap);
+        if (!failed) {
+          setBookingData(previous => previous.selectedDate && monthMap[toDateOnlyString(previous.selectedDate)] === 'full'
+            ? { ...previous, selectedDate: null, selectedTimeSlot: null }
+            : previous);
+        }
+      }
       const next: Record<string, StopSaleDayInfo> = {};
       for (const res of responses) {
         const days = res?.data?.days as Record<string, StopSaleDayInfo> | undefined;
@@ -1647,21 +1677,22 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
         }
       }
 
-      return { days: next, failed };
+      return { days: next, failed, requestId };
     } catch (err) {
       // The server still blocks the booking, but letting the calendar look
       // fully open sends the guest through four steps to a hard rejection.
       console.warn('[BookingSidebar] stop-sale month fetch failed:', err);
-      return { days: {} as Record<string, StopSaleDayInfo>, failed: true };
+      return { days: {} as Record<string, StopSaleDayInfo>, failed: true, requestId };
     }
-  }, [stopSaleTourId]);
+  }, [stopSaleTourId, calendarMonth, readAvailability]);
 
   useEffect(() => {
+    if (!isOpen || !showDatePicker) return;
     let cancelled = false;
 
     (async () => {
-      const { days, failed } = await fetchStopSaleDates();
-      if (cancelled) return;
+      const { days, failed, requestId } = await fetchStopSaleDates();
+      if (cancelled || requestId !== availabilityRequest.current) return;
       if (Object.keys(days).length > 0) {
         setStopSaleDates((prev) => ({ ...prev, ...days }));
       }
@@ -1672,11 +1703,12 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
     return () => {
       cancelled = true;
     };
-  }, [fetchStopSaleDates]);
+  }, [fetchStopSaleDates, isOpen, showDatePicker]);
 
   const retryStopSales = useCallback(() => {
     setHasLoadedStopSales(false);
-    void fetchStopSaleDates().then(({ days, failed }) => {
+    void fetchStopSaleDates().then(({ days, failed, requestId }) => {
+      if (requestId !== availabilityRequest.current) return;
       if (Object.keys(days).length > 0) {
         setStopSaleDates((prev) => ({ ...prev, ...days }));
       }
@@ -1685,81 +1717,9 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
     });
   }, [fetchStopSaleDates]);
 
-  useEffect(() => {
-    if (!isOpen || !showDatePicker) return;
-    void fetchStopSaleDates().then(({ days, failed }) => {
-      if (Object.keys(days).length > 0) {
-        setStopSaleDates((prev) => ({ ...prev, ...days }));
-      }
-      setStopSaleLoadFailed(failed);
-    });
-  }, [isOpen, showDatePicker, fetchStopSaleDates]);
-
   // Generate calendar availability based on tour's availability settings
   const calendarAvailability = useMemo(() => {
-    const availabilityMap: { [key: string]: 'high' | 'medium' | 'low' | 'full' } = {};
-
-    if (!tour?.availability) return availabilityMap;
-
-    const { type, availableDays = [], blockedDates = [], startDate, endDate, specificDates = [] } = tour.availability;
-
-    // Generate dates for the next 6 months
-    const today = new Date();
-    const sixMonthsLater = new Date();
-    sixMonthsLater.setMonth(sixMonthsLater.getMonth() + 6);
-
-    // Convert blocked dates to a Set for quick lookup
-    const blockedSet = new Set(
-      blockedDates.map(d => {
-        const date = new Date(d);
-        return toDateOnlyString(date);
-      })
-    );
-
-    // For specific_dates type, only those dates are available
-    if (type === 'specific_dates' && specificDates.length > 0) {
-      specificDates.forEach(d => {
-        const date = new Date(d);
-        const dateKey = toDateOnlyString(date);
-        if (!blockedSet.has(dateKey) && date >= today) {
-          availabilityMap[dateKey] = 'high';
-        }
-      });
-      return availabilityMap;
-    }
-
-    // For date_range type, check if date falls within range
-    const rangeStart = startDate ? new Date(startDate) : today;
-    const rangeEnd = endDate ? new Date(endDate) : sixMonthsLater;
-
-    // Iterate through each day
-    for (let d = new Date(today); d <= sixMonthsLater; d.setDate(d.getDate() + 1)) {
-      const dateKey = toDateOnlyString(d);
-      const dayOfWeek = d.getDay(); // 0 = Sunday, 6 = Saturday
-
-      // Check if blocked
-      if (blockedSet.has(dateKey)) {
-        availabilityMap[dateKey] = 'full';
-        continue;
-      }
-
-      // Check date range for date_range type
-      if (type === 'date_range') {
-        if (d < rangeStart || d > rangeEnd) {
-          continue; // Outside date range, not available
-        }
-      }
-
-      // Check if day of week is available
-      if (availableDays.length > 0 && !availableDays.includes(dayOfWeek)) {
-        // Day not in available days - mark as unavailable (don't show indicator)
-        continue;
-      }
-
-      // Day is available - assign availability level
-      // Use 'high' for available days (can be enhanced with actual booking data later)
-      availabilityMap[dateKey] = 'high';
-    }
+    const availabilityMap: Record<string, 'high' | 'medium' | 'low' | 'full'> = { ...monthAvailability };
 
     // Overlay stop-sale state: fully blocked days become 'full' (unclickable),
     // partially blocked days downgrade to 'low' as a visual warning while
@@ -1773,7 +1733,8 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
     }
 
     return availabilityMap;
-  }, [tour, stopSaleDates]);
+  }, [monthAvailability, stopSaleDates]);
+
 
   // Get tour display data with proper fallbacks
   const tourDisplayData = useMemo(() => {
@@ -1913,7 +1874,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
             duration: option.duration || tourDisplayData?.duration || '',
             languages: option.languages || tourDisplayData?.languages || ['English'],
             description: option.description || 'Experience our tour',
-            timeSlots: bindTimeSlotsToOption(optionId, futureDepartureSlots(selectedDateKey, baseTimeSlots)).map((slot: TimeSlot) => ({
+            timeSlots: bindTimeSlotsToOption(optionId, futureDepartureSlots(selectedDateKey, baseTimeSlots, new Date(), tour.bookingCutoffMinutes)).map((slot: TimeSlot) => ({
               ...slot,
               available: isStopSaleBlocked ? 0 : slot.available,
             })),
@@ -1955,7 +1916,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
             duration: tourDisplayData?.duration || '',
             languages: tourDisplayData?.languages || ['English'],
             description: 'Perfect introduction to the destination with expert guide',
-            timeSlots: bindTimeSlotsToOption(fallbackOptionId, futureDepartureSlots(selectedDateKey, baseTimeSlots)).map((slot) => ({
+            timeSlots: bindTimeSlotsToOption(fallbackOptionId, futureDepartureSlots(selectedDateKey, baseTimeSlots, new Date(), tour.bookingCutoffMinutes)).map((slot) => ({
               ...slot,
               available: isStopSaleBlocked ? 0 : slot.available,
             })),
@@ -2217,8 +2178,8 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
     }
 
     if (bookingData.selectedTimeSlot && (!bookingData.selectedDate || !isFutureDeparture(
-      toDateOnlyString(bookingData.selectedDate), bookingData.selectedTimeSlot.time))) {
-      toast.error('This departure has already started. Choose another time or date.');
+      toDateOnlyString(bookingData.selectedDate), bookingData.selectedTimeSlot.time, new Date(), tour.bookingCutoffMinutes))) {
+      toast.error('Bookings for this departure are closed. Choose another time or date.');
       setCurrentStep(1);
       return;
     }
@@ -2228,7 +2189,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
       // Scroll to top after step change
       setTimeout(scrollToTop, 100);
     }
-  }, [currentStep, bookingData.selectedTimeSlot, bookingData.selectedDate, scrollToTop]);
+  }, [currentStep, bookingData.selectedTimeSlot, bookingData.selectedDate, scrollToTop, tour.bookingCutoffMinutes]);
 
   const handleBack = useCallback(() => {
     if (currentStep > 1) {
@@ -2289,21 +2250,15 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
 
   // Enhanced date selection
   const handleDateSelect = useCallback((date: Date) => {
+    const dateKey = toDateOnlyString(date);
+    const dayAvailability = calendarAvailability[dateKey];
+    if (!hasLoadedStopSales || stopSaleLoadFailed || !dayAvailability || dayAvailability === 'full') return;
     setBookingData(prev => ({ ...prev, selectedDate: date, selectedTimeSlot: null }));
     setShowDatePicker(false);
     setAvailability(null);
     setCurrentStep(1);
 
-    const dateKey = toDateOnlyString(date);
-    const dayAvailability = calendarAvailability[dateKey];
-
-    if (dayAvailability === 'full') {
-      toast.error(t('booking.dateFullyBooked'), {
-        id: 'availability-toast',
-        duration: 4000,
-        icon: '😞'
-      });
-    } else if (dayAvailability === 'low') {
+    if (dayAvailability === 'low') {
       toast(t('booking.limitedAvailability'), {
         id: 'availability-toast',
         icon: '⚡',
@@ -2322,11 +2277,11 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
         icon: '📅'
       });
     }
-  }, [calendarAvailability]);
+  }, [calendarAvailability, hasLoadedStopSales, stopSaleLoadFailed]);
 
   const handleTimeSlotSelect = useCallback(async (timeSlot: TimeSlot) => {
-    if (!bookingData.selectedDate || !isFutureDeparture(toDateOnlyString(bookingData.selectedDate), timeSlot.time)) {
-      toast.error('This departure has already started. Choose another time or date.');
+    if (!bookingData.selectedDate || !isFutureDeparture(toDateOnlyString(bookingData.selectedDate), timeSlot.time, new Date(), tour.bookingCutoffMinutes)) {
+      toast.error('Bookings for this departure are closed. Choose another time or date.');
       return;
     }
     if (timeSlot.available === 0) {
@@ -2509,9 +2464,9 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
       }
 
       const normalizedDate = toDateOnlyString(selectedDateValue);
-      if (!isFutureDeparture(normalizedDate, selectedTimeSlot.time)) {
+      if (!isFutureDeparture(normalizedDate, selectedTimeSlot.time, new Date(), tour.bookingCutoffMinutes)) {
         setCurrentStep(1);
-        throw new Error('This departure has already started. Choose another time or date.');
+        throw new Error('Bookings for this departure are closed. Choose another time or date.');
       }
       const selectedAddOns = clampSelectedPerPersonAddOns(
         bookingData.selectedAddOns,
@@ -2617,7 +2572,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
     } finally {
       setIsProcessing(false);
     }
-  }, [isProcessing, onClose, router, bookingData, availability, tourDisplayData, addToCart]);
+  }, [isProcessing, onClose, router, bookingData, availability, tourDisplayData, addToCart, tour.bookingCutoffMinutes, tour.title, t]);
 
   const formatDate = useCallback((date: Date) => {
     return date.toLocaleDateString('en-US', {
@@ -2821,6 +2776,8 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
                         hasLoadedStopSales={hasLoadedStopSales}
                         stopSaleLoadFailed={stopSaleLoadFailed}
                         onRetryStopSales={retryStopSales}
+                        onMonthChange={setCalendarMonth}
+                        visibleMonth={calendarMonth}
                       />
                     </motion.div>
                   )}

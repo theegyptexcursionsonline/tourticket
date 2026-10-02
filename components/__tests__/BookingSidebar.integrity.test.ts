@@ -61,8 +61,10 @@ describe('BookingSidebar states only what the data proves', () => {
 
 describe('BookingSidebar availability fails closed', () => {
   it('reports whether any stop-sale month failed to load', () => {
-    expect(source).toMatch(/return \{ days: next, failed \}/);
+    expect(source).toMatch(/return \{ days: next, failed, requestId \}/);
     expect(source).toMatch(/failed: true/);
+    expect(source).toContain('if (cancelled || requestId !== availabilityRequest.current) return;');
+    expect(source).toContain('if (requestId !== availabilityRequest.current) return;');
   });
 
   it('tracks the failure in state rather than swallowing it', () => {

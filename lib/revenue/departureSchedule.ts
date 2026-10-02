@@ -1,3 +1,4 @@
+import { resolveBookingCutoff } from '@/lib/bookings/bookingCutoff';
 const sameDate = (left: Date, right: Date) => left.toISOString().slice(0, 10) === right.toISOString().slice(0, 10);
 
 export const EEO_TIME_ZONE = 'Africa/Cairo';
@@ -60,14 +61,14 @@ export function isTourScheduled(tour: TourSchedule, date: Date) {
 }
 
 /** Shared display/admission clock rule. Missing and malformed slots fail closed. */
-export function isFutureDeparture(date: string, time: string, now = new Date()) {
+export function isFutureDeparture(date: string, time: string, now = new Date(), bookingCutoffMinutes?: unknown) {
   try {
-    return Number.isFinite(now.getTime()) && new Date(localDepartureToUtc(date, time)).getTime() > now.getTime();
+    return Number.isFinite(now.getTime()) && new Date(localDepartureToUtc(date, time)).getTime() - resolveBookingCutoff(bookingCutoffMinutes) * 60000 > now.getTime();
   } catch {
     return false;
   }
 }
 
-export function futureDepartureSlots<T extends { time: string }>(date: string, slots: readonly T[], now = new Date()): T[] {
-  return slots.filter(slot => isFutureDeparture(date, slot.time, now));
+export function futureDepartureSlots<T extends { time: string }>(date: string, slots: readonly T[], now = new Date(), bookingCutoffMinutes?: unknown): T[] {
+  return slots.filter(slot => isFutureDeparture(date, slot.time, now, bookingCutoffMinutes));
 }

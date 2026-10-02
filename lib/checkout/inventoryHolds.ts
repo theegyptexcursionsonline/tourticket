@@ -1,3 +1,4 @@
+import { currentBookingDeadline } from './currentBookingCutoff';
 import { departureAdmissionTime, DepartureAdmissionError, type PaymentSuccessProof } from '@/lib/checkout/departureAdmission';
 import { randomUUID } from 'node:crypto';
 import type { Types } from 'mongoose';
@@ -9,6 +10,7 @@ import { normalizePriceDate } from '@/lib/revenue/pricingResolver';
 import { paidTenantValue } from '@/lib/tenant/paidTenant';
 
 export interface InventoryHoldCartItem {
+  bookingCutoffMinutes?: number;
   _id?: unknown;
   id?: unknown;
   selectedDate?: string;
@@ -27,6 +29,7 @@ export interface InventoryAvailabilitySnapshot {
   optionKey: string;
   requestedGuests: number;
   startsAtUtc: string;
+  bookingClosesAtUtc?: string;
   capacity: number;
   booked: number;
   activeHeld: number;
@@ -338,6 +341,7 @@ export async function inspectInventoryAvailability(item: InventoryHoldCartItem):
       ...target,
       requestedGuests: target.guests,
       startsAtUtc: evidence.startsAtUtc,
+      bookingClosesAtUtc: evidence.bookingClosesAtUtc,
       capacity: evidence.capacity,
       booked: evidence.booked,
       activeHeld,
@@ -368,7 +372,7 @@ async function reserveOne(
       throw new InventoryHoldError('INVENTORY_IDEMPOTENCY_CONFLICT', 'The reservation key is already bound to different commerce evidence.');
     }
     if (existing?.state === 'converted') return existing;
-    departureAdmissionTime({ date: target.date, time: target.time });
+    await currentBookingDeadline(target);
     // A retry must return the original hold window, not extend inventory
     // indefinitely every time a client repeats the same idempotent request.
     if (existing?.state === 'active' && new Date(existing.expiresAt).getTime() > Date.now()) return existing;
@@ -388,7 +392,7 @@ async function reserveOne(
       requested: target.guests,
     });
 
-    departureAdmissionTime({ date: target.date, time: target.time });
+    await currentBookingDeadline(target);
     const now = new Date();
     return CheckoutInventoryHold.findOneAndUpdate(
       { tenantId: target.tenantId, reservationKey, itemIndex },
@@ -755,7 +759,7 @@ async function ensureOneForPayment(input: {
       }
       if (booking.status !== 'Confirmed' || booking.paymentStatus !== 'paid') {
         try {
-          departureAdmissionTime({ date: target.date, time: target.time, paymentIntentId: input.paymentIntentId,
+          departureAdmissionTime({ date: target.date, time: target.time, bookingCutoffMinutes: input.item.bookingCutoffMinutes, paymentIntentId: input.paymentIntentId,
             reservationKey: input.reservationKey, paymentSuccess: input.paymentSuccess });
         } catch (error) {
           if (error instanceof DepartureAdmissionError) throw new InventoryHoldError(error.code, error.message);
@@ -791,7 +795,7 @@ async function ensureOneForPayment(input: {
       return hold;
     }
     try {
-      departureAdmissionTime({ date: target.date, time: target.time,
+      departureAdmissionTime({ date: target.date, time: target.time, bookingCutoffMinutes: input.item.bookingCutoffMinutes,
         paymentIntentId: input.paymentIntentId, reservationKey: input.reservationKey,
         paymentSuccess: input.paymentSuccess });
     } catch (error) {
@@ -821,7 +825,7 @@ async function ensureOneForPayment(input: {
       requested: target.guests,
     });
     try {
-      departureAdmissionTime({ date: target.date, time: target.time,
+      departureAdmissionTime({ date: target.date, time: target.time, bookingCutoffMinutes: input.item.bookingCutoffMinutes,
         paymentIntentId: input.paymentIntentId, reservationKey: input.reservationKey, paymentSuccess: input.paymentSuccess });
     } catch (error) {
       if (error instanceof DepartureAdmissionError) throw new InventoryHoldError(error.code, error.message);
