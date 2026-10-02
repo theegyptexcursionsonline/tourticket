@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
 import Discount from '@/lib/models/Discount';
+import { discountTenantFilter } from '@/lib/discounts/tenantScope';
 import { enforcePublicActionLimits } from '@/lib/security/distributedAbuseLimit';
 import { PublicInputError, readBoundedJson } from '@/lib/security/publicInput';
 
@@ -44,7 +45,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const discount = await Discount.findOne({ code })
+    const discount = await Discount.findOne({ ...discountTenantFilter(), code })
       .select('discountType value isActive expiresAt usageLimit timesUsed')
       .lean();
     const unavailable = !discount

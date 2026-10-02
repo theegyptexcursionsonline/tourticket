@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { getLocale } from 'next-intl/server';
 import dbConnect from '@/lib/dbConnect';
 import Discount from '@/lib/models/Discount';
+import { discountTenantFilter } from '@/lib/discounts/tenantScope';
 import TourModel from '@/lib/models/Tour';
 import DestinationModel from '@/lib/models/Destination';
 import ReviewModel from '@/lib/models/Review';
@@ -87,7 +88,7 @@ export default async function OfferPage({
   await dbConnect();
 
   // The Discount record is the sole authority — the same checks checkout runs.
-  const record = await Discount.findOne({ code: raw.toUpperCase() }).lean() as
+  const record = await Discount.findOne({ ...discountTenantFilter(), code: raw.toUpperCase() }).lean() as
     | { code: string; discountType: 'percentage' | 'fixed'; value: number; isActive: boolean; expiresAt?: Date; usageLimit?: number; timesUsed: number }
     | null;
   if (!record) {

@@ -2,6 +2,7 @@
 import mongoose, { Document, Schema, Model } from 'mongoose';
 
 export interface IDiscount extends Document {
+  tenantId: string;
   code: string;
   discountType: 'percentage' | 'fixed';
   value: number;
@@ -12,10 +13,10 @@ export interface IDiscount extends Document {
 }
 
 const DiscountSchema: Schema<IDiscount> = new Schema({
+  tenantId: { type: String, default: 'default', required: true },
   code: {
     type: String,
     required: [true, 'Discount code is required.'],
-    unique: true,
     trim: true,
     uppercase: true,
   },
@@ -45,7 +46,9 @@ const DiscountSchema: Schema<IDiscount> = new Schema({
     default: 0,
     min: [0, 'Times used cannot be negative.'],
   },
-}, { timestamps: true });
+}, { timestamps: true, autoIndex: false });
+
+DiscountSchema.index({ tenantId: 1, code: 1 }, { unique: true });
 
 const Discount: Model<IDiscount> = mongoose.models.Discount || mongoose.model<IDiscount>('Discount', DiscountSchema);
 
