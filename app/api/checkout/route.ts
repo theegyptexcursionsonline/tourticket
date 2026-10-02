@@ -1,4 +1,7 @@
 // app/api/checkout/route.ts (With booking reference generation)
+import { discountTenantFilter } from '@/lib/discounts/tenantScope';
+import { isCompletePaidCheckoutReplay } from '@/lib/checkout/confirmedCheckoutReplay';
+import { departureAdmissionTime, DepartureAdmissionError, parseQuotedDepartureDeadlines } from '@/lib/checkout/departureAdmission';
 import { NextRequest, NextResponse } from 'next/server';
 import { randomBytes } from 'node:crypto';
 import dbConnect from '@/lib/dbConnect';
@@ -114,7 +117,7 @@ async function recordCardDiscountUsageOnce(paymentIntentId: string, discountCode
   ));
   if (!usageClaimed) return;
   try {
-    await Discount.findOneAndUpdate({ code: discountCode }, { $inc: { timesUsed: 1 } });
+    await Discount.findOneAndUpdate({ code: discountCode, ...discountTenantFilter() }, { $inc: { timesUsed: 1 } });
   } catch (discountError) {
     await CheckoutPaymentQuote.updateOne(
       { paymentIntentId, tenantId: 'default' },
@@ -197,11 +200,12 @@ export async function POST(request: NextRequest) {
     }
 
     const normalizedDiscountCode = discountCode ? String(discountCode).trim().toUpperCase() : undefined;
+    // A paid quote remains immutable recovery evidence after its purchase window expires.
+    // Provider success, customer, amount and exact quote binding are verified below.
     const storedQuote = paymentDetails?.paymentIntentId && paymentMethod !== 'bank'
       ? await CheckoutPaymentQuote.findOne({
           paymentIntentId: String(paymentDetails.paymentIntentId),
           tenantId: 'default',
-          expiresAt: { $gt: new Date() },
         }).lean<{
           quoteBinding: string;
           checkoutAttemptId?: string;
@@ -237,6 +241,35 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (!storedQuote && paymentDetails?.paymentIntentId) {
+      let paidIntent;
+      try { paidIntent = await getStripe().paymentIntents.retrieve(String(paymentDetails.paymentIntentId)); }
+      catch { return NextResponse.json({ success: false, code: 'PAYMENT_INVALID', message: 'The payment could not be verified.' }, { status: 400 }); }
+      if (paidIntent.status === 'succeeded') {
+        // A lost quote write cannot turn an already-paid checkout into a new priced purchase.
+        // Only the canonical signature-verified success event may recover its booking.
+        if (String(paidIntent.metadata.customer_email || '').trim().toLowerCase() !== normalizedCustomerEmail) {
+          return NextResponse.json({ success: false, code: 'QUOTE_OWNER_MISMATCH', message: 'Payment does not belong to this customer.' }, { status: 403 });
+        }
+        try {
+          const attempt = normalizeCheckoutAttemptId(paidIntent.metadata.checkout_attempt_id);
+          if (!attempt || paidIntent.currency.toLowerCase() !== 'usd' || !Number.isSafeInteger(paidIntent.amount) || paidIntent.amount <= 0
+            || Math.round(Number(paidIntent.metadata.pricing_total) * 100) !== paidIntent.amount) throw new Error();
+          const deadlines = parseQuotedDepartureDeadlines(paidIntent.metadata.departure_deadlines_utc, requestedCart.length);
+          const binding = buildQuoteBinding({ cart: requestedCart, customerEmail: normalizedCustomerEmail,
+            currency: 'USD', amountMinor: paidIntent.amount, checkoutAttemptId: attempt,
+            discountCode: normalizedDiscountCode, departureDeadlinesUtc: deadlines });
+          if (binding !== paidIntent.metadata.quote_binding) throw new Error();
+        } catch {
+          return NextResponse.json({ success: false, code: 'PAYMENT_QUOTE_MISMATCH', message: 'This payment needs confirmation before a booking can be created.' },
+            { status: 409, headers: { 'Cache-Control': 'no-store, private' } });
+        }
+        return NextResponse.json({ success: false, processing: true, code: 'PAYMENT_RECONCILIATION_PENDING',
+          message: 'Your payment was received. Booking confirmation is still being checked. Keep this page open and check again; do not pay again.' },
+          { status: 202, headers: { 'Cache-Control': 'no-store, private' } });
+      }
+    }
+
     // Once Stripe has charged a persisted quote, use that immutable server-side
     // snapshot. Re-resolving a newer price here could reject a successfully paid
     // customer while the webhook creates the original booking independently.
@@ -251,7 +284,7 @@ export async function POST(request: NextRequest) {
     const computedSubtotal = storedQuote?.pricing.subtotal ?? calculateCartSubtotal(cart || []);
     let computedDiscount = storedQuote?.pricing.discount ?? 0;
     if (!storedQuote && discountCode) {
-      const discount = await Discount.findOne({ code: String(discountCode).toUpperCase() });
+      const discount = await Discount.findOne({ code: String(discountCode).toUpperCase(), ...discountTenantFilter() });
       if (discount && discount.isActive && (!discount.expiresAt || new Date(discount.expiresAt) >= new Date()) && (!discount.usageLimit || discount.timesUsed < discount.usageLimit)) {
         computedDiscount = discount.discountType === 'percentage'
           ? round2((computedSubtotal * discount.value) / 100)
@@ -343,6 +376,26 @@ export async function POST(request: NextRequest) {
           { status: 409 },
         );
       }
+      try {
+        for (const item of cart) departureAdmissionTime({
+          date: item.selectedDate || '', time: item.selectedTime || '',
+          paymentIntentId: verifiedPaymentIntent.id, reservationKey: expectedBinding,
+        });
+      } catch (error) {
+        if (error instanceof DepartureAdmissionError && error.code === 'PAYMENT_TIME_UNPROVEN') {
+          const prior = await Booking.find({ paymentId: verifiedPaymentIntent.id, ...DEFAULT_TENANT_FILTER }).lean();
+          if (isCompletePaidCheckoutReplay(prior, cart)) {
+            const receiptToken = await signToken({ sub: `receipt:${verifiedPaymentIntent.id}`, scope: 'receipt', paymentId: verifiedPaymentIntent.id }, { expiresIn: '1h' });
+            return NextResponse.json({ success: true, message: 'Booking confirmed!', bookingId: prior[0].bookingReference,
+              bookings: prior.map(booking => booking._id), paymentId: verifiedPaymentIntent.id, receiptToken },
+              { headers: { 'Cache-Control': 'no-store, private' } });
+          }
+          return NextResponse.json({ success: false, processing: true, code: 'PAYMENT_RECONCILIATION_PENDING',
+            message: 'Your payment was received. Booking confirmation is still being checked. Keep this page open and check again; do not pay again.' },
+            { status: 202, headers: { 'Cache-Control': 'no-store, private' } });
+        }
+        throw error;
+      }
       paymentFulfillmentLeaseKey = `payment:${verifiedPaymentIntent.id}`;
       paymentFulfillmentLeaseToken = await acquireCheckoutInventoryLease(paymentFulfillmentLeaseKey, 120_000);
       try {
@@ -353,6 +406,10 @@ export async function POST(request: NextRequest) {
         });
       } catch (inventoryError) {
         if (!(inventoryError instanceof InventoryHoldError)) throw inventoryError;
+        if (inventoryError.code === 'PAYMENT_TIME_UNPROVEN') return NextResponse.json({
+          success: false, processing: true, code: 'PAYMENT_RECONCILIATION_PENDING',
+          message: 'Your payment was received. Booking confirmation is still being checked. Keep this page open and check again; do not pay again.',
+        }, { status: 202, headers: { 'Cache-Control': 'no-store, private' } });
         await refundUnavailablePaidInventory({
           stripe: getStripe(),
           paymentIntentId: verifiedPaymentIntent.id,
@@ -497,7 +554,7 @@ export async function POST(request: NextRequest) {
       const existingBookings = await Booking.find({ paymentId: paymentResult.paymentId, user: user._id, ...DEFAULT_TENANT_FILTER })
         .sort({ paymentItemIndex: 1, createdAt: 1 })
         .lean();
-      if (existingBookings.length >= cart.length) {
+      if (isCompletePaidCheckoutReplay(existingBookings, cart)) {
         const existingBooking = existingBookings[0];
         console.log(`[Checkout] Booking already exists for payment ${paymentResult.paymentId}`);
         if (normalizedDiscountCode) {
@@ -524,6 +581,14 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Pending/partial paid records are reconciled by the canonical signed webhook.
+    if (isCardPayment && paymentResult.paymentId) {
+      const partial = await Booking.exists({ paymentId: paymentResult.paymentId, ...DEFAULT_TENANT_FILTER });
+      if (partial) return NextResponse.json({ success: false, processing: true, code: 'PAYMENT_RECONCILIATION_PENDING',
+        message: 'Your payment was received. Booking confirmation is still being checked. Keep this page open and check again; do not pay again.' },
+        { status: 202, headers: { 'Cache-Control': 'no-store, private' } });
+    }
+
     // Create bookings with generated references
     const createdBookings = [];
     
@@ -532,10 +597,22 @@ export async function POST(request: NextRequest) {
       try {
         // Recheck immediately before persistence to narrow the gap between
         // quote/payment and booking creation.
-        await assertCartAvailability([cartItem]);
-        const tour = await Tour.findOne({ _id: cartItem._id || cartItem.id, isPublished: true, ...DEFAULT_TENANT_FILTER });
+        if (!isCardPayment) await assertCartAvailability([cartItem]);
+        const tour = await Tour.findOne({ _id: cartItem._id || cartItem.id, ...(!isCardPayment ? { isPublished: true } : {}), ...DEFAULT_TENANT_FILTER });
         if (!tour) {
           throw new Error(`Tour not found: ${cartItem.title}`);
+        }
+
+        try {
+          departureAdmissionTime({ date: cartItem.selectedDate || '', time: cartItem.selectedTime || '',
+            paymentIntentId: isCardPayment ? paymentResult.paymentId : undefined });
+        } catch (error) {
+          if (isCardPayment && error instanceof DepartureAdmissionError && error.code === 'PAYMENT_TIME_UNPROVEN') {
+            return NextResponse.json({ success: false, processing: true, code: 'PAYMENT_RECONCILIATION_PENDING',
+              message: 'Your payment was received. Booking confirmation is still being checked. Keep this page open and check again; do not pay again.' },
+              { status: 202, headers: { 'Cache-Control': 'no-store, private' } });
+          }
+          throw error;
         }
 
         // Use parseLocalDate to ensure date-only strings are parsed correctly
@@ -710,7 +787,7 @@ export async function POST(request: NextRequest) {
       } else {
         try {
           await Discount.findOneAndUpdate(
-            { code: normalizedDiscountCode },
+            { code: normalizedDiscountCode, ...discountTenantFilter() },
             { $inc: { timesUsed: 1 } },
           );
         } catch (discountError) {
@@ -952,6 +1029,11 @@ export async function POST(request: NextRequest) {
     } else {
       console.log(`[Checkout] Card payment - customer confirmation will be sent by webhook after payment succeeds`);
     }
+
+    // A synchronous paid write is Pending until the canonical signed webhook confirms it.
+    if (isCardPayment) return NextResponse.json({ success: false, processing: true, code: 'PAYMENT_RECONCILIATION_PENDING',
+      message: 'Your payment was received. Booking confirmation is still being checked. Keep this page open and check again; do not pay again.' },
+      { status: 202, headers: { 'Cache-Control': 'no-store, private' } });
 
     // Return success response
     const receiptToken = await signToken({

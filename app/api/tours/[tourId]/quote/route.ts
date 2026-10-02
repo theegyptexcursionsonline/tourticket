@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
+import { assertRevenuePriceTargetSellable } from '@/lib/revenue/sellableDeparture';
+import { RevenuePricingWriteError } from '@/lib/revenue/priceWriteGate';
 import { resolveEffectivePrice } from '@/lib/revenue/pricingResolver';
 
 export const dynamic = 'force-dynamic';
@@ -14,9 +16,13 @@ export async function GET(request: NextRequest, context: { params: Promise<{ tou
     if (!date || !time) {
       return NextResponse.json({ error: { code: 'INVALID_QUOTE_TARGET', message: 'date and time are required.' } }, { status: 400 });
     }
+    await assertRevenuePriceTargetSellable({ tourId, date, time, optionKey: optionKey || 'standard' });
     const quote = await resolveEffectivePrice({ tourId, date, time, optionKey });
     return NextResponse.json({ quote }, { headers: { 'Cache-Control': 'no-store, private' } });
   } catch (error: unknown) {
+    if (error instanceof RevenuePricingWriteError) {
+      return NextResponse.json({ error: { code: error.code, message: error.message } }, { status: error.status, headers: { 'Cache-Control': 'no-store, private' } });
+    }
     const message = error instanceof Error ? error.message : 'Unable to resolve price';
     const status = /Invalid|required/.test(message) ? 400 : /unavailable/.test(message) ? 404 : 500;
     return NextResponse.json({ error: { code: 'QUOTE_UNAVAILABLE', message } }, { status });

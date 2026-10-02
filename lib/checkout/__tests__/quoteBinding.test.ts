@@ -30,3 +30,18 @@ describe('buildQuoteBinding', () => {
     })).not.toBe(baseline);
   });
 });
+
+describe('quoted departure timezone snapshot binding', () => {
+  it('binds the server-resolved instant as well as the displayed date/time, preventing reuse after a timezone change', () => {
+    const departure = Date.parse('2026-08-01T07:00:00Z');
+    const first = buildQuoteBinding({ ...input, departureDeadlinesUtc: [departure] });
+    expect(first).toBe(buildQuoteBinding({ ...input, departureDeadlinesUtc: [departure] }));
+    expect(first).not.toBe(buildQuoteBinding({ ...input, departureDeadlinesUtc: [departure + 3600000] }));
+    expect(first).not.toBe(buildQuoteBinding(input));
+  });
+  it('refuses missing/invalid deadline elements instead of hashing an incomplete snapshot', () => {
+    for (const departureDeadlinesUtc of [[], [0], [NaN], [1.5], [1, 2]]) {
+      expect(() => buildQuoteBinding({ ...input, departureDeadlinesUtc })).toThrow('Exact quoted departure deadlines');
+    }
+  });
+});

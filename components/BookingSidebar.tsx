@@ -15,6 +15,7 @@ import toast from 'react-hot-toast';
 import { useTranslations } from 'next-intl';
 import { useCart } from '@/hooks/useCart';
 import { useSettings } from '@/hooks/useSettings';
+import { futureDepartureSlots, isFutureDeparture } from '@/lib/revenue/departureSchedule';
 import { toDateOnlyString } from '@/utils/date';
 import { useLocale } from 'next-intl';
 import { isRTL } from '@/i18n/config';
@@ -1880,7 +1881,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
             duration: option.duration || tourDisplayData?.duration || '',
             languages: option.languages || tourDisplayData?.languages || ['English'],
             description: option.description || 'Experience our tour',
-            timeSlots: bindTimeSlotsToOption(optionId, baseTimeSlots).map((slot: TimeSlot) => ({
+            timeSlots: bindTimeSlotsToOption(optionId, futureDepartureSlots(selectedDateKey, baseTimeSlots)).map((slot: TimeSlot) => ({
               ...slot,
               available: isStopSaleBlocked ? 0 : slot.available,
             })),
@@ -1922,7 +1923,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
             duration: tourDisplayData?.duration || '',
             languages: tourDisplayData?.languages || ['English'],
             description: 'Perfect introduction to the destination with expert guide',
-            timeSlots: bindTimeSlotsToOption(fallbackOptionId, baseTimeSlots).map((slot) => ({
+            timeSlots: bindTimeSlotsToOption(fallbackOptionId, futureDepartureSlots(selectedDateKey, baseTimeSlots)).map((slot) => ({
               ...slot,
               available: isStopSaleBlocked ? 0 : slot.available,
             })),
@@ -2183,13 +2184,19 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
       return;
     }
 
+    if (bookingData.selectedTimeSlot && (!bookingData.selectedDate || !isFutureDeparture(
+      toDateOnlyString(bookingData.selectedDate), bookingData.selectedTimeSlot.time))) {
+      toast.error('This departure has already started. Choose another time or date.');
+      setCurrentStep(1);
+      return;
+    }
     if (currentStep < 4) {
       setCurrentStep(s => s + 1);
       setAnimationKey(prev => prev + 1);
       // Scroll to top after step change
       setTimeout(scrollToTop, 100);
     }
-  }, [currentStep, bookingData.selectedTimeSlot, scrollToTop]);
+  }, [currentStep, bookingData.selectedTimeSlot, bookingData.selectedDate, scrollToTop]);
 
   const handleBack = useCallback(() => {
     if (currentStep > 1) {
@@ -2286,6 +2293,10 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
   }, [calendarAvailability]);
 
   const handleTimeSlotSelect = useCallback(async (timeSlot: TimeSlot) => {
+    if (!bookingData.selectedDate || !isFutureDeparture(toDateOnlyString(bookingData.selectedDate), timeSlot.time)) {
+      toast.error('This departure has already started. Choose another time or date.');
+      return;
+    }
     if (timeSlot.available === 0) {
       toast.error(t('booking.timeSlotFullyBooked'));
       return;
@@ -2466,6 +2477,10 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
       }
 
       const normalizedDate = toDateOnlyString(selectedDateValue);
+      if (!isFutureDeparture(normalizedDate, selectedTimeSlot.time)) {
+        setCurrentStep(1);
+        throw new Error('This departure has already started. Choose another time or date.');
+      }
       const selectedAddOns = clampSelectedPerPersonAddOns(
         bookingData.selectedAddOns,
         availability?.addOns || [],

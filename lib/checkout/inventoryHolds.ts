@@ -1,9 +1,10 @@
+import { departureAdmissionTime, DepartureAdmissionError, type PaymentSuccessProof } from '@/lib/checkout/departureAdmission';
 import { randomUUID } from 'node:crypto';
 import type { Types } from 'mongoose';
 import Booking from '@/lib/models/Booking';
 import CheckoutInventoryHold from '@/lib/models/CheckoutInventoryHold';
 import CheckoutInventoryLease from '@/lib/models/CheckoutInventoryLease';
-import { assertRevenuePriceTargetSellable } from '@/lib/revenue/sellableDeparture';
+import { assertRevenuePriceTargetSellable, readPaidDepartureCapacity } from '@/lib/revenue/sellableDeparture';
 import { normalizePriceDate } from '@/lib/revenue/pricingResolver';
 import { paidTenantValue } from '@/lib/tenant/paidTenant';
 
@@ -367,6 +368,7 @@ async function reserveOne(
       throw new InventoryHoldError('INVENTORY_IDEMPOTENCY_CONFLICT', 'The reservation key is already bound to different commerce evidence.');
     }
     if (existing?.state === 'converted') return existing;
+    departureAdmissionTime({ date: target.date, time: target.time });
     // A retry must return the original hold window, not extend inventory
     // indefinitely every time a client repeats the same idempotent request.
     if (existing?.state === 'active' && new Date(existing.expiresAt).getTime() > Date.now()) return existing;
@@ -386,6 +388,7 @@ async function reserveOne(
       requested: target.guests,
     });
 
+    departureAdmissionTime({ date: target.date, time: target.time });
     const now = new Date();
     return CheckoutInventoryHold.findOneAndUpdate(
       { tenantId: target.tenantId, reservationKey, itemIndex },
@@ -718,28 +721,47 @@ export async function releaseInventoryHolds(input: {
 }
 
 async function ensureOneForPayment(input: {
+  paymentSuccess?: PaymentSuccessProof;
   tenantId: string;
   paymentIntentId: string;
   reservationKey: string;
   item: InventoryHoldCartItem;
   itemIndex: number;
+  singleItemPayment: boolean;
 }) {
   const target = targetFor(input.item, input.tenantId);
   return withInventoryLease(target, async () => {
     const booking = await Booking.findOne({
-      tenantId: target.tenantId,
       paymentId: input.paymentIntentId,
-      paymentItemIndex: input.itemIndex,
-    }).select('_id').lean<{ _id: Types.ObjectId } | null>();
+      ...(input.singleItemPayment ? { $or: [{ paymentItemIndex: 0 }, { paymentItemIndex: null }] } : { paymentItemIndex: input.itemIndex }),
+    }).select('_id tenantId status paymentStatus tour dateString time').lean<{ _id: Types.ObjectId; tenantId?: string; status?: string; paymentStatus?: string; tour?: unknown; dateString?: string; time?: string } | null>();
+    if (booking && ((booking.tenantId && booking.tenantId !== 'default' && booking.tenantId !== target.tenantId) || String(booking.tour) !== target.tourId || booking.dateString !== target.date || booking.time !== target.time)) {
+      throw new InventoryHoldError('INVENTORY_PAYMENT_CONFLICT', 'The existing booking does not match the charged departure.');
+    }
     let hold = await CheckoutInventoryHold.findOne({
       tenantId: target.tenantId,
-      paymentIntentId: input.paymentIntentId,
       itemIndex: input.itemIndex,
+      $or: [{ paymentIntentId: input.paymentIntentId }, { reservationKey: input.reservationKey }],
     }).lean<HoldRow | null>();
+    if (hold?.paymentIntentId && hold.paymentIntentId !== input.paymentIntentId) {
+      throw new InventoryHoldError('INVENTORY_PAYMENT_CONFLICT', 'Inventory is already bound to a different payment.');
+    }
     if (hold && !sameTarget(hold, target)) {
       throw new InventoryHoldError('INVENTORY_PAYMENT_CONFLICT', 'Payment inventory does not match the charged quote.');
     }
     if (booking) {
+      if (booking.status !== 'Confirmed' && booking.status !== 'Pending') {
+        throw new InventoryHoldError('PAYMENT_TIME_UNPROVEN', 'The existing booking state needs reconciliation.');
+      }
+      if (booking.status !== 'Confirmed' || booking.paymentStatus !== 'paid') {
+        try {
+          departureAdmissionTime({ date: target.date, time: target.time, paymentIntentId: input.paymentIntentId,
+            reservationKey: input.reservationKey, paymentSuccess: input.paymentSuccess });
+        } catch (error) {
+          if (error instanceof DepartureAdmissionError) throw new InventoryHoldError(error.code, error.message);
+          throw error;
+        }
+      }
       const now = new Date();
       hold = await CheckoutInventoryHold.findOneAndUpdate(
         hold ? { _id: hold._id } : {
@@ -768,16 +790,29 @@ async function ensureOneForPayment(input: {
       ).lean<HoldRow | null>();
       return hold;
     }
-    if (hold?.state === 'converted') return hold;
+    try {
+      departureAdmissionTime({ date: target.date, time: target.time,
+        paymentIntentId: input.paymentIntentId, reservationKey: input.reservationKey,
+        paymentSuccess: input.paymentSuccess });
+    } catch (error) {
+      if (error instanceof DepartureAdmissionError) throw new InventoryHoldError(error.code, error.message);
+      throw error;
+    }
     if (hold?.state === 'active' && new Date(hold.expiresAt).getTime() > Date.now()) return hold;
 
-    const evidence = await assertRevenuePriceTargetSellable({
-      tenantId: target.tenantId,
-      tourId: target.tourId,
-      optionKey: target.optionKey,
-      date: target.date,
-      time: target.time,
-    });
+    let evidence;
+    try {
+      evidence = input.paymentSuccess
+        ? await readPaidDepartureCapacity(target)
+        : await assertRevenuePriceTargetSellable({
+          tenantId: target.tenantId, tourId: target.tourId, optionKey: target.optionKey, date: target.date, time: target.time,
+        });
+    } catch (error) {
+      if (error && typeof error === 'object' && 'code' in error && error.code === 'PAYMENT_TIME_UNPROVEN') {
+        throw new InventoryHoldError('PAYMENT_TIME_UNPROVEN', 'The paid departure capacity needs reconciliation.');
+      }
+      throw error;
+    }
     const held = await activeHeldGuests(target, hold?._id);
     assertInventoryCapacity({
       capacity: evidence.capacity,
@@ -785,6 +820,13 @@ async function ensureOneForPayment(input: {
       activeHeld: held,
       requested: target.guests,
     });
+    try {
+      departureAdmissionTime({ date: target.date, time: target.time,
+        paymentIntentId: input.paymentIntentId, reservationKey: input.reservationKey, paymentSuccess: input.paymentSuccess });
+    } catch (error) {
+      if (error instanceof DepartureAdmissionError) throw new InventoryHoldError(error.code, error.message);
+      throw error;
+    }
     const now = new Date();
     hold = await CheckoutInventoryHold.findOneAndUpdate(
       hold ? { _id: hold._id } : {
@@ -814,6 +856,8 @@ async function ensureOneForPayment(input: {
 }
 
 export async function ensureInventoryHoldsForPayment(input: {
+  paymentSuccess?: PaymentSuccessProof;
+  departureDeadlinesUtc?: number[];
   tenantId?: string;
   paymentIntentId: string;
   reservationKey: string;
@@ -826,10 +870,17 @@ export async function ensureInventoryHoldsForPayment(input: {
     || input.cart.length > 10) {
     throw new InventoryHoldError('INVALID_INVENTORY_PAYMENT', 'Paid inventory input is invalid.');
   }
+  if (input.departureDeadlinesUtc !== undefined && (!input.paymentSuccess
+    || input.departureDeadlinesUtc.length !== input.cart.length
+    || !input.departureDeadlinesUtc.every(value => Number.isSafeInteger(value) && value > 0 && Number.isFinite(new Date(value).getTime())))) {
+    throw new InventoryHoldError('PAYMENT_TIME_UNPROVEN', 'The paid departure deadlines could not be verified.');
+  }
   const holds = [];
   const tenantId = paidTenantValue(input.tenantId || 'default');
   for (let itemIndex = 0; itemIndex < input.cart.length; itemIndex += 1) {
-    holds.push(await ensureOneForPayment({ ...input, tenantId, item: input.cart[itemIndex], itemIndex }));
+    holds.push(await ensureOneForPayment({ ...input,
+      paymentSuccess: input.paymentSuccess ? { ...input.paymentSuccess, departureDeadlineUtc: input.departureDeadlinesUtc?.[itemIndex] } : undefined,
+      tenantId, item: input.cart[itemIndex], itemIndex, singleItemPayment: input.cart.length === 1 }));
   }
   return holds;
 }

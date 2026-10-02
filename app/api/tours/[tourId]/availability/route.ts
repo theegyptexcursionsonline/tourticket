@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
 import Tour from '@/lib/models/Tour';
 import Booking from '@/lib/models/Booking';
+import { isFutureDeparture } from '@/lib/revenue/departureSchedule';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 
 export async function GET(
@@ -17,6 +18,10 @@ export async function GET(
 
     if (!month) {
       return NextResponse.json({ message: 'Month parameter is required' }, { status: 400 });
+    }
+
+    if (!/^\d{4}-(?:0[1-9]|1[0-2])$/.test(month)) {
+      return NextResponse.json({ message: 'Select a valid month.' }, { status: 400 });
     }
 
     const tour = await Tour.findOne({ _id: tourId, ...DEFAULT_TENANT_FILTER })
@@ -54,8 +59,10 @@ export async function GET(
     const availableSlotsByDate: Record<string, Array<{ time: string; remaining: number }>> = {};
     const fullyBookedDates: string[] = [];
 
+    const now = new Date();
+
     // --- Iterate through each day of the month to check availability ---
-    for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+    for (let d = new Date(startDate); d <= endDate; d.setUTCDate(d.getUTCDate() + 1)) {
         const dayOfWeek = d.getUTCDay();
         const dateString = d.toISOString().split('T')[0];
 
@@ -65,6 +72,7 @@ export async function GET(
             let allSlotsFull = true;
 
             for (const slot of slots) {
+                if (!isFutureDeparture(dateString, slot.time, now)) continue;
                 const bookedGuests = bookingsMap.get(dateString)?.get(slot.time) || 0;
                 const remainingCapacity = slot.capacity - bookedGuests;
                 
@@ -84,7 +92,7 @@ export async function GET(
         }
     }
 
-    return NextResponse.json({ availableSlotsByDate, fullyBookedDates });
+    return NextResponse.json({ availableSlotsByDate, fullyBookedDates }, { headers: { 'Cache-Control': 'no-store' } });
 
   } catch (error) {
     console.error('Failed to get availability:', error);

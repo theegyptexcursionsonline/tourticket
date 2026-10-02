@@ -1,3 +1,5 @@
+import { discountTenantFilter } from '@/lib/discounts/tenantScope';
+import { quotedDepartureDeadlines, DepartureAdmissionError } from '@/lib/checkout/departureAdmission';
 import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
 import Discount from '@/lib/models/Discount';
@@ -253,7 +255,7 @@ export async function prepareWebCheckout(
   const tax = roundMoney(subtotal * 0.05);
   let discount = 0;
   if (normalizedDiscountCode) {
-    const candidate = await Discount.findOne({ code: normalizedDiscountCode }).lean();
+    const candidate = await Discount.findOne({ code: normalizedDiscountCode, ...discountTenantFilter() }).lean();
     if (
       candidate
       && candidate.isActive
@@ -296,6 +298,7 @@ export async function prepareWebCheckout(
     );
   }
 
+  const departureDeadlinesUtc = quotedDepartureDeadlines(cart);
   const amountMinor = Math.round(total * 100);
   const quoteBinding = buildQuoteBinding({
     cart,
@@ -304,6 +307,7 @@ export async function prepareWebCheckout(
     amountMinor,
     discountCode: normalizedDiscountCode,
     checkoutAttemptId,
+    departureDeadlinesUtc,
   });
   const paymentPricing = { subtotal, serviceFee, tax, discount, total, currency: 'USD' as const };
   const metadata = {
@@ -321,6 +325,7 @@ export async function prepareWebCheckout(
     pricing_total: String(total),
     pricing_currency: 'USD',
     discount_code: normalizedDiscountCode || 'none',
+    departure_deadlines_utc: JSON.stringify(departureDeadlinesUtc),
     has_booking_data: 'true',
     quote_binding: quoteBinding,
     checkout_attempt_id: checkoutAttemptId,
@@ -410,6 +415,10 @@ export function webCheckoutErrorResponse(error: unknown): NextResponse | null {
       { success: false, code: error.code, message: error.message },
       { status: 409, headers: { 'Cache-Control': 'no-store' } },
     );
+  }
+  if (error instanceof DepartureAdmissionError) {
+    return NextResponse.json({ success: false, code: error.code, message: error.message },
+      { status: 409, headers: { 'Cache-Control': 'no-store' } });
   }
   if (error instanceof InventoryHoldError) {
     return NextResponse.json(

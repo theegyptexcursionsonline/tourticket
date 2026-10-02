@@ -74,3 +74,14 @@ it('updates only authorized fields and validates merged percentage value',async(
   expect((await PUT(request({isActive:false}),ctx)).status).toBe(200);
   expect(db.findOneAndUpdate).toHaveBeenCalledWith(expect.objectContaining({_id:id}),{$set:{isActive:false}},expect.objectContaining({runValidators:true}));
 });
+
+it('a concurrent financial edit cannot combine a fixed amount with a stale percentage type',async()=>{
+  db.findOne.mockReturnValue({lean:jest.fn().mockResolvedValue({discountType:'fixed',value:20,code:'WELCOME20'})});
+  // Another writer raises the fixed amount after this read. The financial CAS misses.
+  db.findOneAndUpdate.mockResolvedValue(null);
+  const response=await PUT(request({discountType:'percentage'}),ctx);
+  expect(response.status).toBe(409);
+  expect(await response.json()).toEqual({success:false,error:'This discount changed while you were editing. Reload it and try again.'});
+  expect(db.findOneAndUpdate).toHaveBeenCalledWith(expect.objectContaining({_id:id,discountType:'fixed',value:20}),
+    {$set:{discountType:'percentage'}},expect.objectContaining({runValidators:true}));
+});

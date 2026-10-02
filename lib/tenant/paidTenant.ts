@@ -25,6 +25,7 @@ export interface PaidTenant {
   contactPhone?: string;
   logo?: string;
   primaryColor?: string;
+  timeZone?: string;
 }
 
 /**
@@ -115,11 +116,12 @@ export async function loadPaidTenant(tenantId: string): Promise<PaidTenant> {
     if (!connection?.db) return base;
     const doc = await connection.db.collection('tenants').findOne(
       { tenantId: resolvedId },
-      { projection: { tenantId: 1, name: 1, contact: 1, 'branding.logo': 1, 'branding.primaryColor': 1 } },
+      { projection: { tenantId: 1, name: 1, contact: 1, 'branding.logo': 1, 'branding.primaryColor': 1, 'localization.defaultTimezone': 1 } },
     );
     if (!doc) return base;
     return {
       ...base,
+      timeZone: typeof (doc.localization as { defaultTimezone?: unknown } | undefined)?.defaultTimezone === 'string' ? (doc.localization as { defaultTimezone: string }).defaultTimezone : undefined,
       name: typeof doc.name === 'string' ? doc.name : undefined,
       contactEmail: (doc.contact as { email?: string } | undefined)?.email,
       contactPhone: (doc.contact as { phone?: string } | undefined)?.phone,

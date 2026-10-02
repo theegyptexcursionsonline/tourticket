@@ -106,3 +106,32 @@ export async function assertRevenuePriceTargetSellable(target: {
   });
   return { ...result, optionId: aliases.find((alias) => alias !== target.optionKey) || aliases[0] };
 }
+
+/** Capacity recovery for an immutable, verified on-time paid departure.
+ * Current publication, pricing, scheduling and stop-sale admission cannot revoke that purchase.
+ * Missing authoritative capacity remains unproven and requires reconciliation.
+ */
+export async function readPaidDepartureCapacity(target: {
+  tenantId: string; tourId: string; date: string; time: string;
+}): Promise<{ capacity: number; booked: number }> {
+  const tenantFilter = target.tenantId === 'default' ? DEFAULT_TENANT_FILTER : paidTenantFilter(target.tenantId);
+  const date = normalizePriceDate(target.date);
+  const end = new Date(date); end.setUTCHours(23, 59, 59, 999);
+  const [tour, explicit, bookings] = await Promise.all([
+    Tour.findOne({ _id: target.tourId, ...tenantFilter }).select('availability.slots').lean<SellableTour | null>(),
+    Availability.findOne({ tour: target.tourId, date: { $gte: date, $lte: end }, ...tenantFilter }).select('slots').lean<ExplicitAvailability | null>(),
+    Booking.find({ $and: [{ tour: target.tourId, time: target.time, status: { $in: ['Confirmed', 'Pending'] },
+      $or: [{ date: { $gte: date, $lte: end } }, { dateString: target.date }] }, tenantFilter] })
+      .select('adultGuests childGuests infantGuests guests').lean<BookingRow[]>(),
+  ]);
+  const slot = (explicit?.slots?.length ? explicit.slots : tour?.availability?.slots || []).find(row => row.time === target.time);
+  if (!slot) throw new RevenuePricingWriteError(409, 'PAYMENT_TIME_UNPROVEN', 'The paid departure capacity needs reconciliation.');
+  const capacity = Number(slot.capacity || 0) + Number(slot.extraCapacity || 0);
+  const bookedFromRows = bookings.reduce((sum, row) => sum + (Number(row.adultGuests || 0) + Number(row.childGuests || 0)
+    + Number(row.infantGuests || 0) || Number(row.guests || 0)), 0);
+  const booked = Math.max(Number(slot.booked || 0), bookedFromRows);
+  if (!Number.isFinite(capacity) || capacity <= 0 || !Number.isFinite(booked) || booked < 0) {
+    throw new RevenuePricingWriteError(409, 'PAYMENT_TIME_UNPROVEN', 'The paid departure capacity needs reconciliation.');
+  }
+  return { capacity, booked };
+}

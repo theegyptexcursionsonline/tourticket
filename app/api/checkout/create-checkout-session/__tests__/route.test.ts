@@ -70,7 +70,7 @@ const prepared = {
   paymentExperience: 'hosted',
   locale: 'en',
   customer: { email: 'guest@example.com', firstName: 'Guest', lastName: 'Customer' },
-  cart: [{ title: 'Nile Cruise' }],
+  cart: [{ title: 'Nile Cruise', selectedDate: '2099-10-02', selectedTime: '08:00' }],
   cartSummary: [{ t: '507f1f77bcf86cd799439011' }],
   pricing: { subtotal: 100, serviceFee: 3, tax: 5, discount: 0, total: 108, currency: 'USD' },
   amountMinor: 10_800,
@@ -108,9 +108,23 @@ describe('POST /api/checkout/create-checkout-session', () => {
     process.env.STRIPE_SECRET_KEY = 'sk_test_unit';
   });
 
+  afterEach(() => jest.useRealTimers());
+
   afterAll(() => {
     if (originalStripeKey === undefined) delete process.env.STRIPE_SECRET_KEY;
     else process.env.STRIPE_SECRET_KEY = originalStripeKey;
+  });
+
+  it('does not create a provider page when the departure passes during awaited hold coverage', async () => {
+    const deadline = Date.parse('2026-10-02T05:00:00Z');
+    jest.useFakeTimers().setSystemTime(deadline - 1);
+    mockPrepare.mockResolvedValue({ ...prepared, cart: [{ ...prepared.cart[0], selectedDate: '2026-10-02' }] });
+    mockCoverHolds.mockImplementation(async () => { jest.setSystemTime(deadline); return 'covered'; });
+    const response = await POST(new Request('https://example.com/api/checkout/create-checkout-session', { method: 'POST', body: '{}' }));
+    expect(response.status).not.toBe(200);
+    expect(mockSessionCreate).not.toHaveBeenCalled();
+    expect(mockPersist).not.toHaveBeenCalled();
+    expect(mockReleaseHolds).toHaveBeenCalledWith(expect.objectContaining({ reservationKey: prepared.quoteBinding, onlyUnbound: true }));
   });
 
   it('creates a hosted Session from the server-authoritative total and preserves webhook metadata', async () => {

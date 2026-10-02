@@ -71,7 +71,7 @@ export function evaluateDepartureSellability(facts: DepartureSellabilityFacts) {
   }
   const startsAt = new Date(facts.startsAtUtc);
   if (!Number.isFinite(startsAt.getTime()) || startsAt.getTime() <= (facts.now || new Date()).getTime()) {
-    throw new RevenuePricingWriteError(422, 'DEPARTURE_NOT_FUTURE', 'Price changes are allowed only for future departures.');
+    throw new RevenuePricingWriteError(422, 'DEPARTURE_NOT_FUTURE', 'This departure has already started. Choose another time or date.');
   }
   if (facts.explicitStopSale || facts.fullStopSale) {
     throw new RevenuePricingWriteError(422, 'DEPARTURE_STOP_SALE', 'The target departure is stop-saled.');

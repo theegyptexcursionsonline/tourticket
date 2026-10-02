@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useMemo, useEffect } from 'react';
+import PaymentReconciliationNotice from '@/components/PaymentReconciliationNotice';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -1095,6 +1096,9 @@ export default function CheckoutPage() {
 
   const [isConfirmed, setIsConfirmed] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [paymentReconciliation, setPaymentReconciliation] = useState(false);
+  const paidRequestRef = useRef<{ intentId: string; payload: unknown; confirm: () => void } | null>(null);
+  const reconciliationFlightRef = useRef(false);
   const [orderedItems, setOrderedItems] = useState<CartItem[]>([]);
   const [finalPricing, setFinalPricing] = useState<PricingSummary | null>(null);
   const [finalCustomer, setFinalCustomer] = useState<FormDataShape | null>(null);
@@ -1212,6 +1216,8 @@ export default function CheckoutPage() {
 
   // Handler that accepts payment intent ID directly to avoid race conditions
   const handlePaymentProcessWithIntent = async (intentId: string) => {
+    if (reconciliationFlightRef.current) return;
+    reconciliationFlightRef.current = true;
     setIsProcessing(true);
 
     try {
@@ -1253,22 +1259,30 @@ export default function CheckoutPage() {
       };
 
       // Call the checkout API
+      if (!paidRequestRef.current || paidRequestRef.current.intentId !== intentId) paidRequestRef.current = {
+        intentId, payload: bookingPayload, confirm: () => {
+          setOrderedItems([...(cart || [])]); setFinalPricing(pricing); setFinalCustomer(formData);
+        },
+      };
       const response = await fetch('/api/checkout', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
-        body: JSON.stringify(bookingPayload),
+        body: JSON.stringify(paidRequestRef.current.payload),
       });
 
       const result = await response.json();
 
+      if (response.status === 202 && result.processing === true && result.code === 'PAYMENT_RECONCILIATION_PENDING') {
+        setPaymentReconciliation(true);
+        return;
+      }
       if (response.ok && result.success) {
+        setPaymentReconciliation(false);
         // Success - show thank you page
-        setOrderedItems([...(cart || [])]);
-        setFinalPricing(pricing);
-        setFinalCustomer(formData);
+        paidRequestRef.current.confirm();
         setLastOrderId(result.bookingId || `ORD-${Date.now()}`);
         setReceiptToken(result.receiptToken);
 
@@ -1284,6 +1298,7 @@ export default function CheckoutPage() {
       console.error('Payment process error:', error);
       toast.error('Something went wrong. Please try again.');
     } finally {
+      reconciliationFlightRef.current = false;
       setIsProcessing(false);
     }
   };
@@ -1312,7 +1327,7 @@ export default function CheckoutPage() {
   }, [isConfirmed]);
 
   const showPaymentLauncher = paymentExperience !== null && paymentExperience !== 'inline';
-  const showMobileStickyCTA = !isConfirmed
+  const showMobileStickyCTA = !isConfirmed && !paymentReconciliation
     && cart
     && cart.length > 0
     && (customerType === 'guest' || user)
@@ -1332,6 +1347,9 @@ export default function CheckoutPage() {
     <>
       <main className={`min-h-screen bg-gradient-to-b from-slate-50 via-white to-slate-50 pt-20 sm:pt-24 ${showMobileStickyCTA ? 'pb-56' : 'pb-40'} lg:pb-16`}>
         <div className="container mx-auto px-4 sm:px-6 max-w-7xl">
+          {paymentReconciliation && !isConfirmed && (
+            <PaymentReconciliationNotice checking={isProcessing} onRetry={() => handlePaymentProcessWithIntent(paidRequestRef.current?.intentId || paymentIntentId)} />
+          )}
           <AnimatePresence mode="wait">
             <motion.div 
               key={isConfirmed ? 'thankyou' : 'checkout'} 
@@ -1351,7 +1369,7 @@ export default function CheckoutPage() {
               ) : (
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8 lg:gap-12 items-start">
                   <div className="lg:col-span-2 order-2 lg:order-1">
-                    <CheckoutFormStep
+                    {!paymentReconciliation && <CheckoutFormStep
                       onPaymentProcess={handlePaymentProcess}
                       onPaymentProcessWithIntent={handlePaymentProcessWithIntent}
                       isProcessing={isProcessing}
@@ -1367,7 +1385,7 @@ export default function CheckoutPage() {
                       paymentIntentId={paymentIntentId}
                       setPaymentIntentId={setPaymentIntentId}
                       onPaymentExperienceChange={setPaymentExperience}
-                    />
+                    />}
                   </div>
                   <div className="lg:col-span-1 order-1 lg:order-2">
                     <BookingSummary
@@ -1375,7 +1393,7 @@ export default function CheckoutPage() {
                       promoCode={promoCode}
                       setPromoCode={setPromoCode}
                       applyPromoCode={handleApplyCoupon}
-                      isProcessing={isProcessing}
+                      isProcessing={isProcessing || paymentReconciliation}
                       isApplyingCoupon={isApplyingCoupon}
                       couponMessage={couponMessage}
                       showPaymentLauncher={showPaymentLauncher}

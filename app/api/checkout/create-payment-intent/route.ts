@@ -1,3 +1,4 @@
+import { quotedDepartureDeadlines } from '@/lib/checkout/departureAdmission';
 import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import {
@@ -33,6 +34,11 @@ export async function POST(request: Request) {
       paymentExperience: 'modal',
     });
     await createInventoryHolds({ reservationKey: prepared.quoteBinding, cart: prepared.cart });
+    try { quotedDepartureDeadlines(prepared.cart); }
+    catch (error) {
+      await releaseInventoryHolds({ reservationKey: prepared.quoteBinding, reason: 'departure_started', onlyUnbound: true });
+      throw error;
+    }
     const stripe = getStripe();
     try {
       paymentIntent = await stripe.paymentIntents.create({

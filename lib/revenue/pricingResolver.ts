@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { isValidDepartureDate } from '@/lib/revenue/departureSchedule';
 import Tour from '@/lib/models/Tour';
 import RevenuePriceOverride, { type GuestPrices } from '@/lib/models/RevenuePriceOverride';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
@@ -34,7 +35,7 @@ type PriceOverride = {
 
 export function normalizePriceDate(value: string | Date) {
   const raw = value instanceof Date ? value.toISOString().slice(0, 10) : value;
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(raw)) throw new Error('Invalid price date');
+  if (!isValidDepartureDate(raw)) throw new Error('Invalid price date');
   return new Date(`${raw}T00:00:00.000Z`);
 }
 

@@ -24,13 +24,13 @@ async function PUTHandler(request: NextRequest, { params }: { params: Promise<{ 
     if (!existing) return NextResponse.json({ success: false, error: 'Discount not found' }, { status: 404 });
     if ((values.discountType ?? existing.discountType) === 'percentage' && (values.value ?? existing.value) > 100) throw new DiscountInputError('A percentage discount cannot exceed 100%.');
     if (values.code && values.code !== existing.code && await Discount.exists({ ...discountTenantFilter(), code: values.code, _id: { $ne: id } })) return discountMutationError({ code: 11000 });
-    const updatedDiscount = await Discount.findOneAndUpdate(filter, { $set: values }, {
+    const updatedDiscount = await Discount.findOneAndUpdate({ ...filter, discountType: existing.discountType, value: existing.value }, { $set: values }, {
       new: true,
       runValidators: true,
     });
 
     if (!updatedDiscount) {
-      return NextResponse.json({ success: false, error: 'Discount not found' }, { status: 404 });
+      return NextResponse.json({ success: false, error: 'This discount changed while you were editing. Reload it and try again.' }, { status: 409 });
     }
 
     return NextResponse.json({ success: true, data: updatedDiscount });

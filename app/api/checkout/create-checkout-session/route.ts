@@ -1,3 +1,4 @@
+import { quotedDepartureDeadlines, DepartureAdmissionError } from '@/lib/checkout/departureAdmission';
 import { randomUUID } from 'crypto';
 import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
@@ -141,6 +142,7 @@ async function reuseOrRetire(
       });
     }
   }
+  if (reusable) quotedDepartureDeadlines(prepared.cart);
   return reusable;
 }
 
@@ -211,6 +213,7 @@ export async function POST(request: Request) {
     // Fencing: a request that outlived its lease must not make a second page.
     await assertCheckoutInventoryLeaseHeld(lease.key, lease.token);
     try {
+      quotedDepartureDeadlines(prepared.cart);
       session = await stripe.checkout.sessions.create({
         mode: 'payment',
         ui_mode: 'hosted',
@@ -264,12 +267,13 @@ export async function POST(request: Request) {
         const closed = await stripe.checkout.sessions.expire(session.id).catch(() => undefined);
         noPayablePage = closed?.status === 'expired';
       } else {
-        noPayablePage = STRIPE_DEFINITE_REJECTIONS.has((error as { type?: string }).type || '');
+        noPayablePage = error instanceof DepartureAdmissionError || STRIPE_DEFINITE_REJECTIONS.has((error as { type?: string }).type || '');
       }
       if (noPayablePage) {
         await releaseInventoryHolds({
           reservationKey: prepared.quoteBinding,
           reason: session ? 'checkout_session_snapshot_failed' : 'checkout_session_creation_failed',
+          ...(error instanceof DepartureAdmissionError ? { onlyUnbound: true } : {}),
         });
       }
       throw error;

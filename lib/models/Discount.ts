@@ -19,6 +19,7 @@ const DiscountSchema: Schema<IDiscount> = new Schema({
     required: [true, 'Discount code is required.'],
     trim: true,
     uppercase: true,
+    unique: true,
   },
   discountType: {
     type: String,

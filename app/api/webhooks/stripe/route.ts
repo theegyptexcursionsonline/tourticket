@@ -1,3 +1,7 @@
+import { discountTenantFilter } from '@/lib/discounts/tenantScope';
+import { isCompletePaidCheckoutReplay, matchesPaidCheckoutItems } from '@/lib/checkout/confirmedCheckoutReplay';
+import { parseQuotedDepartureDeadlines, DepartureAdmissionError } from '@/lib/checkout/departureAdmission';
+import { localDepartureToUtc } from '@/lib/revenue/departureSchedule';
 // app/api/webhooks/stripe/route.ts
 import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
@@ -109,7 +113,7 @@ function formatBookingDate(dateString: string | Date | undefined): string {
 }
 
 // Process successful payment - create booking if it doesn't exist
-async function processSuccessfulPayment(paymentIntent: Stripe.PaymentIntent) {
+async function processSuccessfulPayment(paymentIntent: Stripe.PaymentIntent, successEventCreated: number) {
   const paymentId = paymentIntent.id;
   const metadata = paymentIntent.metadata;
 
@@ -158,7 +162,7 @@ async function processSuccessfulPayment(paymentIntent: Stripe.PaymentIntent) {
     if (!usageClaimed) return;
     try {
       await Discount.findOneAndUpdate(
-        { code: persistedQuote.discountCode },
+        { code: persistedQuote.discountCode, ...discountTenantFilter(tenantId) },
         { $inc: { timesUsed: 1 } },
       );
     } catch (discountError) {
@@ -219,6 +223,47 @@ async function processSuccessfulPayment(paymentIntent: Stripe.PaymentIntent) {
     }
   }
 
+  const existingBookings = await Booking.find({ paymentId }).sort({ paymentItemIndex: 1, createdAt: 1 });
+  if (existingBookings.some(booking => booking.status !== 'Pending' && booking.status !== 'Confirmed')) {
+    return { created: false, reason: 'terminal_booking_preserved' };
+  }
+  const paidCart = cartData.map(item => ({ _id: item.t, selectedDate: item.d, selectedTime: item.tm,
+      quantity: item.a, childQuantity: item.c || 0, infantQuantity: item.n || 0,
+      selectedBookingOption: { pricingKey: item.ok, id: item.bo } }));
+  if (existingBookings.length > 0) {
+    if (!matchesPaidCheckoutItems(existingBookings, paidCart, tenantValue)) {
+      throw new DepartureAdmissionError('PAYMENT_TIME_UNPROVEN', 'The existing paid items need reconciliation.');
+    }
+    const customerEmail = persistedQuote?.customer.email || metadata.customer_email;
+    const users = [...new Set(existingBookings.map(booking => String(booking.user)))];
+    if (!customerEmail || users.length !== 1) {
+      throw new DepartureAdmissionError('PAYMENT_TIME_UNPROVEN', 'The existing paid customer needs reconciliation.');
+    }
+    const paidCustomer = await User.findById(users[0]);
+    if (!paidCustomer?.email || paidCustomer.email.trim().toLowerCase() !== customerEmail.trim().toLowerCase()) {
+      throw new DepartureAdmissionError('PAYMENT_TIME_UNPROVEN', 'The existing paid customer needs reconciliation.');
+    }
+  }
+  const completedReplay = isCompletePaidCheckoutReplay(existingBookings, cartData.map(item => ({
+    _id: item.t, selectedDate: item.d, selectedTime: item.tm, quantity: item.a, childQuantity: item.c || 0, infantQuantity: item.n || 0,
+  })));
+
+  // New checkouts carry their server-authored timezone-resolved deadlines.
+  // Legacy named brands must have a known tenant timezone, never assumed Cairo.
+  let departureDeadlinesUtc: number[] | undefined;
+  try {
+    departureDeadlinesUtc = completedReplay ? undefined : parseQuotedDepartureDeadlines(metadata.departure_deadlines_utc, cartData.length);
+    if (!completedReplay && !departureDeadlinesUtc && tenantValue !== 'default') {
+      if (!paidTenant.timeZone) throw new DepartureAdmissionError('PAYMENT_TIME_UNPROVEN', 'The paid departure timezone needs reconciliation.');
+      const timeZone = paidTenant.timeZone;
+      departureDeadlinesUtc = cartData.map(item => new Date(localDepartureToUtc(item.d || '', item.tm || '', timeZone)).getTime());
+    }
+  } catch (error) {
+    // No invented time or arrival-time refund: retry/reconcile unknown evidence.
+    if (error instanceof DepartureAdmissionError) throw error;
+    throw new DepartureAdmissionError('PAYMENT_TIME_UNPROVEN', 'The paid departure timezone needs reconciliation.');
+  }
+
   // Main-site checkouts use quote_binding; the white-label network still uses
   // checkout_fingerprint for the same immutable 64-character cart binding.
   // Every Stripe event reaches this one webhook, so rejecting the sibling key
@@ -232,9 +277,10 @@ async function processSuccessfulPayment(paymentIntent: Stripe.PaymentIntent) {
           'The hosted payment quote could not be recovered.',
         );
       }
-      await bindInventoryHoldsToPayment(reservationKey, paymentId);
     }
     await ensureInventoryHoldsForPayment({
+      departureDeadlinesUtc,
+      paymentSuccess: { paymentIntentId: paymentId, reservationKey, succeededAt: new Date(successEventCreated * 1000) },
       tenantId,
       paymentIntentId: paymentId,
       reservationKey,
@@ -250,8 +296,9 @@ async function processSuccessfulPayment(paymentIntent: Stripe.PaymentIntent) {
         selectedBookingOption: { pricingKey: item.ok || item.bo },
       })),
     });
+    if (metadata.checkout_experience === 'hosted') await bindInventoryHoldsToPayment(reservationKey, paymentId);
   } catch (inventoryError) {
-    if (!(inventoryError instanceof InventoryHoldError)) throw inventoryError;
+    if (!(inventoryError instanceof InventoryHoldError) || inventoryError.code === 'PAYMENT_TIME_UNPROVEN') throw inventoryError;
     await refundUnavailablePaidInventory({
       stripe: getStripe(),
       paymentIntentId: paymentId,
@@ -262,7 +309,6 @@ async function processSuccessfulPayment(paymentIntent: Stripe.PaymentIntent) {
   }
 
   // Check if booking already exists for this payment (created by checkout endpoint)
-  const existingBookings = await Booking.find({ paymentId }).sort({ paymentItemIndex: 1, createdAt: 1 });
   const rawExpectedBookingCount = Number(metadata.tour_count || persistedQuote?.cartSummary.length || 1);
   const expectedBookingCount = Number.isInteger(rawExpectedBookingCount) && rawExpectedBookingCount > 0
     ? rawExpectedBookingCount
@@ -280,7 +326,7 @@ async function processSuccessfulPayment(paymentIntent: Stripe.PaymentIntent) {
       console.log(`[Webhook] Updating booking ${existingBooking.bookingReference} from Pending to Confirmed`);
       const confirmedAt = existingBookings.find((booking) => booking.paymentConfirmedAt)?.paymentConfirmedAt || new Date();
       await Booking.updateMany(
-        { _id: { $in: existingBookings.map((booking) => booking._id) } },
+        { _id: { $in: existingBookings.map((booking) => booking._id) }, paymentId, status: { $in: ['Pending', 'Confirmed'] } },
         [{ $set: {
           status: 'Confirmed',
           paymentStatus: 'paid',
@@ -289,6 +335,12 @@ async function processSuccessfulPayment(paymentIntent: Stripe.PaymentIntent) {
           paymentConfirmedBy: `stripe:${paymentId}`,
         } }],
       );
+      const admitted = await Booking.find({ paymentId }).sort({ paymentItemIndex: 1, createdAt: 1 });
+      if (!matchesPaidCheckoutItems(admitted, paidCart, tenantValue)
+        || admitted.some(booking => String(booking.user) !== String(existingBooking.user))
+        || !isCompletePaidCheckoutReplay(admitted, cartData.map(item => ({
+        _id: item.t, selectedDate: item.d, selectedTime: item.tm, quantity: item.a, childQuantity: item.c || 0, infantQuantity: item.n || 0,
+      })))) return { created: false, reason: 'booking_state_changed_requires_reconciliation' };
       for (const booking of existingBookings) {
         booking.status = 'Confirmed';
         booking.paymentStatus = 'paid';
@@ -1041,7 +1093,7 @@ export async function POST(request: Request) {
         try {
           paymentLeaseToken = await acquireCheckoutInventoryLease(paymentLeaseKey, 120_000);
           const startedAt = Date.now();
-          const result = await processSuccessfulPayment(paymentIntent);
+          const result = await processSuccessfulPayment(paymentIntent, event.created);
           console.log(`[Webhook] Process result for ${paymentIntent.id}:`, result);
           // Every outcome here is durable now. The dangerous ones are silent —
           // a refund because the tour would not resolve, a cart that failed to

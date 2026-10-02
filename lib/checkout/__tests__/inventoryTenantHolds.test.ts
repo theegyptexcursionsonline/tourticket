@@ -33,6 +33,7 @@ import { assertRevenuePriceTargetSellable } from '@/lib/revenue/sellableDepartur
 describe('paid brand inventory recovery', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    jest.useFakeTimers().setSystemTime(new Date('2026-08-01T00:00:00Z'));
     jest.mocked(CheckoutInventoryLease.findOneAndUpdate).mockImplementation(((_filter: unknown, update: unknown) => ({
       lean: jest.fn().mockResolvedValue({
         leaseToken: (update as { $set: { leaseToken: string } }).$set.leaseToken,
@@ -40,7 +41,7 @@ describe('paid brand inventory recovery', () => {
     })) as never);
     jest.mocked(CheckoutInventoryLease.updateOne).mockResolvedValue({ acknowledged: true } as never);
     jest.mocked(Booking.findOne).mockReturnValue({
-      select: () => ({ lean: jest.fn().mockResolvedValue({ _id: '6a76fbe774b8df75965f67af' }) }),
+      select: () => ({ lean: jest.fn().mockResolvedValue({ _id: '6a76fbe774b8df75965f67af', tenantId: 'default', status: 'Confirmed', paymentStatus: 'paid', tour: '69861276f1598842cc1e5028', dateString: '2026-08-09', time: '10:00' }) }),
     } as never);
     jest.mocked(CheckoutInventoryHold.findOne).mockReturnValue({
       lean: jest.fn().mockResolvedValue(null),
@@ -53,7 +54,9 @@ describe('paid brand inventory recovery', () => {
     } as never);
   });
 
-  it('finds an existing booking and creates its converted hold inside the paying tenant', async () => {
+  afterEach(() => jest.useRealTimers());
+
+  it('finds a historical default-tagged brand booking by exact payment and creates its hold only inside the paying tenant', async () => {
     await ensureInventoryHoldsForPayment({
       tenantId: 'hurghada-excursions-online',
       paymentIntentId: 'pi_brand_inventory_1',
@@ -70,9 +73,8 @@ describe('paid brand inventory recovery', () => {
     });
 
     expect(Booking.findOne).toHaveBeenCalledWith({
-      tenantId: 'hurghada-excursions-online',
       paymentId: 'pi_brand_inventory_1',
-      paymentItemIndex: 0,
+      $or: [{ paymentItemIndex: 0 }, { paymentItemIndex: null }],
     });
     expect(CheckoutInventoryHold.findOneAndUpdate).toHaveBeenCalledWith(
       {

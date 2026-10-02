@@ -32,13 +32,19 @@ export function buildQuoteBinding(input: {
   amountMinor: number;
   discountCode?: string | null;
   checkoutAttemptId: string;
+  departureDeadlinesUtc?: number[];
 }) {
   const checkoutAttemptId = normalizeCheckoutAttemptId(input.checkoutAttemptId);
   if (!checkoutAttemptId) {
     throw new Error('A valid checkout attempt identifier is required.');
   }
+  if (input.departureDeadlinesUtc !== undefined && (input.departureDeadlinesUtc.length !== input.cart.length
+    || !input.departureDeadlinesUtc.every(value => Number.isSafeInteger(value) && value > 0))) {
+    throw new Error('Exact quoted departure deadlines are required.');
+  }
   const canonical = JSON.stringify({
     checkoutAttemptId,
+    ...(input.departureDeadlinesUtc ? { departureDeadlinesUtc: input.departureDeadlinesUtc } : {}),
     cart: normalizedCart(input.cart),
     customerEmail: input.customerEmail.trim().toLowerCase(),
     currency: input.currency.toUpperCase(),
