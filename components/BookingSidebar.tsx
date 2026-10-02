@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef, useLayoutEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
@@ -601,7 +601,7 @@ const CalendarWidget: React.FC<{
 };
 
 // MODIFIED: TourOptionCard now uses real tour data
-const TourOptionCard: React.FC<{
+export const TourOptionCard: React.FC<{
   option: TourOption;
   onSelect: (timeSlot: TimeSlot) => void;
   selectedTimeSlot: TimeSlot | null;
@@ -619,6 +619,32 @@ const TourOptionCard: React.FC<{
   const [descExpanded, setDescExpanded] = useState(false);
   const [descOverflows, setDescOverflows] = useState(false);
   const descRef = useRef<HTMLParagraphElement>(null);
+  const departureRef = useRef<HTMLDivElement>(null);
+  const scrollOnExpand = useRef(false);
+  const toggleExpanded = () => {
+    scrollOnExpand.current = !expanded;
+    onToggleExpanded?.();
+  };
+
+  // Only a customer opening this card moves the drawer. Initial rendering,
+  // availability refreshes and closing a card must not steal scroll or focus.
+  useLayoutEffect(() => {
+    if (!expanded || !scrollOnExpand.current) return;
+    scrollOnExpand.current = false;
+    const frame = requestAnimationFrame(() => {
+      const target = departureRef.current;
+      const region = target?.closest<HTMLElement>("[data-testid='booking-drawer-scroll-region']");
+      if (!target || !region) return;
+      const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+      // The region sits between the drawer header and footer; scroll only it,
+      // keeping the section below its edge guards without moving the page.
+      region.scrollTo({
+        top: Math.max(0, region.scrollTop + target.getBoundingClientRect().top - region.getBoundingClientRect().top - 16),
+        behavior: reducedMotion ? 'auto' : 'smooth',
+      });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [expanded]);
 
   // Only offer "Read more" when the clamped text is actually cut off. A card
   // that mounts collapsed sits inside a hidden subtree where every box is
@@ -713,11 +739,11 @@ const TourOptionCard: React.FC<{
               tabIndex: 0,
               'aria-expanded': isOpen,
               'aria-controls': bodyId,
-              onClick: onToggleExpanded,
+              onClick: toggleExpanded,
               onKeyDown: (event: React.KeyboardEvent) => {
                 if (event.key === 'Enter' || event.key === ' ') {
                   event.preventDefault();
-                  onToggleExpanded?.();
+                  toggleExpanded();
                 }
               },
             }
@@ -897,11 +923,17 @@ const TourOptionCard: React.FC<{
       </div>
 
       {/* Time Slots */}
-      <div>
+      <div ref={departureRef}>
         <div className="flex items-center justify-between mb-2">
-          <h4 className="font-semibold text-gray-800 text-xs">Available Times Today</h4>
-          <span className="text-[10px] text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">Select one to continue</span>
+          <h4 className="font-semibold text-gray-800 text-xs">Available departure times</h4>
+          {hasAvailableSlots && <span className="text-[10px] text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">Select one to continue</span>}
         </div>
+
+        {!hasAvailableSlots && !option.isStopSaleBlocked && (
+          <div role="status" className="mb-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+            No departures are available for this date. Please choose another date.
+          </div>
+        )}
 
         {!hasAvailableSlots && option.isStopSaleBlocked && (
           <div className="mb-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
