@@ -54,17 +54,25 @@ function request(url: string, init: { method?: string; headers?: Record<string, 
 }
 
 describe('the edge vouches for the visitor on every request it passes on', () => {
+  const originalSecrets = {
+    ABUSE_LIMIT_HASH_SECRET: process.env.ABUSE_LIMIT_HASH_SECRET,
+    JWT_SECRET: process.env.JWT_SECRET,
+  };
   let warn: jest.SpyInstance;
   let error: jest.SpyInstance;
 
   beforeEach(() => {
     process.env.ABUSE_LIMIT_HASH_SECRET = SECRET;
+    delete process.env.JWT_SECRET;
     warn = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
     error = jest.spyOn(console, 'error').mockImplementation(() => undefined);
   });
 
   afterEach(() => {
-    delete process.env.ABUSE_LIMIT_HASH_SECRET;
+    for (const [key, value] of Object.entries(originalSecrets)) {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
     delete (globalThis as NetlifyGlobal).Netlify;
     warn.mockRestore();
     error.mockRestore();
@@ -127,6 +135,16 @@ describe('the edge vouches for the visitor on every request it passes on', () =>
 
     expect(vouchedVisitor(forwardedWord(response), SECRET)).toEqual({ address: '198.51.100.7', via: 'cf' });
     expect(response.headers.get('x-middleware-request-x-next-intl-locale')).toBe('de');
+  });
+
+  it('uses the configured JWT signing fallback when the dedicated secret is absent', async () => {
+    delete process.env.ABUSE_LIMIT_HASH_SECRET;
+    process.env.JWT_SECRET = SECRET;
+    onNetlifyEdge('203.0.113.5');
+    const response = await proxy(request('https://egypt-excursionsonline.com/api/discounts/verify', {
+      method: 'POST',
+    }));
+    expect(vouchedVisitor(forwardedWord(response), SECRET)).toEqual({ address: '203.0.113.5', via: 'peer' });
   });
 
   it('forwards no word at all without the secret, stripping the copy, and says so once', async () => {
