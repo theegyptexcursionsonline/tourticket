@@ -9,16 +9,18 @@ jest.mock('next/server', () => {
   class MockNextResponse {
     status: number;
     _data: unknown;
+    headers: Headers;
 
-    constructor(init?: { status?: number }) {
+    constructor(init?: { status?: number; headers?: HeadersInit }) {
       this.status = init?.status ?? 200;
+      this.headers = new Headers(init?.headers);
     }
 
     async json() {
       return this._data;
     }
 
-    static json(data: unknown, init?: { status?: number }) {
+    static json(data: unknown, init?: { status?: number; headers?: HeadersInit }) {
       const response = new MockNextResponse(init);
       response._data = data;
       return response;
@@ -81,6 +83,7 @@ import { GET } from '@/app/api/admin/content/blog/[slug]/route';
 import { revalidateStorefrontContent } from '@/lib/storefront/revalidateTourStorefront';
 import { authenticateContentEngineMutation } from '@/lib/auth/verifyContentEngine';
 import {
+  verifyContentEngine,
   verifyContentEngineMutationTarget,
   verifyContentEngineTenant,
 } from '@/lib/auth/verifyContentEngine';
@@ -192,7 +195,7 @@ describe('draft-only receiver contract', () => {
 });
 
 it('reports an archived tombstone truthfully during slug lookup', async () => {
-  blogFindOne.mockReturnValue({ lean: async () => ({ _id: 'draft-1', slug: 'qa-draft', status: 'draft', archivedAt: new Date(), __v: 1 }) });
+  blogFindOne.mockReturnValue({ select: () => ({ lean: async () => ({ _id: 'draft-1', slug: 'qa-draft', status: 'draft', archivedAt: new Date(), __v: 1 }) }) });
   const response = await GET(lookupRequest('default'), { params: Promise.resolve({ slug: 'qa-draft' }) });
   expect(await response.json()).toMatchObject({ status: 'archived', revision: 1 });
 });
@@ -634,7 +637,7 @@ describe('GET /api/admin/content/blog/[slug]', () => {
       __v: 7,
       updatedAt: new Date(0),
     });
-    blogFindOne.mockReturnValue({ lean });
+    blogFindOne.mockReturnValue({ select: jest.fn().mockReturnValue({ lean }) });
 
     const response = await GET(lookupRequest('default'), {
       params: Promise.resolve({ slug: 'some-slug' }),
@@ -659,5 +662,68 @@ describe('GET /api/admin/content/blog/[slug]', () => {
 
     expect(response.status).toBe(503);
     expect(blogFindOne).not.toHaveBeenCalled();
+  });
+
+  it('returns authoritative receipt provenance and an uncached canonical URL after editorial publication', async () => {
+    const select = jest.fn().mockReturnValue({ lean: async () => ({
+      _id: 'blog-1', slug: 'reviewed-guide', tenantId: 'default', status: 'published',
+      __v: 8, contentEnginePublishReceiptId: 'receipt-1',
+    }) });
+    blogFindOne.mockReturnValue({ select });
+    const previousUrl = process.env.NEXT_PUBLIC_SITE_URL;
+    process.env.NEXT_PUBLIC_SITE_URL = 'https://egypt-excursionsonline.com/';
+    try {
+      const response = await GET(lookupRequest('default'), { params: Promise.resolve({ slug: 'reviewed-guide' }) });
+      expect(select).toHaveBeenCalledWith('+contentEnginePublishReceiptId');
+      expect(await response.json()).toMatchObject({
+        id: 'blog-1', tenantId: 'default', locale: 'en', revision: 8,
+        publishReceiptId: 'receipt-1', status: 'published',
+        liveUrl: 'https://egypt-excursionsonline.com/blog/reviewed-guide',
+      });
+      expect(response.headers.get('Cache-Control')).toBe('private, no-store');
+    } finally {
+      if (previousUrl === undefined) delete process.env.NEXT_PUBLIC_SITE_URL;
+      else process.env.NEXT_PUBLIC_SITE_URL = previousUrl;
+    }
+  });
+
+  it.each([
+    { status: 'draft' }, { status: 'scheduled' },
+    { status: 'published', archivedAt: new Date(0) },
+  ])('does not advertise a live URL for an unpublished or archived record: %j', async state => {
+    blogFindOne.mockReturnValue({ select: () => ({ lean: async () => ({
+      _id: 'blog-1', slug: 'private-guide', tenantId: 'default', __v: 2,
+      contentEnginePublishReceiptId: 'receipt-1', ...state,
+    }) }) });
+    const response = await GET(lookupRequest('default'), { params: Promise.resolve({ slug: 'private-guide' }) });
+    expect(await response.json()).not.toHaveProperty('liveUrl');
+  });
+
+  it('does not manufacture receipt evidence for manually created content', async () => {
+    blogFindOne.mockReturnValue({ select: () => ({ lean: async () => ({
+      _id: 'blog-1', slug: 'manual-guide', status: 'published', __v: 0,
+    }) }) });
+    const response = await GET(lookupRequest('default'), { params: Promise.resolve({ slug: 'manual-guide' }) });
+    expect(await response.json()).toMatchObject({ publishReceiptId: null });
+  });
+
+  it('denies a foreign tenant before selecting private provenance', async () => {
+    const response = await GET(lookupRequest('foreign'), { params: Promise.resolve({ slug: 'private-guide' }) });
+    expect(response.status).toBe(422);
+    expect(blogFindOne).not.toHaveBeenCalled();
+  });
+
+  it('denies unauthenticated reads before database access', async () => {
+    jest.mocked(verifyContentEngine).mockReturnValueOnce({ status: 401 } as never);
+    const response = await GET(lookupRequest('default'), { params: Promise.resolve({ slug: 'private-guide' }) });
+    expect(response.status).toBe(401);
+    expect(mockDbConnect).not.toHaveBeenCalled();
+  });
+
+  it('returns not found without publication evidence when the record is absent', async () => {
+    blogFindOne.mockReturnValue({ select: () => ({ lean: async () => null }) });
+    const response = await GET(lookupRequest('default'), { params: Promise.resolve({ slug: 'missing' }) });
+    expect(response.status).toBe(404);
+    expect(await response.json()).not.toHaveProperty('publishReceiptId');
   });
 });

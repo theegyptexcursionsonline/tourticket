@@ -10,6 +10,7 @@ import {
   verifyContentEngineTenant,
 } from "@/lib/auth/verifyContentEngine";
 import { tenantSlugFilter } from "@/lib/tenant/tenantScope";
+import { defaultLocale } from "@/i18n/config";
 
 export async function GET(
   req: NextRequest,
@@ -25,7 +26,9 @@ export async function GET(
   let blog;
   try {
     await dbConnect();
-    blog = await Blog.findOne(tenantSlugFilter(slug, tenantId)).lean();
+    blog = await Blog.findOne(tenantSlugFilter(slug, tenantId))
+      .select("+contentEnginePublishReceiptId")
+      .lean();
   } catch (error) {
     console.error("[content-receiver] lookup failed", {
       contentType: "blog",
@@ -37,13 +40,21 @@ export async function GET(
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
+  const status = blog.archivedAt ? "archived" : blog.status;
+  // This flagship receiver admits only the default tenant and English base
+  // locale. Never echo a caller's locale or host as publication evidence.
+  const base = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "")
+    ?? "https://www.egypt-excursionsonline.com";
   return NextResponse.json({
     id: String(blog._id),
     slug: blog.slug,
     title: blog.title,
-    status: blog.archivedAt ? "archived" : blog.status,
+    status,
     revision: blog.__v,
     tenantId: blog.tenantId ?? null,
     updatedAt: blog.updatedAt,
-  });
+    publishReceiptId: blog.contentEnginePublishReceiptId ?? null,
+    locale: defaultLocale,
+    ...(status === "published" ? { liveUrl: `${base}/blog/${encodeURIComponent(blog.slug)}` } : {}),
+  }, { headers: { "Cache-Control": "private, no-store" } });
 }
