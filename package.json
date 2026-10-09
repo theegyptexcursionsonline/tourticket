@@ -31,6 +31,7 @@
     "ci": "pnpm typecheck && pnpm lint && pnpm test:unit && pnpm build && pnpm test:e2e",
     "blog:migrate-tenant-index": "tsx scripts/migrate-blog-slug-tenant-index.ts",
     "content:migrate-tenant-index": "tsx scripts/migrate-blog-slug-tenant-index.ts",
+    "bookings:migrate-feed-indexes": "tsx scripts/migrate-booking-feed-indexes.ts",
     "algolia:sync": "tsx scripts/sync-algolia.ts",
     "algolia:clear-sync": "tsx scripts/sync-algolia.ts --clear",
     "algolia:sync-all": "tsx scripts/sync-all-algolia.ts",
