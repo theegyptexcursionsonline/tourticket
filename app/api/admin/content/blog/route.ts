@@ -188,9 +188,13 @@ async function POSTHandler(req: NextRequest) {
     target.method === "POST" && target.receiverType === "blog"
     && target.tenantId === body.tenantId && target.locale === body.defaultLocale
     && target.publicationMode === "draft");
-  const outcome = (record: { _id: unknown; slug: string; status?: string; archivedAt?: Date | null }) => draftOnly
-    ? { id: String(record._id), slug: record.slug, status: Boolean(record.archivedAt) ? "archived" : "draft", requiresManualPublish: true }
-    : { id: String(record._id), slug: record.slug, liveUrl: liveUrlForBlog(record.slug, body.defaultLocale!), status: "published", requiresManualPublish: false };
+  const outcome = (record: { _id: unknown; slug: string; status?: string; archivedAt?: Date | null; __v?: number }) => {
+    if (!draftOnly) return { id: String(record._id), slug: record.slug, liveUrl: liveUrlForBlog(record.slug, body.defaultLocale!), status: "published", requiresManualPublish: false };
+    // Read the committed document revision, including replay/recovery; never
+    // invent a zero revision for a historical record without version evidence.
+    if (!Number.isSafeInteger(record.__v) || record.__v! < 0) throw new Error("Receiver draft revision is unavailable");
+    return { id: String(record._id), slug: record.slug, status: Boolean(record.archivedAt) ? "archived" : "draft", requiresManualPublish: true, revision: record.__v! };
+  };
 
 
   const tenant = verifyContentEngineTenant(body.tenantId);
@@ -298,7 +302,7 @@ async function POSTHandler(req: NextRequest) {
           })
         : null;
       if (recovered) {
-        if (draftOnly && recovered.status !== "draft") return NextResponse.json({ error: "Receiver draft is unavailable" }, { status: 409 });
+        if (draftOnly && (recovered.status !== "draft" || recovered.archivedAt)) return NextResponse.json({ error: "Receiver draft is unavailable" }, { status: 409 });
         contentCommitted = true;
         const adopted = {
           droppedLocales,

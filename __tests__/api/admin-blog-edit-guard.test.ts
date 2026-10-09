@@ -16,7 +16,7 @@ jest.mock('@/lib/models/Blog', () => ({ __esModule: true, default: { findOneAndU
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 import { PUT } from '@/app/api/admin/blog/[id]/route';
 const context = { params: Promise.resolve({ id: '507f1f77bcf86cd799439011' }) };
-const request = (body: unknown) => ({ json: async () => body }) as never;
+const request = (body: unknown) => ({ headers: new Headers(), json: async () => body }) as never;
 beforeEach(() => { mockUpdate.mockReset(); });
 it.each([{ archivedAt: null }, { contentEngineGrantId: 'other' }, { $set: { status: 'published' } }, { 'contentEngineGrantId.x': 1 }, { tenantId: 'other' }, null])('refuses protected input %j', async body => {
   expect((await PUT(request(body), context)).status).toBe(400);

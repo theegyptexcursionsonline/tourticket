@@ -17,6 +17,14 @@ async function PUTHandler(
   if (auth instanceof NextResponse) return auth;
 
   try {
+    // Optional strong revision precondition: exactly a quoted, nonnegative
+    // decimal integer (e.g. If-Match: "0"). No wildcard, weak tag or tag list.
+    const ifMatch = request.headers.get('if-match');
+    const expectedRevision = ifMatch === null ? undefined : Number(ifMatch.slice(1, -1));
+    if (ifMatch !== null && (!/^"(?:0|[1-9][0-9]*)"$/.test(ifMatch)
+      || !Number.isSafeInteger(expectedRevision) || expectedRevision! >= Number.MAX_SAFE_INTEGER)) {
+      return NextResponse.json({ success: false, error: 'Invalid blog revision precondition' }, { status: 400 });
+    }
     await dbConnect();
     
     const data = await request.json();
@@ -37,7 +45,7 @@ async function PUTHandler(
       return NextResponse.json({ success: false, error: 'Invalid related content references' }, { status: 400 });
     }
     const blog = await Blog.findOneAndUpdate(
-      { _id: id, ...DEFAULT_TENANT_FILTER, archivedAt: null },
+      { _id: id, ...DEFAULT_TENANT_FILTER, archivedAt: null, ...(expectedRevision !== undefined ? { __v: expectedRevision } : {}) },
       { $set: data, $inc: { __v: 1 } },
       { 
         new: true, 
@@ -48,8 +56,8 @@ async function PUTHandler(
     if (!blog) {
       return NextResponse.json({ 
         success: false, 
-        error: 'Blog post not found' 
-      }, { status: 404 });
+        error: expectedRevision === undefined ? 'Blog post not found' : 'Blog revision precondition failed'
+      }, { status: expectedRevision === undefined ? 404 : 412 });
     }
 
     revalidateStorefrontContent();

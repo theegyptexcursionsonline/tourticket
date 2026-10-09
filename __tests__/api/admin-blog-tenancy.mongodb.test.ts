@@ -106,3 +106,29 @@ it('preserves normal image metadata while adding missing image captions', async 
     expect.objectContaining({ url: data.images[0] }),
   ]));
 });
+
+const conditional = (tag: string, body: unknown = { status: 'published' }) => new NextRequest('https://example.test/api/admin/blog', { method: 'PUT', headers: { 'content-type': 'application/json', 'if-match': tag }, body: JSON.stringify(body) });
+it.each(['default', undefined, null, ''])('atomically publishes matching revision for default/legacy %s without storing precondition', async tenant => {
+  const id = await seed(tenant, { contentEnginePublishReceiptId: 'owned-receipt' });
+  expect((await PUT(conditional('"0"'), context(id))).status).toBe(200);
+  const saved = await Blog.collection.findOne({ _id: id });
+  expect(saved?.status).toBe('published'); expect(saved?.__v).toBe(1); expect(saved?.contentEnginePublishReceiptId).toBe('owned-receipt');
+  expect(saved).not.toHaveProperty('if-match'); expect(saved).not.toHaveProperty('expectedRevision');
+  expect((await PUT(conditional('"0"', { title: 'Stale change' }), context(id))).status).toBe(412);
+  expect(await Blog.collection.findOne({ _id: id })).toEqual(saved);
+});
+it('only one simultaneous editor succeeds against a reviewed revision', async () => {
+  const id = await seed('default');
+  const responses = await Promise.all([PUT(conditional('"0"', { title: 'First revision change' }), context(id)), PUT(conditional('"0"', { title: 'Second revision change' }), context(id))]);
+  expect(responses.map(r => r.status).sort()).toEqual([200, 412]); expect((await Blog.collection.findOne({ _id: id }))?.__v).toBe(1);
+});
+it.each(['0', 'W/"0"', '*', '"0", "1"', '"-1"', '"01"', '"1.5"', '"9007199254740991"', '"9007199254740992"', '""'])('refuses malformed If-Match %s without mutation', async tag => {
+  const id = await seed('default'), before = await Blog.collection.findOne({ _id: id });
+  expect((await PUT(conditional(tag), context(id))).status).toBe(400);
+  expect(await Blog.collection.findOne({ _id: id })).toEqual(before); expect(revalidateStorefrontContent).not.toHaveBeenCalled();
+});
+it.each(['foreign', 'archived', 'missing'])('precondition does not expose or mutate %s rows', async kind => {
+  const id = await seed(kind === 'foreign' ? 'other-tenant' : 'default', kind === 'archived' ? { archivedAt: new Date() } : {}), before = await Blog.collection.findOne({ _id: id });
+  expect((await PUT(conditional('"0"'), context(kind === 'missing' ? new mongoose.Types.ObjectId() : id))).status).toBe(412);
+  expect(await Blog.collection.findOne({ _id: id })).toEqual(before); expect(revalidateStorefrontContent).not.toHaveBeenCalled();
+});

@@ -172,25 +172,74 @@ describe('draft-only receiver contract', () => {
   it('forces a published request into a private draft without public cache effects', async () => {
     admitDraft();
     blogFindOne.mockResolvedValue(null);
-    blogCreate.mockImplementation(async doc => ({ ...doc, _id: 'draft-1' }));
+    blogCreate.mockImplementation(async doc => ({ ...doc, _id: 'draft-1', __v: 0 }));
     const response = await POST(request({ payload: validPayload, defaultLocale: 'en' }));
     expect(response.status).toBe(201);
     expect(blogCreate).toHaveBeenCalledWith(expect.objectContaining({ status: 'draft', contentEngineGrantId: 'draft-canary' }));
-    expect(await response.json()).toEqual(expect.objectContaining({ status: 'draft', requiresManualPublish: true, publishReceiptId: expect.any(String) }));
+    expect(await response.json()).toEqual(expect.objectContaining({ status: 'draft', requiresManualPublish: true, revision: 0, publishReceiptId: expect.any(String) }));
     expect(await response.json()).not.toHaveProperty('liveUrl');
     expect(revalidateStorefrontContent).not.toHaveBeenCalled();
   });
   it('returns archived state on a create replay without recreating or publishing', async () => {
     admitDraft();
     blogFindOne.mockResolvedValue(null);
-    blogCreate.mockImplementation(async doc => ({ ...doc, _id: 'draft-1' }));
+    blogCreate.mockImplementation(async doc => ({ ...doc, _id: 'draft-1', __v: 0 }));
     await POST(request({ payload: validPayload, defaultLocale: 'en' }));
     admitDraft();
-    blogFindOne.mockResolvedValue({ _id: 'draft-1', slug: validPayload.slug, status: 'draft', archivedAt: new Date() });
+    blogFindOne.mockResolvedValue({ _id: 'draft-1', slug: validPayload.slug, status: 'draft', archivedAt: new Date(), __v: 2 });
     const retry = await POST(request({ payload: validPayload, defaultLocale: 'en' }));
     expect(await retry.json()).toEqual(expect.objectContaining({ status: 'archived' }));
     expect(blogCreate).toHaveBeenCalledTimes(1);
     expect(blogFindOne).toHaveBeenLastCalledWith(expect.objectContaining({ contentEngineGrantId: 'draft-canary', contentEnginePublishReceiptId: expect.any(String) }));
+  });
+  it('replays current authoritative revision without rewriting the completed receipt', async () => {
+    admitDraft(); blogFindOne.mockResolvedValue(null);
+    blogCreate.mockImplementation(async doc => ({ ...doc, _id: 'draft-1', __v: 0 }));
+    const first = await POST(request({ payload: validPayload, defaultLocale: 'en' }));
+    const original = await first.json();
+    admitDraft(); blogFindOne.mockResolvedValue({ _id: 'draft-1', slug: validPayload.slug, status: 'draft', __v: 3 });
+    const replay = await POST(request({ payload: validPayload, defaultLocale: 'en' }));
+    expect(await replay.json()).toMatchObject({ id: original.id, slug: original.slug, publishReceiptId: original.publishReceiptId, status: 'draft', requiresManualPublish: true, revision: 3 });
+    expect(mockReceiptStore.current!.receipts[0].response).toEqual(original);
+    expect(blogCreate).toHaveBeenCalledTimes(1);
+    expect(blogFindOne).toHaveBeenLastCalledWith(expect.objectContaining({ ...DEFAULT_TENANT_FILTER, contentEnginePublishReceiptId: original.publishReceiptId, contentEngineGrantId: 'draft-canary' }));
+  });
+  it('supplies current revision for an immutable historical receipt that omitted it', async () => {
+    admitDraft(); blogFindOne.mockResolvedValue(null);
+    blogCreate.mockImplementation(async doc => ({ ...doc, _id: 'draft-1', __v: 0 }));
+    await POST(request({ payload: validPayload, defaultLocale: 'en' }));
+    delete mockReceiptStore.current!.receipts[0].response!.revision;
+    admitDraft(); blogFindOne.mockResolvedValue({ _id: 'draft-1', slug: validPayload.slug, status: 'draft', __v: 2 });
+    const replay = await POST(request({ payload: validPayload, defaultLocale: 'en' }));
+    expect(await replay.json()).toMatchObject({ status: 'draft', revision: 2, requiresManualPublish: true });
+    expect(mockReceiptStore.current!.receipts[0].response).not.toHaveProperty('revision');
+    expect(blogCreate).toHaveBeenCalledTimes(1);
+  });
+  it('adopts only its receipt-owned private draft after completion response loss', async () => {
+    admitDraft(); mockReceiptStore.current!.loseNextCompletion(); blogFindOne.mockResolvedValueOnce(null);
+    let record: Record<string, unknown>;
+    blogCreate.mockImplementation(async doc => (record = { ...doc, _id: 'draft-1', __v: 4 }));
+    expect((await POST(request({ payload: validPayload, defaultLocale: 'en' }))).status).toBe(503);
+    mockReceiptStore.current!.expireClaims(); admitDraft(); blogFindOne.mockImplementation(async () => record);
+    const result = await POST(request({ payload: validPayload, defaultLocale: 'en' }));
+    expect(result.status).toBe(201); expect(await result.json()).toMatchObject({ status: 'draft', revision: 4, requiresManualPublish: true, publishReceiptId: expect.any(String) });
+    expect(blogCreate).toHaveBeenCalledTimes(1); expect(revalidateStorefrontContent).not.toHaveBeenCalled();
+  });
+  it.each([undefined, -1, 1.5, Number.MAX_SAFE_INTEGER + 1])('refuses untrustworthy stored revision %s', async revision => {
+    admitDraft(); blogFindOne.mockResolvedValue(null); blogCreate.mockImplementation(async doc => ({ ...doc, _id: 'draft-1', __v: 0 }));
+    await POST(request({ payload: validPayload, defaultLocale: 'en' }));
+    admitDraft(); blogFindOne.mockResolvedValue({ _id: 'draft-1', slug: validPayload.slug, status: 'draft', __v: revision });
+    const response = await POST(request({ payload: validPayload, defaultLocale: 'en' }));
+    expect(response.status).toBe(503); expect(await response.json()).not.toHaveProperty('revision'); expect(blogCreate).toHaveBeenCalledTimes(1);
+  });
+  it.each(['published', 'archived'])('never adopts %s content from an interrupted create', async status => {
+    admitDraft(); mockReceiptStore.current!.loseNextCompletion(); blogFindOne.mockResolvedValueOnce(null);
+    blogCreate.mockImplementation(async doc => ({ ...doc, _id: 'draft-1', __v: 0 }));
+    await POST(request({ payload: validPayload, defaultLocale: 'en' }));
+    mockReceiptStore.current!.expireClaims(); admitDraft();
+    blogFindOne.mockResolvedValue({ _id: 'draft-1', slug: validPayload.slug, status: status === 'archived' ? 'draft' : status, archivedAt: status === 'archived' ? new Date() : undefined, __v: 2 });
+    expect((await POST(request({ payload: validPayload, defaultLocale: 'en' }))).status).toBe(409);
+    expect(blogCreate).toHaveBeenCalledTimes(1); expect(revalidateStorefrontContent).not.toHaveBeenCalled();
   });
 });
 
