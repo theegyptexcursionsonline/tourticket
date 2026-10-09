@@ -1,3 +1,4 @@
+import { blogRelatedPopulations } from '@/lib/content/blogReferences';
 import React from 'react';
 import dbConnect from '@/lib/dbConnect';
 import Blog from '@/lib/models/Blog';
@@ -18,8 +19,7 @@ async function getBlogs(): Promise<IBlog[] | null> {
     await dbConnect();
     const blogs = await Blog.find({ ...DEFAULT_TENANT_FILTER, archivedAt: null })
       .sort({ createdAt: -1 })
-      .populate('relatedDestinations', 'name slug')
-      .populate('relatedTours', 'title slug')
+      .populate(blogRelatedPopulations('admin'))
       .lean();
     return JSON.parse(JSON.stringify(blogs));
   } catch (error) {

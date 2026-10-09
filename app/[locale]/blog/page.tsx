@@ -1,9 +1,9 @@
+import { blogRelatedPopulations } from '@/lib/content/blogReferences';
 import React from 'react';
 import { Metadata } from 'next';
 import dbConnect from '@/lib/dbConnect';
 import Blog from '@/lib/models/Blog';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
-import { PUBLIC_CONTENT_FILTER } from '@/lib/content/publicContentFilter';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import BlogClientPage from './BlogClientPage';
@@ -67,15 +67,13 @@ async function getBlogsWithCategoryCounts(): Promise<{
     // Get all published blogs
     const blogs = await Blog.find({ status: 'published', ...DEFAULT_TENANT_FILTER })
       .sort({ publishedAt: -1 })
-      .populate({ path: 'relatedDestinations', select: 'name slug urlType parentPage', match: PUBLIC_CONTENT_FILTER })
-      .populate({ path: 'relatedTours', select: 'title slug urlType parentPage', match: PUBLIC_CONTENT_FILTER });
+      .populate(blogRelatedPopulations('list'));
 
     // Get featured posts
     const featuredPosts = await Blog.find({ status: 'published', featured: true, ...DEFAULT_TENANT_FILTER })
       .sort({ publishedAt: -1 })
       .limit(3)
-      .populate({ path: 'relatedDestinations', select: 'name slug urlType parentPage', match: PUBLIC_CONTENT_FILTER })
-      .populate({ path: 'relatedTours', select: 'title slug urlType parentPage', match: PUBLIC_CONTENT_FILTER });
+      .populate(blogRelatedPopulations('list'));
 
     // Get category counts
     const categoryCounts = await Promise.all(

@@ -55,8 +55,11 @@ describe('blog links and sitemap do not surface trash', () => {
   it('blog populates filter the joined side', () => {
     for (const file of ['app/[locale]/blog/[slug]/page.tsx', 'app/[locale]/blog/page.tsx']) {
       const source = read(file);
-      expect(source).toMatch(/relatedDestinations[\s\S]{0,160}PUBLIC_CONTENT_FILTER/);
-      expect(source).toMatch(/relatedTours[\s\S]{0,140}PUBLIC_CONTENT_FILTER/);
+      expect(source).toMatch(/\.populate\(blogRelatedPopulations\('(list|detail)'\)\)/);
+      const helper = read('lib/content/blogReferences.ts');
+      expect(helper).toContain('...DEFAULT_TENANT_FILTER, ...PUBLIC_CONTENT_FILTER');
+      expect(helper).toMatch(/path: 'relatedDestinations'[^\n]*match/);
+      expect(helper).toMatch(/path: 'relatedTours'[^\n]*match/);
     }
   });
 

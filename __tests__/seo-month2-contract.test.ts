@@ -36,8 +36,10 @@ describe('Month-2 SEO growth contracts', () => {
 
   it('uses real stored relationships and never backfills unrelated editorial tours', () => {
     const blog = read('app/[locale]/blog/[slug]/page.tsx');
-    expect(blog).toContain('relatedDestinations');
-    expect(blog).toContain('relatedTours');
+    expect(blog).toContain(".populate(blogRelatedPopulations('detail'))");
+    const references = read('lib/content/blogReferences.ts');
+    expect(references).toContain("path: 'relatedDestinations'");
+    expect(references).toContain("path: 'relatedTours'");
     expect(blog).toContain('tags: { $in: blogTags }');
     expect(blog).not.toContain('relevantTours.length < 3');
     expect(blog).not.toContain('featured: -1, createdAt: -1');

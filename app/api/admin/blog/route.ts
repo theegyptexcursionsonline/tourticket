@@ -1,3 +1,4 @@
+import { validDefaultBlogReferences } from '@/lib/content/blogReferences';
 // app/api/admin/blog/route.ts
 import { withAdminAudit } from '@/lib/admin/adminAudit';
 import { NextRequest, NextResponse } from 'next/server';
@@ -38,6 +39,9 @@ async function POSTHandler(request: NextRequest) {
     // Main administration owns the flagship only; clients cannot select another tenant.
     if (![undefined, null, '', 'default'].includes(data.tenantId)) {
       return NextResponse.json({ success: false, error: 'Only default-site blog posts can be created here' }, { status: 400 });
+    }
+    if (!await validDefaultBlogReferences(data)) {
+      return NextResponse.json({ success: false, error: 'Invalid related content references' }, { status: 400 });
     }
     data.tenantId = 'default';
     data.imageMetadata = ensureImageMetadata(data.imageMetadata, [data.featuredImage, ...(data.images || [])]);

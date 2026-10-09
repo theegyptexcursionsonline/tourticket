@@ -1,3 +1,4 @@
+import { blogRelatedPopulations } from '@/lib/content/blogReferences';
 // app/blog/[slug]/page.tsx
 import { notFound } from 'next/navigation';
 import dbConnect from '@/lib/dbConnect';
@@ -90,8 +91,7 @@ async function getBlogPost(slug: string) {
   await dbConnect();
 
   const blog = await Blog.findOne({ slug, status: 'published', ...DEFAULT_TENANT_FILTER })
-    .populate({ path: 'relatedDestinations', select: 'name slug image urlType parentPage', match: { ...DEFAULT_TENANT_FILTER, ...PUBLIC_CONTENT_FILTER } })
-    .populate({ path: 'relatedTours', select: 'title slug image discountPrice urlType destination parentPage', match: { ...DEFAULT_TENANT_FILTER, ...PUBLIC_CONTENT_FILTER }, populate: { path: 'destination', select: 'slug' } })
+    .populate(blogRelatedPopulations('detail'))
     .lean();
 
   if (!blog) {

@@ -1,3 +1,4 @@
+import { validDefaultBlogReferences } from '@/lib/content/blogReferences';
 import { withAdminAudit } from '@/lib/admin/adminAudit';
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
@@ -31,6 +32,9 @@ async function PUTHandler(
     if (!data || typeof data !== 'object' || Array.isArray(data)
       || Object.keys(data).some(key => key.startsWith('$') || key.includes('.') || key.startsWith('contentEngine') || key === 'archivedAt' || key === 'tenantId' || key === '__v' || key === '_id')) {
       return NextResponse.json({ success: false, error: 'Protected blog fields cannot be changed' }, { status: 400 });
+    }
+    if (!await validDefaultBlogReferences(data)) {
+      return NextResponse.json({ success: false, error: 'Invalid related content references' }, { status: 400 });
     }
     const blog = await Blog.findOneAndUpdate(
       { _id: id, ...DEFAULT_TENANT_FILTER, archivedAt: null },
