@@ -68,8 +68,9 @@ const mockCatUpdate = jest.fn();
 jest.mock('@/lib/models/Category', () => ({
   __esModule: true,
   default: {
-    findById: (...args: unknown[]) => ({ lean: () => mockCatFindById(...args) }),
-    findByIdAndUpdate: (...args: unknown[]) => mockCatUpdate(...args),
+    exists: (...args: unknown[]) => mockCatFindById(...args),
+    findOne: (...args: unknown[]) => ({ lean: () => mockCatFindById(...args) }),
+    findOneAndUpdate: (...args: unknown[]) => mockCatUpdate(...args),
   },
 }));
 
@@ -160,6 +161,7 @@ describe('Smoke: POST /api/admin/translate', () => {
       const finders = { tour: mockTourFindById, destination: mockDestFindById, category: mockCatFindById };
       finders[modelType].mockResolvedValue({ _id: '123', title: 'Test', name: 'Test', description: 'Desc' });
       mockOpenAISuccess();
+      mockCatUpdate.mockResolvedValue({});
 
       const res = await POST(makeRequest({ modelType, id: '123' }));
       const data = await res.json();

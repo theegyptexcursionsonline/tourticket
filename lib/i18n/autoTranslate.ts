@@ -4,6 +4,7 @@ import Tour from '@/lib/models/Tour';
 import { revalidateStorefrontContent } from '@/lib/storefront/revalidateTourStorefront';
 import Destination from '@/lib/models/Destination';
 import Category from '@/lib/models/Category';
+import { tenantFilter } from '@/lib/tenant/tenantScope';
 import AttractionPage from '@/lib/models/AttractionPage';
 import {
   TranslationFieldDef,
@@ -558,9 +559,9 @@ export async function autoTranslateDestination(destinationId: string): Promise<v
   console.log(`Auto-translated destination ${destinationId} into ${Object.keys(translations).join(', ')}`);
 }
 
-export async function autoTranslateCategory(categoryId: string): Promise<void> {
+export async function autoTranslateCategory(categoryId: string, tenantId = 'default'): Promise<void> {
   await dbConnect();
-  const cat = await Category.findById(categoryId).lean();
+  const cat = await Category.findOne({ _id: categoryId, ...tenantFilter(tenantId) }).lean();
   if (!cat) throw new Error('Category not found');
 
   const fields = extractFields(cat as Record<string, unknown>, categoryTranslationFields);
@@ -574,14 +575,16 @@ export async function autoTranslateCategory(categoryId: string): Promise<void> {
   });
   if (Object.keys(translations).length === 0) throw new Error('No category translations were generated');
 
-  await Category.findByIdAndUpdate(categoryId, { $set: buildTranslationsSetOps(translations) });
+  // Recheck ownership after provider work; a concurrent reassignment cannot receive this translation.
+  const saved = await Category.findOneAndUpdate({ _id: categoryId, ...tenantFilter(tenantId) }, { $set: buildTranslationsSetOps(translations) });
+  if (!saved) throw new Error('Translation target no longer belongs to the requested tenant');
   revalidateStorefrontContent();
   console.log(`Auto-translated category ${categoryId} into ${Object.keys(translations).join(', ')}`);
 }
 
-export async function autoTranslateAttractionPage(pageId: string): Promise<void> {
+export async function autoTranslateAttractionPage(pageId: string, tenantId = 'default'): Promise<void> {
   await dbConnect();
-  const page = await AttractionPage.findById(pageId).lean();
+  const page = await AttractionPage.findOne({ _id: pageId, ...tenantFilter(tenantId) }).lean();
   if (!page) throw new Error('Page not found');
 
   const fields = extractFields(page as Record<string, unknown>, attractionPageTranslationFields);
@@ -595,7 +598,9 @@ export async function autoTranslateAttractionPage(pageId: string): Promise<void>
   });
   if (Object.keys(translations).length === 0) throw new Error('No page translations were generated');
 
-  await AttractionPage.findByIdAndUpdate(pageId, { $set: buildTranslationsSetOps(translations) });
+  // Recheck ownership after provider work; a concurrent reassignment cannot receive this translation.
+  const saved = await AttractionPage.findOneAndUpdate({ _id: pageId, ...tenantFilter(tenantId) }, { $set: buildTranslationsSetOps(translations) });
+  if (!saved) throw new Error('Translation target no longer belongs to the requested tenant');
   revalidateStorefrontContent();
   console.log(`Auto-translated attraction page ${pageId} into ${Object.keys(translations).join(', ')}`);
 }

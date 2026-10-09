@@ -101,9 +101,9 @@ async function POSTHandler(request: NextRequest) {
         } else if (modelType === 'destination') {
           await Destination.findOneAndUpdate({ _id: id, ...DEFAULT_TENANT_FILTER }, setOp);
         } else if (modelType === 'category') {
-          await Category.findByIdAndUpdate(id, setOp);
+          if (!await Category.findOneAndUpdate({ _id: id, ...DEFAULT_TENANT_FILTER }, setOp)) throw new Error('Translation target no longer belongs to the default tenant');
         } else if (modelType === 'attraction-page') {
-          await AttractionPage.findByIdAndUpdate(id, setOp);
+          if (!await AttractionPage.findOneAndUpdate({ _id: id, ...DEFAULT_TENANT_FILTER }, setOp)) throw new Error('Translation target no longer belongs to the default tenant');
         }
       };
 
@@ -117,9 +117,9 @@ async function POSTHandler(request: NextRequest) {
         } else if (modelType === 'destination') {
           doc = await Destination.findOne({ _id: id, ...DEFAULT_TENANT_FILTER }).lean() as Record<string, unknown> | null;
         } else if (modelType === 'category') {
-          doc = await Category.findById(id).lean() as Record<string, unknown> | null;
+          doc = await Category.findOne({ _id: id, ...DEFAULT_TENANT_FILTER }).lean() as Record<string, unknown> | null;
         } else if (modelType === 'attraction-page') {
-          doc = await AttractionPage.findById(id).lean() as Record<string, unknown> | null;
+          doc = await AttractionPage.findOne({ _id: id, ...DEFAULT_TENANT_FILTER }).lean() as Record<string, unknown> | null;
         }
 
         if (!doc) {

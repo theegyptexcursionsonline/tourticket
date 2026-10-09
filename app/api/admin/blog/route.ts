@@ -30,7 +30,16 @@ async function POSTHandler(request: NextRequest) {
 
   try {
     await dbConnect();
-    const data = await request.json();
+    const data = await request.json().catch(() => null);
+    if (!data || typeof data !== 'object' || Array.isArray(data)
+      || Object.keys(data).some(key => key.startsWith('$') || key.includes('.') || key.startsWith('contentEngine') || key === 'archivedAt' || key === '__v' || key === '_id')) {
+      return NextResponse.json({ success: false, error: 'Protected blog fields cannot be set' }, { status: 400 });
+    }
+    // Main administration owns the flagship only; clients cannot select another tenant.
+    if (![undefined, null, '', 'default'].includes(data.tenantId)) {
+      return NextResponse.json({ success: false, error: 'Only default-site blog posts can be created here' }, { status: 400 });
+    }
+    data.tenantId = 'default';
     data.imageMetadata = ensureImageMetadata(data.imageMetadata, [data.featuredImage, ...(data.images || [])]);
     const created = await Blog.create(data);
     revalidateStorefrontContent();

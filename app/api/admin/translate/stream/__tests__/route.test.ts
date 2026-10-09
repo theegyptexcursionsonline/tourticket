@@ -54,8 +54,8 @@ const mockCategoryUpdate = jest.fn();
 jest.mock('@/lib/models/Category', () => ({
   __esModule: true,
   default: {
-    findById: (...args: unknown[]) => ({ lean: () => mockCategoryFindById(...args) }),
-    findByIdAndUpdate: (...args: unknown[]) => mockCategoryUpdate(...args),
+    findOne: (...args: unknown[]) => ({ lean: () => mockCategoryFindById(...args) }),
+    findOneAndUpdate: (...args: unknown[]) => mockCategoryUpdate(...args),
   },
 }));
 
@@ -64,8 +64,8 @@ const mockAttractionPageUpdate = jest.fn();
 jest.mock('@/lib/models/AttractionPage', () => ({
   __esModule: true,
   default: {
-    findById: (...args: unknown[]) => ({ lean: () => mockAttractionPageFindById(...args) }),
-    findByIdAndUpdate: (...args: unknown[]) => mockAttractionPageUpdate(...args),
+    findOne: (...args: unknown[]) => ({ lean: () => mockAttractionPageFindById(...args) }),
+    findOneAndUpdate: (...args: unknown[]) => mockAttractionPageUpdate(...args),
   },
 }));
 

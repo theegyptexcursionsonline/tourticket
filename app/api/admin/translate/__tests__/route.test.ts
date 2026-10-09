@@ -36,6 +36,9 @@ jest.mock('@/lib/models/Destination', () => ({
   default: { exists: jest.fn().mockResolvedValue(true) },
 }));
 
+jest.mock('@/lib/models/Category', () => ({ __esModule: true, default: { exists: jest.fn().mockResolvedValue(true) } }));
+jest.mock('@/lib/models/AttractionPage', () => ({ __esModule: true, default: { exists: jest.fn().mockResolvedValue(true) } }));
+
 // Mock auto-translate functions
 const mockAutoTranslateTour = jest.fn();
 const mockAutoTranslateDestination = jest.fn();

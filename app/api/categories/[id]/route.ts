@@ -100,7 +100,11 @@ async function PUTHandler(
       resourceId: id,
     }));
 
-    const body = await request.json();
+    const body = await request.json().catch(() => null);
+    if (!body || typeof body !== 'object' || Array.isArray(body)
+      || Object.keys(body).some(key => key.startsWith('$') || key.includes('.') || key === '_id' || key === '__v')) {
+      return NextResponse.json({ success: false, error: 'Invalid or protected content fields' }, { status: 400 });
+    }
     Object.assign(body, sanitizeContentNavigation(body));
     Object.assign(body, await validateAndNormalizePageLinks(body, {
       currentCategoryId: id,
@@ -155,7 +159,7 @@ async function PUTHandler(
 
     const category = await Category.findOneAndUpdate(
       { $and: [DEFAULT_TENANT_FILTER, { _id: id }] },
-      body,
+      { $set: body },
       { new: true, runValidators: true }
     ).lean();
 

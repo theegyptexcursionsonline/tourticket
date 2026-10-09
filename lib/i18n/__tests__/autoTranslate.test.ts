@@ -1,3 +1,4 @@
+import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 import { extractFields, translateEntityFields } from '../autoTranslate';
 import { tourTranslationFields, destinationTranslationFields, categoryTranslationFields } from '../translationFields';
 
@@ -24,12 +25,12 @@ jest.mock('@/lib/models/Destination', () => ({
   findByIdAndUpdate: jest.fn(),
 }));
 jest.mock('@/lib/models/Category', () => ({
-  findById: jest.fn(),
-  findByIdAndUpdate: jest.fn(),
+  findOne: jest.fn(),
+  findOneAndUpdate: jest.fn(),
 }));
 jest.mock('@/lib/models/AttractionPage', () => ({
-  findById: jest.fn(),
-  findByIdAndUpdate: jest.fn(),
+  findOne: jest.fn(),
+  findOneAndUpdate: jest.fn(),
 }));
 
 describe('translateEntityFields', () => {
@@ -360,8 +361,8 @@ describe('autoTranslateCategory', () => {
       description: 'Exciting adventure experiences',
     };
 
-    Category.findById.mockReturnValue({ lean: jest.fn().mockResolvedValue(mockCat) });
-    Category.findByIdAndUpdate.mockResolvedValue({});
+    Category.findOne.mockReturnValue({ lean: jest.fn().mockResolvedValue(mockCat) });
+    Category.findOneAndUpdate.mockResolvedValue({});
 
     const mockTranslations = {
       ar: { name: 'جولات المغامرات', description: 'تجارب مغامرات مثيرة' },
@@ -382,8 +383,8 @@ describe('autoTranslateCategory', () => {
     const { autoTranslateCategory } = await import('../autoTranslate');
     await autoTranslateCategory('cat123');
 
-    expect(Category.findById).toHaveBeenCalledWith('cat123');
-    expect(Category.findByIdAndUpdate).toHaveBeenCalledWith('cat123', {
+    expect(Category.findOne).toHaveBeenCalledWith({ _id: 'cat123', ...DEFAULT_TENANT_FILTER });
+    expect(Category.findOneAndUpdate).toHaveBeenCalledWith({ _id: 'cat123', ...DEFAULT_TENANT_FILTER }, {
       $set: {
         'translations.ar': mockTranslations.ar,
         'translations.es': mockTranslations.es,

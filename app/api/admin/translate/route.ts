@@ -10,6 +10,8 @@ import {
 import dbConnect from '@/lib/dbConnect';
 import Tour from '@/lib/models/Tour';
 import Destination from '@/lib/models/Destination';
+import Category from '@/lib/models/Category';
+import AttractionPage from '@/lib/models/AttractionPage';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 
 const VALID_MODEL_TYPES = ['tour', 'destination', 'category', 'attraction-page'] as const;
@@ -64,7 +66,9 @@ async function POSTHandler(request: NextRequest) {
       ? await defaultTenantTourExists(id)
       : modelType === 'destination'
         ? await defaultTenantDestinationExists(id)
-        : true;
+        : modelType === 'category'
+          ? await Category.exists({ _id: id, ...DEFAULT_TENANT_FILTER })
+          : await AttractionPage.exists({ _id: id, ...DEFAULT_TENANT_FILTER });
     if (!inScope) return NextResponse.json({ success: false, error: `${modelType} not found` }, { status: 404 });
 
     await translators[modelType](id);

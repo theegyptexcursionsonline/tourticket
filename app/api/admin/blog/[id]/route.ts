@@ -2,6 +2,7 @@ import { withAdminAudit } from '@/lib/admin/adminAudit';
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
 import Blog from '@/lib/models/Blog';
+import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 import mongoose from 'mongoose';
 import { verifyAdmin } from '@/lib/auth/verifyAdmin';
 import { revalidateStorefrontContent } from '@/lib/storefront/revalidateTourStorefront';
@@ -32,7 +33,7 @@ async function PUTHandler(
       return NextResponse.json({ success: false, error: 'Protected blog fields cannot be changed' }, { status: 400 });
     }
     const blog = await Blog.findOneAndUpdate(
-      { _id: id, archivedAt: null },
+      { _id: id, ...DEFAULT_TENANT_FILTER, archivedAt: null },
       { $set: data, $inc: { __v: 1 } },
       { 
         new: true, 
@@ -104,6 +105,7 @@ async function DELETEHandler(
     // The predicate is atomic with deletion, including when archive races this call.
     const blog = await Blog.findOneAndDelete({
       _id: id,
+      ...DEFAULT_TENANT_FILTER,
       archivedAt: null,
       contentEnginePublishReceiptId: null,
       contentEngineUpdateReceiptId: null,
@@ -112,7 +114,7 @@ async function DELETEHandler(
     });
     
     if (!blog) {
-      if (await Blog.exists({ _id: id })) {
+      if (await Blog.exists({ _id: id, ...DEFAULT_TENANT_FILTER })) {
         return NextResponse.json({ success: false, error: 'Receiver-owned or archived content must be retained. Use the receiver archive workflow for a private draft.' }, { status: 409 });
       }
       return NextResponse.json({ success: false, error: 'Blog post not found' }, { status: 404 });
