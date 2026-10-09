@@ -68,7 +68,7 @@
     "form-data": "^4.0.6",
     "framer-motion": "^12.42.2",
     "fuse.js": "^7.4.2",
-    "handlebars": "^4.7.9",
+    "handlebars": "^4.7.10",
     "instantsearch.css": "^8.18.0",
     "jose": "^6.2.3",
     "jsonwebtoken": "^9.0.3",
