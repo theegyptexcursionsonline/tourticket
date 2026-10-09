@@ -10,6 +10,7 @@ import {
   verifyContentEngineTenant,
 } from "@/lib/auth/verifyContentEngine";
 import { tenantSlugFilter } from "@/lib/tenant/tenantScope";
+import { localePath } from "@/lib/i18n/seoAlternates";
 import { defaultLocale } from "@/i18n/config";
 
 export async function GET(
@@ -43,8 +44,6 @@ export async function GET(
   const status = blog.archivedAt ? "archived" : blog.status;
   // This flagship receiver admits only the default tenant and English base
   // locale. Never echo a caller's locale or host as publication evidence.
-  const base = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "")
-    ?? "https://www.egypt-excursionsonline.com";
   return NextResponse.json({
     id: String(blog._id),
     slug: blog.slug,
@@ -55,6 +54,6 @@ export async function GET(
     updatedAt: blog.updatedAt,
     publishReceiptId: blog.contentEnginePublishReceiptId ?? null,
     locale: defaultLocale,
-    ...(status === "published" ? { liveUrl: `${base}/blog/${encodeURIComponent(blog.slug)}` } : {}),
+    ...(status === "published" ? { liveUrl: localePath(defaultLocale, `/blog/${encodeURIComponent(blog.slug)}`) } : {}),
   }, { headers: { "Cache-Control": "private, no-store" } });
 }

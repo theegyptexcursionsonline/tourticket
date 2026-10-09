@@ -3,6 +3,7 @@
 // Auth: bearer token plus an exact receiver grant and target headers.
 // POST creates a new blog post; PUT updates an existing one by slug.
 
+import { localePath } from "@/lib/i18n/seoAlternates";
 import { withAdminAudit } from '@/lib/admin/adminAudit';
 import { NextRequest, NextResponse } from "next/server";
 import dbConnect from "@/lib/dbConnect";
@@ -115,11 +116,7 @@ function baseLocaleBucket(payload: IncomingPayload): Record<string, unknown> {
 }
 
 function liveUrlForBlog(slug: string, locale: string = defaultLocale): string {
-  const base =
-    process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ??
-    "https://www.egypt-excursionsonline.com";
-  const prefix = locale === defaultLocale ? "" : `/${locale}`;
-  return `${base}${prefix}/blog/${slug}`;
+  return localePath(locale, `/blog/${slug}`);
 }
 
 function validate(payload: IncomingPayload | undefined): string | null {

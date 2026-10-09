@@ -236,6 +236,7 @@ describe('POST /api/admin/content/destination', () => {
     expect(await response.json()).toEqual(expect.objectContaining({
       status: 'published',
       requiresManualPublish: false,
+      liveUrl: `https://egypt-excursionsonline.com/destinations/${validPayload.slug}`,
     }));
   });
 
@@ -255,6 +256,14 @@ describe('POST /api/admin/content/destination', () => {
     const nameConflict = await POST(request({ payload: validPayload }));
     expect(nameConflict.status).toBe(409);
     expect(mockReceiptStore.current!.receipts).toHaveLength(0);
+  });
+
+  it.each(['en', 'de'])('uses the public destination path with exactly one %s locale prefix', async locale => {
+    destinationFindOne.mockResolvedValue(null);
+    destinationCreate.mockResolvedValue({ _id: 'destination-1', slug: validPayload.slug });
+    const response = await POST(request({ payload: validPayload, defaultLocale: locale }));
+    expect(response.status).toBe(201);
+    expect((await response.json()).liveUrl).toBe(`https://egypt-excursionsonline.com${locale === 'en' ? '' : '/de'}/destinations/${validPayload.slug}`);
   });
 
   it('replays one write and recovers only exact receipt provenance', async () => {

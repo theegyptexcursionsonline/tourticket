@@ -24,7 +24,8 @@ import {
   releasePublishClaim,
   type PublishClaim,
 } from "@/lib/content/publishIdempotency";
-import { localizedContentPath } from "@/lib/content/contentUrl";
+import { localePath } from "@/lib/i18n/seoAlternates";
+import { contentPath } from "@/lib/content/contentUrl";
 import { revalidateStorefrontContent } from "@/lib/storefront/revalidateTourStorefront";
 import {
   contentReceiverIndexesReady,
@@ -84,10 +85,7 @@ function baseLocaleBucket(p: IncomingPayload): Record<string, unknown> {
 }
 
 function liveUrlFor(slug: string, locale: string): string {
-  const base =
-    process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ??
-    "https://www.egypt-excursionsonline.com";
-  return `${base}${localizedContentPath("destination", slug, "default", locale)}`;
+  return localePath(locale, contentPath("destination", slug, "default"));
 }
 
 function validate(p: IncomingPayload | undefined): string | null {

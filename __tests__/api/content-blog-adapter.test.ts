@@ -376,7 +376,7 @@ describe('POST /api/admin/content/blog', () => {
     expect(await response.json()).toEqual(
       expect.objectContaining({
         droppedLocales: ['it'],
-        liveUrl: `https://www.egypt-excursionsonline.com/de/blog/${validPayload.slug}`,
+        liveUrl: `https://egypt-excursionsonline.com/de/blog/${validPayload.slug}`,
       }),
     );
   });
@@ -391,6 +391,18 @@ describe('POST /api/admin/content/blog', () => {
     expect(first.status).toBe(201);
     expect(replay.status).toBe(201);
     expect(await replay.json()).toEqual(await first.json());
+    expect(blogCreate).toHaveBeenCalledTimes(1);
+  });
+
+  it('preserves the original historical publication URL on receipt replay', async () => {
+    blogFindOne.mockResolvedValue(null);
+    blogCreate.mockResolvedValue({ _id: 'blog-1', slug: validPayload.slug });
+    await POST(request({ payload: validPayload }));
+    const legacyUrl = `https://www.egypt-excursionsonline.com/blog/${validPayload.slug}`;
+    mockReceiptStore.current!.receipts[0].response!.liveUrl = legacyUrl;
+    const replay = await POST(request({ payload: validPayload }));
+    expect((await replay.json()).liveUrl).toBe(legacyUrl);
+    expect(mockReceiptStore.current!.receipts[0].response!.liveUrl).toBe(legacyUrl);
     expect(blogCreate).toHaveBeenCalledTimes(1);
   });
 
@@ -537,7 +549,7 @@ describe('PUT /api/admin/content/blog', () => {
       },
       { new: true, runValidators: true, context: 'query' },
     );
-    expect(await response.json()).toEqual(expect.objectContaining({ revision: 3, droppedLocales: ['ru'] }));
+    expect(await response.json()).toEqual(expect.objectContaining({ revision: 3, droppedLocales: ['ru'], liveUrl: `https://egypt-excursionsonline.com/blog/${validPayload.slug}` }));
   });
 
   it('remains disabled until the exact receiver indexes are present', async () => {
@@ -720,7 +732,7 @@ describe('GET /api/admin/content/blog/[slug]', () => {
     }) });
     blogFindOne.mockReturnValue({ select });
     const previousUrl = process.env.NEXT_PUBLIC_SITE_URL;
-    process.env.NEXT_PUBLIC_SITE_URL = 'https://egypt-excursionsonline.com/';
+    delete process.env.NEXT_PUBLIC_SITE_URL;
     try {
       const response = await GET(lookupRequest('default'), { params: Promise.resolve({ slug: 'reviewed-guide' }) });
       expect(select).toHaveBeenCalledWith('+contentEnginePublishReceiptId');
@@ -733,6 +745,31 @@ describe('GET /api/admin/content/blog/[slug]', () => {
     } finally {
       if (previousUrl === undefined) delete process.env.NEXT_PUBLIC_SITE_URL;
       else process.env.NEXT_PUBLIC_SITE_URL = previousUrl;
+    }
+  });
+
+  it.each([undefined, 'https://www.egypt-excursionsonline.com', 'https://untrusted.invalid'])('matches public canonical with conflicting legacy URL %s and ignores request hosts', async legacyUrl => {
+    const previousBase = process.env.NEXT_PUBLIC_BASE_URL;
+    const previousSite = process.env.NEXT_PUBLIC_SITE_URL;
+    process.env.NEXT_PUBLIC_BASE_URL = 'https://egypt-excursionsonline.com///';
+    if (legacyUrl === undefined) delete process.env.NEXT_PUBLIC_SITE_URL;
+    else process.env.NEXT_PUBLIC_SITE_URL = legacyUrl;
+    try {
+      blogFindOne.mockReturnValue({ select: () => ({ lean: async () => ({ _id: 'blog-1', slug: 'reviewed-guide', status: 'published', __v: 1 }) }) });
+      let isolatedGet!: typeof GET;
+      let canonical!: string;
+      jest.isolateModules(() => {
+        isolatedGet = require('@/app/api/admin/content/blog/[slug]/route').GET;
+        canonical = require('@/lib/i18n/seoAlternates').metadataAlternates('en', '/blog/reviewed-guide').canonical;
+      });
+      const req = { headers: new Headers({ host: 'untrusted.invalid', 'x-forwarded-host': 'untrusted.invalid' }), nextUrl: new URL('https://untrusted.invalid/api/admin/content/blog/reviewed-guide?tenantId=default&locale=de') };
+      const response = await isolatedGet(req as never, { params: Promise.resolve({ slug: 'reviewed-guide' }) });
+      expect(response.status).toBe(200);
+      expect((await response.json()).liveUrl).toBe(canonical);
+      expect(canonical).toBe('https://egypt-excursionsonline.com/blog/reviewed-guide');
+    } finally {
+      if (previousBase === undefined) delete process.env.NEXT_PUBLIC_BASE_URL; else process.env.NEXT_PUBLIC_BASE_URL = previousBase;
+      if (previousSite === undefined) delete process.env.NEXT_PUBLIC_SITE_URL; else process.env.NEXT_PUBLIC_SITE_URL = previousSite;
     }
   });
 

@@ -280,9 +280,18 @@ describe('POST /api/admin/content/category', () => {
     );
     expect(await response.json()).toEqual(expect.objectContaining({
       droppedLocales: ['it'],
+      liveUrl: `https://egypt-excursionsonline.com/categories/${validCategory.slug}`,
       status: 'published',
       requiresManualPublish: false,
     }));
+  });
+
+  it.each(['en', 'de'])('uses the public category path with exactly one %s locale prefix', async locale => {
+    categoryFindOne.mockResolvedValue(null);
+    categoryCreate.mockResolvedValue({ _id: 'category-1', slug: validCategory.slug });
+    const response = await postCategory(request({ payload: validCategory, defaultLocale: locale }));
+    expect(response.status).toBe(201);
+    expect((await response.json()).liveUrl).toBe(`https://egypt-excursionsonline.com${locale === 'en' ? '' : '/de'}/categories/${validCategory.slug}`);
   });
 
   it('replays one write and binds stale recovery to exact provenance', async () => {
@@ -400,7 +409,7 @@ describe('PUT /api/admin/content/category', () => {
       },
       { new: true, runValidators: true, context: 'query' },
     );
-    expect(await response.json()).toEqual(expect.objectContaining({ revision: 6 }));
+    expect(await response.json()).toEqual(expect.objectContaining({ revision: 6, liveUrl: `https://egypt-excursionsonline.com/categories/${validCategory.slug}` }));
   });
 
   it('remains disabled until the exact receiver indexes are present', async () => {
