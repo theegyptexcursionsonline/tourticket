@@ -775,5 +775,25 @@
     },
     "ratedOnly": "⭐ Experience notee",
     "reviewerAvatar": "Avatar du contributeur"
+  },
+  "appDownload": {
+    "button": "Appli",
+    "buttonLabel": "Obtenir l'appli EEO",
+    "eyebrowSoon": "Bientôt disponible",
+    "eyebrowLive": "L'appli EEO",
+    "titleSoon": "L'appli EEO arrive bientôt",
+    "titleLive": "Obtenir l'appli EEO",
+    "benefitBookings": "Toutes vos réservations et vos billets au même endroit",
+    "benefitUpdates": "Des nouvelles de votre voyage",
+    "benefitWishlist": "Enregistrez des excursions et réservez en quelques gestes",
+    "scanSoon": "Scannez pour ouvrir la page de l'appli sur votre téléphone",
+    "scanLive": "Scannez avec l'appareil photo de votre téléphone pour la télécharger",
+    "qrAlt": "QR code de la page de l'appli EEO",
+    "comingSoonOn": "Bientôt",
+    "downloadOn": "Télécharger dans l'",
+    "getItOn": "Disponible sur",
+    "storeComingSoon": "{store} : bientôt disponible",
+    "learnMore": "En savoir plus sur l'appli",
+    "close": "Fermer"
   }
 }

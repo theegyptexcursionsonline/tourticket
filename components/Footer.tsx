@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, type ReactNode } from "react";
 import { ArrowUpRight, Facebook, Instagram, Twitter, Youtube, Phone, Mail, MessageSquare, Loader2, ScanLine, X, Smartphone } from "lucide-react";
 import QRCode from 'qrcode';
 import Image from "next/image";
@@ -11,6 +11,7 @@ import { useLocale, useTranslations } from 'next-intl';
 import { isRTL } from '@/i18n/config';
 import type { EeoWindow } from './componentTypes';
 import {OFFICIAL_SOCIAL_LINKS} from '@/lib/config/socialLinks';
+import { mobileAppIsLive, mobileAppLandingUrl, mobileAppStores } from '@/lib/config/mobileApp';
 
 // Import the single, consolidated switcher component
 import CurrencyLanguageSwitcher from '@/components/shared/CurrencyLanguageSwitcher';
@@ -39,6 +40,19 @@ const paymentMethods = [
   { name: "Amex", component: PaymentIcons.Amex },
 ];
 
+/** A store link once its listing is configured; until then the button opens the coming-soon note. */
+function StoreAction({ href, onComingSoon, className, children }: {
+  href: string | null;
+  onComingSoon: () => void;
+  className: string;
+  children: ReactNode;
+}) {
+  if (href) {
+    return <a href={href} target="_blank" rel="noopener noreferrer" className={className}>{children}</a>;
+  }
+  return <button type="button" onClick={onComingSoon} className={className}>{children}</button>;
+}
+
 // =================================================================
 // --- FOOTER COMPONENT ---
 // =================================================================
@@ -53,8 +67,11 @@ export default function Footer() {
   const t = useTranslations('footer');
   const locale = useLocale();
   const rtl = isRTL(locale);
-  const appLandingPath = locale === 'en' ? '/mobile-app' : `/${locale}/mobile-app`;
-  const appLandingUrl = `https://egypt-excursionsonline.com${appLandingPath}`;
+  const appT = useTranslations('appDownload');
+  // Store buttons become real links once a listing is configured; until then the app reads "coming soon".
+  const appStores = mobileAppStores();
+  const appLive = mobileAppIsLive(appStores);
+  const appLandingUrl = mobileAppLandingUrl(locale);
   const appLandingLabel = appLandingUrl.replace(/^https?:\/\//, '');
 
   // Generate QR code for the dedicated app landing page.
@@ -160,7 +177,7 @@ export default function Footer() {
               <div className="mb-6 flex flex-wrap items-center gap-3">
                 <div className="inline-flex items-center gap-2.5 rounded-full border border-slate-200 bg-slate-50 px-3.5 py-2">
                   <span className="h-2 w-2 rounded-full bg-emerald-500" />
-                  <span className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-600">{t('comingSoon')}</span>
+                  <span className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-600">{appLive ? appT('eyebrowLive') : t('comingSoon')}</span>
                 </div>
               </div>
 
@@ -174,9 +191,11 @@ export default function Footer() {
               </div>
 
               <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:items-center">
-                <div className="inline-flex min-h-12 items-center justify-center rounded-xl border border-rose-100 bg-rose-50 px-5 py-3 text-sm font-bold text-rose-700">
-                  <span>{t('launchingOn')}</span>
-                </div>
+                {!appLive && (
+                  <div className="inline-flex min-h-12 items-center justify-center rounded-xl border border-rose-100 bg-rose-50 px-5 py-3 text-sm font-bold text-rose-700">
+                    <span>{t('launchingOn')}</span>
+                  </div>
+                )}
                 <button
                   type="button"
                   onClick={() => setShowAppModal(true)}
@@ -188,9 +207,9 @@ export default function Footer() {
               </div>
 
               <div className="mt-7 grid w-full max-w-lg grid-cols-2 gap-2.5">
-                <button
-                  type="button"
-                  onClick={() => setShowAppModal(true)}
+                <StoreAction
+                  href={appStores.appStoreUrl}
+                  onComingSoon={() => setShowAppModal(true)}
                   className="group relative overflow-hidden rounded-xl border border-slate-900 bg-slate-950 p-3 text-left transition-colors hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 focus-visible:ring-offset-2 sm:p-3.5"
                 >
                   <div className="relative flex items-center gap-2.5 sm:gap-4">
@@ -205,11 +224,11 @@ export default function Footer() {
                     </div>
                     <ArrowUpRight size={16} className="hidden text-white/40 sm:block" />
                   </div>
-                </button>
+                </StoreAction>
 
-                <button
-                  type="button"
-                  onClick={() => setShowAppModal(true)}
+                <StoreAction
+                  href={appStores.playStoreUrl}
+                  onComingSoon={() => setShowAppModal(true)}
                   className="group relative overflow-hidden rounded-xl border border-slate-900 bg-slate-950 p-3 text-left transition-colors hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 focus-visible:ring-offset-2 sm:p-3.5"
                 >
                   <div className="relative flex items-center gap-2.5 sm:gap-4">
@@ -227,7 +246,7 @@ export default function Footer() {
                     </div>
                     <ArrowUpRight size={16} className="hidden text-white/40 sm:block" />
                   </div>
-                </button>
+                </StoreAction>
               </div>
             </div>
 
@@ -564,10 +583,12 @@ export default function Footer() {
                 <Smartphone size={28} className="text-rose-700" />
               </div>
 
-              <h3 className="relative text-2xl font-extrabold tracking-tight text-slate-900">{t('comingSoon')}</h3>
-              <p className="relative mt-3 inline-flex rounded-full border border-rose-200 bg-white/85 px-4 py-2 text-sm font-semibold text-rose-700 shadow-sm">
-                {t('launchingOn')}
-              </p>
+              <h3 className="relative text-2xl font-extrabold tracking-tight text-slate-900">{appLive ? appT('titleLive') : t('comingSoon')}</h3>
+              {!appLive && (
+                <p className="relative mt-3 inline-flex rounded-full border border-rose-200 bg-white/85 px-4 py-2 text-sm font-semibold text-rose-700 shadow-sm">
+                  {t('launchingOn')}
+                </p>
+              )}
             </div>
 
             {/* Modal body */}
@@ -587,7 +608,7 @@ export default function Footer() {
                 </div>
               </div>
 
-              <p className="text-sm text-slate-500 leading-relaxed text-center mb-6">{t('comingSoonDesc')}</p>
+              <p className="text-sm text-slate-500 leading-relaxed text-center mb-6">{appLive ? appT('scanLive') : t('comingSoonDesc')}</p>
 
               <button
                 type="button"

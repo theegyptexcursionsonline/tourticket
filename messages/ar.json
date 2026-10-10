@@ -775,5 +775,25 @@
     },
     "ratedOnly": "⭐ قيّم هذه التجربة",
     "reviewerAvatar": "صورة مقدم التقييم"
+  },
+  "appDownload": {
+    "button": "التطبيق",
+    "buttonLabel": "احصل على تطبيق EEO",
+    "eyebrowSoon": "قريبًا",
+    "eyebrowLive": "تطبيق EEO",
+    "titleSoon": "تطبيق EEO في الطريق إليك",
+    "titleLive": "احصل على تطبيق EEO",
+    "benefitBookings": "كل حجوزاتك وتذاكرك في مكان واحد",
+    "benefitUpdates": "تحديثات عن رحلتك",
+    "benefitWishlist": "احفظ الجولات واحجز ببضع نقرات",
+    "scanSoon": "امسح الرمز لفتح صفحة التطبيق على هاتفك",
+    "scanLive": "امسح الرمز بكاميرا هاتفك للتنزيل",
+    "qrAlt": "رمز QR لصفحة تطبيق EEO",
+    "comingSoonOn": "قريبًا",
+    "downloadOn": "حمّله من",
+    "getItOn": "احصل عليه من",
+    "storeComingSoon": "{store}: قريبًا",
+    "learnMore": "المزيد عن التطبيق",
+    "close": "إغلاق"
   }
 }

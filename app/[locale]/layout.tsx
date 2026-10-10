@@ -27,6 +27,7 @@ import EEOVoiceConcierge from '@/components/EEOVoiceConcierge';
 import { StorefrontThemeProvider } from '@/contexts/StorefrontThemeContext';
 import { STOREFRONT_THEME_BOOTSTRAP } from '@/lib/storefrontTheme';
 import { filterVisibleTaxonomyEntries } from '@/lib/utils/taxonomy';
+import { mobileAppStores } from '@/lib/config/mobileApp';
 
 const inter = Inter({ subsets: ["latin"], variable: '--font-inter' });
 const almarai = Almarai({
@@ -36,6 +37,8 @@ const almarai = Almarai({
 });
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://egypt-excursionsonline.com';
+
+const APP_STORE_ID = mobileAppStores().appStoreId;
 
 const ROOT_METADATA: Metadata = {
   title: "Egypt Excursions Online - Unforgettable Experiences",
@@ -55,6 +58,8 @@ const ROOT_METADATA: Metadata = {
     description: 'Book the best tours, day trips, and excursions across Egypt.',
     images: [`${BASE_URL}/hero3.jpg`],
   },
+  // Safari draws (and lets visitors dismiss) its own app banner once the App Store listing exists.
+  ...(APP_STORE_ID ? { itunes: { appId: APP_STORE_ID } } : {}),
 };
 
 // This layout wraps public and private routes. Keep route-specific canonical

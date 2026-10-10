@@ -775,5 +775,25 @@
     },
     "ratedOnly": "⭐ Dieses Erlebnis bewertet",
     "reviewerAvatar": "Profilbild des Bewertenden"
+  },
+  "appDownload": {
+    "button": "App",
+    "buttonLabel": "EEO-App holen",
+    "eyebrowSoon": "Demnächst",
+    "eyebrowLive": "Die EEO-App",
+    "titleSoon": "Die EEO-App kommt bald",
+    "titleLive": "Hol dir die EEO-App",
+    "benefitBookings": "Alle Buchungen und Tickets an einem Ort",
+    "benefitUpdates": "Neuigkeiten zu deiner Reise",
+    "benefitWishlist": "Touren merken und mit wenigen Tipps buchen",
+    "scanSoon": "Scannen, um die App-Seite auf dem Handy zu öffnen",
+    "scanLive": "Mit der Handykamera scannen und herunterladen",
+    "qrAlt": "QR-Code für die Seite der EEO-App",
+    "comingSoonOn": "Demnächst",
+    "downloadOn": "Laden im",
+    "getItOn": "Jetzt bei",
+    "storeComingSoon": "{store}: demnächst",
+    "learnMore": "Mehr über die App",
+    "close": "Schließen"
   }
 }

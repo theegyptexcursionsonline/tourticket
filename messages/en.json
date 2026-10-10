@@ -775,5 +775,25 @@
     },
     "ratedOnly": "⭐ Rated this experience",
     "reviewerAvatar": "Reviewer avatar"
+  },
+  "appDownload": {
+    "button": "App",
+    "buttonLabel": "Get the EEO app",
+    "eyebrowSoon": "Coming soon",
+    "eyebrowLive": "The EEO app",
+    "titleSoon": "The EEO app is on its way",
+    "titleLive": "Get the EEO app",
+    "benefitBookings": "All your bookings and tickets in one place",
+    "benefitUpdates": "Updates about your trip",
+    "benefitWishlist": "Save tours and book in a few taps",
+    "scanSoon": "Scan to open the app page on your phone",
+    "scanLive": "Scan with your phone camera to download",
+    "qrAlt": "QR code for the EEO app page",
+    "comingSoonOn": "Coming soon",
+    "downloadOn": "Download on the",
+    "getItOn": "Get it on",
+    "storeComingSoon": "{store}: coming soon",
+    "learnMore": "More about the app",
+    "close": "Close"
   }
 }

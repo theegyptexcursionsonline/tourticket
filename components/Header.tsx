@@ -53,6 +53,7 @@ import {
 import { isRecord, isSearchHit, type ChatPart, type SearchHit } from '@/components/componentTypes';
 import 'instantsearch.css/themes/satellite.css';
 import ThemeToggle from '@/components/ThemeToggle';
+import AppDownloadEntry from '@/components/AppDownloadEntry';
 import { useLocale } from 'next-intl';
 import { contentPath, localizedTourContentPath } from '@/lib/content/contentUrl';
 
@@ -1324,6 +1325,8 @@ export default function Header({
       {isScrolled && <HeaderSearchBar onFocus={handleMobileSearchOpen} isTransparent={isTransparent} />}
 
       <div className="flex items-center gap-1.5 sm:gap-3 md:gap-5">
+        <AppDownloadEntry isTransparent={isTransparent} headerLinkClasses={`${headerText} ${linkHoverColor}`} />
+
         <CurrencyLanguageSwitcher variant="header" headerLinkClasses={`${headerText} ${linkHoverColor}`} isTransparent={isTransparent} />
 
         <ThemeToggle transparent={isTransparent} className="hidden md:inline-flex" />

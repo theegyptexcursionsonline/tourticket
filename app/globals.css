@@ -289,7 +289,7 @@ html[data-storefront-theme="dark"] body.storefront-theme .es-review-background-c
   color: #94a3b8 !important;
 }
 /* dark-theme:generated:start — built by `pnpm theme:generate`; do not hand-edit */
-/* 310 light utilities darkened, 40 deliberately preserved. */
+/* 311 light utilities darkened, 40 deliberately preserved. */
 
 html[data-storefront-theme="dark"] body.storefront-theme :where([class~="from-gray-100"], [class~="from-slate-100"]):not([class~="bg-clip-text"]) {
   --tw-gradient-from: #1e293b var(--tw-gradient-from-position) !important;
@@ -1036,6 +1036,10 @@ html[data-storefront-theme="dark"] body.storefront-theme :where([class~="hover:t
 
 html[data-storefront-theme="dark"] body.storefront-theme :where([class~="hover:text-red-700"], [class~="hover:text-red-800"]):hover {
   color: #fca5a5 !important;
+}
+
+html[data-storefront-theme="dark"] body.storefront-theme :where([class~="hover:text-rose-800"]):hover {
+  color: #fda4af !important;
 }
 
 .group:hover html[data-storefront-theme="dark"] body.storefront-theme :where([class~="group-hover:text-gray-600"]) {

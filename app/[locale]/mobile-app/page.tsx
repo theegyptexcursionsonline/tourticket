@@ -5,6 +5,7 @@ import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { Link } from '@/i18n/routing';
 import { metadataAlternates } from '@/lib/i18n/seoAlternates';
+import { mobileAppIsLive, mobileAppStores } from '@/lib/config/mobileApp';
 
 export const revalidate = 1800; // 30 min — storefront content; edge serves stale-while-revalidate so clicks stay instant
 
@@ -28,12 +29,33 @@ export async function generateMetadata({ params }: MobileAppPageProps): Promise<
   };
 }
 
+function StoreCard({ href, eyebrow, name, note }: { href: string | null; eyebrow: string; name: string; note: string }) {
+  const body = (
+    <>
+      <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-500">{eyebrow}</p>
+      <p className="mt-1 text-xl font-bold text-slate-900">{name}</p>
+      {!href && <p className="mt-2 text-sm text-slate-500">{note}</p>}
+    </>
+  );
+  if (href) {
+    return (
+      <a href={href} target="_blank" rel="noopener noreferrer" className="rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-[0_16px_40px_-28px_rgba(15,23,42,0.35)] block transition-colors hover:border-slate-300">
+        {body}
+      </a>
+    );
+  }
+  return <div className="rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-[0_16px_40px_-28px_rgba(15,23,42,0.35)]">{body}</div>;
+}
+
 export default async function MobileAppPage({ params }: MobileAppPageProps) {
   const { locale } = await params;
   setRequestLocale(locale);
 
   const t = await getTranslations({ locale, namespace: 'mobileAppPage' });
   const footerT = await getTranslations({ locale, namespace: 'footer' });
+  // A store card links out only once its listing is configured (lib/config/mobileApp.ts).
+  const stores = mobileAppStores();
+  const live = mobileAppIsLive(stores);
 
   return (
     <>
@@ -57,10 +79,12 @@ export default async function MobileAppPage({ params }: MobileAppPageProps) {
                 </p>
 
                 <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-                  <div className="inline-flex items-center gap-2 rounded-full border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-700">
-                    <CalendarDays size={16} />
-                    <span>{footerT('launchingOn')}</span>
-                  </div>
+                  {!live && (
+                    <div className="inline-flex items-center gap-2 rounded-full border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-700">
+                      <CalendarDays size={16} />
+                      <span>{footerT('launchingOn')}</span>
+                    </div>
+                  )}
                   <div className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700">
                     <CheckCircle2 size={16} />
                     <span>{t('officialQr')}</span>
@@ -68,20 +92,8 @@ export default async function MobileAppPage({ params }: MobileAppPageProps) {
                 </div>
 
                 <div className="mt-8 grid gap-3 sm:max-w-xl sm:grid-cols-2">
-                  <div className="rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-[0_16px_40px_-28px_rgba(15,23,42,0.35)]">
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-500">
-                      {footerT('downloadOn')}
-                    </p>
-                    <p className="mt-1 text-xl font-bold text-slate-900">App Store</p>
-                    <p className="mt-2 text-sm text-slate-500">{t('storeAvailability')}</p>
-                  </div>
-                  <div className="rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-[0_16px_40px_-28px_rgba(15,23,42,0.35)]">
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-500">
-                      {footerT('getItOn')}
-                    </p>
-                    <p className="mt-1 text-xl font-bold text-slate-900">Google Play</p>
-                    <p className="mt-2 text-sm text-slate-500">{t('storeAvailability')}</p>
-                  </div>
+                  <StoreCard href={stores.appStoreUrl} eyebrow={footerT('downloadOn')} name="App Store" note={t('storeAvailability')} />
+                  <StoreCard href={stores.playStoreUrl} eyebrow={footerT('getItOn')} name="Google Play" note={t('storeAvailability')} />
                 </div>
 
                 <div className="mt-8 flex flex-col gap-3 sm:flex-row">
