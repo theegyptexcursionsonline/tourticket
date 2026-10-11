@@ -11,10 +11,10 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
   return {
     title: 'AI Voice Concierge — Talk to Nile | Egypt Excursions Online',
     description:
-      'Speak with Nile, our AI voice concierge, about Egypt tours, availability, prices, and bookings — in English or Arabic, any time.',
+      'Explore Egypt tours with Nile by voice or text. Choose an available language in the assistant and confirm prices and availability when booking.',
     openGraph: {
       title: 'AI Voice Concierge | Egypt Excursions Online',
-      description: 'Ask about Egypt tours out loud — grounded answers from the real catalog, in English or Arabic.',
+      description: 'Ask about Egypt tours by voice or text, using the languages available in the assistant.',
       type: 'website',
     },
     alternates: metadataAlternates(locale, '/ai-voice'),

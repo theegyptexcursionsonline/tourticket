@@ -20,8 +20,21 @@ describe('VoicePageContent', () => {
   it('renders localized hero copy and grounded feature claims', () => {
     render(<VoicePageContent locale="en" />);
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Talk to Nile');
-    expect(screen.getByText(/real Egypt Excursions Online catalog/i)).toBeInTheDocument();
+    expect(screen.getByText(/confirm current prices and availability/i)).toBeInTheDocument();
     expect(screen.getAllByRole('heading', { level: 2 })).toHaveLength(4);
+  });
+
+
+  it.each([
+    ['en', 'Available languages', 'Confirm current prices and availability'],
+    ['ar', 'اللغات المتاحة', 'تأكد من الأسعار الحالية والتوافر'],
+    ['de', 'Verfügbare Sprachen', 'Prüfen Sie aktuelle Preise und Verfügbarkeit'],
+    ['fr', 'Langues disponibles', 'Confirmez les prix actuels et les disponibilités'],
+    ['es', 'Idiomas disponibles', 'Confirma los precios actuales y la disponibilidad'],
+  ])('explains language readiness and booking confirmation in %s', (locale, languages, confirmation) => {
+    render(<VoicePageContent locale={locale} />);
+    expect(screen.getByRole('heading', { name: languages })).toBeInTheDocument();
+    expect(screen.getByText((text) => text.includes(confirmation))).toBeInTheDocument();
   });
 
   it('renders Arabic copy for the ar locale', () => {

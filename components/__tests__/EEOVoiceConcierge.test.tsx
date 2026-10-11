@@ -55,7 +55,7 @@ describe('EEOVoiceConcierge', () => {
     });
     const script = document.getElementById(SCRIPT_ID) as HTMLScriptElement;
     expect(script).toBeInTheDocument();
-    expect(script.src).toContain('voice.foxestechnology.com/widget.js');
+    expect(script.src).toContain('voice.foxestechnology.com/widget.js?v=20261011-scoped-consent-v2');
     expect(script.getAttribute('data-foxes-widget-id')).toBe('694c1a7a27cc23227da2ccdb');
     expect(script.getAttribute('data-foxes-position')).toBe('bottom-left');
   });

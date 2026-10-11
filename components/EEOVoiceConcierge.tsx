@@ -7,6 +7,7 @@ import { isOpenBlockingModal } from '@/lib/ui/modalVisibility';
 
 const VOICE_ORIGIN = process.env.NEXT_PUBLIC_FOXES_VOICE_ORIGIN || 'https://voice.foxestechnology.com';
 const WIDGET_ID = process.env.NEXT_PUBLIC_FOXES_VOICE_WIDGET_ID || '694c1a7a27cc23227da2ccdb';
+const WIDGET_RELEASE = '20261011-scoped-consent-v2';
 const SCRIPT_ID = 'eeo-voice-concierge-script';
 const FRAME_ID = 'foxes-voice-widget-frame';
 const MOBILE_BOOKING_BAR_SELECTOR = '[data-mobile-booking-bar="true"]';
@@ -138,7 +139,7 @@ export default function EEOVoiceConcierge({ forceMount = false }: EEOVoiceConcie
       if (document.getElementById(SCRIPT_ID)) return;
       const script = document.createElement('script');
       script.id = SCRIPT_ID;
-      script.src = `${VOICE_ORIGIN}/widget.js`;
+      script.src = `${VOICE_ORIGIN}/widget.js?v=${WIDGET_RELEASE}`;
       script.async = true;
       script.dataset.foxesWidgetId = WIDGET_ID;
       // The search bar owns the trailing corner; voice takes the opposite one
