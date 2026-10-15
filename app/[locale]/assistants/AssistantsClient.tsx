@@ -312,11 +312,15 @@ function AssistantCard({
 }
 
 function isVoiceFrameExpanded(frame: HTMLElement) {
+  if (window.matchMedia('(max-width: 639px)').matches) {
+    // On a phone the widget opens as a sheet sized "100vw" × "100dvh". Those are not pixels:
+    // parseFloat("100vw") read 100, so an open sheet counted as closed and the 2.5 s timer hid it.
+    // Only the rendered box says how wide the frame really is.
+    return frame.getBoundingClientRect().width >= window.innerWidth - 1;
+  }
   const width = Number.parseFloat(frame.style.width) || frame.getBoundingClientRect().width;
   const height = Number.parseFloat(frame.style.height) || frame.getBoundingClientRect().height;
-  return window.matchMedia('(max-width: 639px)').matches
-    ? width >= window.innerWidth - 1
-    : width >= 400 && height >= 600;
+  return width >= 400 && height >= 600;
 }
 
 export default function AssistantsClient() {

@@ -156,6 +156,42 @@ describe('AssistantsClient', () => {
     window.removeEventListener('foxes:search:open', searchOpened);
   });
 
+  it('keeps an open phone sheet on screen: a sheet sized in viewport units is measured, not parsed', async () => {
+    installMatchMedia(true);
+    render(<AssistantsClient />);
+    const { voiceFrame } = await exposeReadyWidgets();
+    const openTimers: Array<() => void> = [];
+    const realSetTimeout = window.setTimeout.bind(window);
+    jest.spyOn(window, 'setTimeout').mockImplementation(((callback: () => void, ms?: number) => {
+      if (ms === 2500) {
+        openTimers.push(callback);
+        return 0;
+      }
+      return realSetTimeout(callback, ms);
+    }) as unknown as typeof window.setTimeout);
+    const box = (width: number, height: number) =>
+      ({ width, height, top: 0, left: 0, right: width, bottom: height, x: 0, y: 0, toJSON: () => ({}) }) as DOMRect;
+
+    fireEvent.click(screen.getByTestId('open-voice-assistant'));
+    // The widget opens its phone sheet in viewport units, exactly as the live widget does.
+    voiceFrame.style.width = '100vw';
+    voiceFrame.style.height = '100dvh';
+    const rect = jest.spyOn(voiceFrame, 'getBoundingClientRect').mockReturnValue(box(window.innerWidth, window.innerHeight));
+    expect(openTimers).toHaveLength(1);
+    act(() => openTimers[0]());
+    expect(voiceFrame.style.visibility).not.toBe('hidden');
+    expect(voiceFrame.style.pointerEvents).not.toBe('none');
+
+    // A launcher that never opened is still hidden when the timer runs out.
+    fireEvent.click(screen.getByTestId('open-voice-assistant'));
+    voiceFrame.style.width = '112px';
+    voiceFrame.style.height = '112px';
+    rect.mockReturnValue(box(112, 112));
+    act(() => openTimers[1]());
+    expect(voiceFrame.style.visibility).toBe('hidden');
+    expect(voiceFrame.style.getPropertyPriority('visibility')).toBe('important');
+  });
+
   it('marks a provider unavailable when its public script fails instead of claiming readiness', () => {
     render(<AssistantsClient />);
 
