@@ -300,6 +300,7 @@ function AssistantCard({
           disabled={state !== 'ready'}
           aria-describedby={statusId}
           onClick={onOpen}
+          id={`eeo-open-${kind}-assistant`}
           data-testid={`open-${kind}-assistant`}
           className="mt-2 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-slate-950 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-slate-950/15 transition hover:-translate-y-0.5 hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500 disabled:shadow-none disabled:hover:translate-y-0"
         >
@@ -344,6 +345,11 @@ export default function AssistantsClient() {
 
   useEffect(() => {
     let timedOut = false;
+    // While one assistant's panel is open, the shared presence contract hides the other
+    // launchers (display:none). That is a step aside, not a failure: an assistant that has
+    // rendered once stays ready while its host is still on the page.
+    let searchSeen = false;
+    let voiceSeen = false;
     const headStylesBefore = new Set(document.head.querySelectorAll('style'));
     const previousBodyOverflow = document.body.style.overflow;
 
@@ -360,7 +366,9 @@ export default function AssistantsClient() {
     const syncWidgets = () => {
       const searchScript = document.getElementById(SEARCH_SCRIPT_ID);
       const searchHost = document.getElementById(SEARCH_HOST_ID);
-      const searchReady = Boolean(searchHost?.isConnected && searchHost.style.display !== 'none');
+      const searchShown = Boolean(searchHost?.isConnected && searchHost.style.display !== 'none');
+      if (searchShown) searchSeen = true;
+      const searchReady = searchShown || Boolean(searchHost?.isConnected && searchSeen);
       if (searchReady) {
         setWidgetState('search', 'ready');
         suppressSearchLauncher();
@@ -370,7 +378,9 @@ export default function AssistantsClient() {
 
       const voiceScript = document.getElementById(VOICE_SCRIPT_ID);
       const voiceFrame = document.getElementById(VOICE_FRAME_ID) as HTMLElement | null;
-      const voiceReady = Boolean(voiceFrame?.isConnected && voiceFrame.style.display !== 'none');
+      const voiceShown = Boolean(voiceFrame?.isConnected && voiceFrame.style.display !== 'none');
+      if (voiceShown) voiceSeen = true;
+      const voiceReady = voiceShown || Boolean(voiceFrame?.isConnected && voiceSeen);
       if (voiceReady && voiceFrame) {
         setWidgetState('voice', 'ready');
         const expanded = isVoiceFrameExpanded(voiceFrame);
@@ -378,6 +388,9 @@ export default function AssistantsClient() {
         if (!expanded && voiceWasOpenRef.current) {
           voiceWasOpenRef.current = false;
           voiceRequestedRef.current = false;
+          // The panel closed (× or Esc inside the frame): give keyboard focus back to the
+          // button that opened it, not to a frame that is about to be hidden.
+          if (document.activeElement === voiceFrame) document.getElementById('eeo-open-voice-assistant')?.focus();
         }
 
         const keepVisible = expanded || voiceRequestedRef.current;

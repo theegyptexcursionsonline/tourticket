@@ -192,6 +192,65 @@ describe('AssistantsClient', () => {
     expect(voiceFrame.style.getPropertyPriority('visibility')).toBe('important');
   });
 
+  it('keeps an assistant ready while another assistant\'s open panel hides its launcher', async () => {
+    let readyTimeout: (() => void) | undefined;
+    const realSetTimeout = window.setTimeout.bind(window);
+    jest.spyOn(window, 'setTimeout').mockImplementation(((callback: () => void, ms?: number) => {
+      if (ms === 12_000) {
+        readyTimeout = callback;
+        return 0;
+      }
+      return realSetTimeout(callback, ms);
+    }) as unknown as typeof window.setTimeout);
+    render(<AssistantsClient />);
+    const { searchHost, voiceFrame } = await exposeReadyWidgets();
+
+    // Voice opens: the shared presence contract hides the Search launcher host, then the
+    // page's readiness window runs out.
+    await act(async () => {
+      searchHost.style.display = 'none';
+      await new Promise((resolve) => window.requestAnimationFrame(resolve));
+    });
+    act(() => readyTimeout?.());
+    expect(screen.getByTestId('open-search-assistant')).toBeEnabled();
+    expect(screen.queryByText('Unavailable')).toBeNull();
+
+    // The same holds the other way round, for the Voice frame.
+    await act(async () => {
+      searchHost.style.display = 'block';
+      voiceFrame.style.display = 'none';
+      await new Promise((resolve) => window.requestAnimationFrame(resolve));
+    });
+    expect(screen.getByTestId('open-voice-assistant')).toBeEnabled();
+    expect(screen.queryByText('Unavailable')).toBeNull();
+  });
+
+  it('returns keyboard focus to the voice button when the panel closes from inside', async () => {
+    render(<AssistantsClient />);
+    const { voiceFrame } = await exposeReadyWidgets();
+    const box = (width: number, height: number) =>
+      ({ width, height, top: 0, left: 0, right: width, bottom: height, x: 0, y: 0, toJSON: () => ({}) }) as DOMRect;
+    const rect = jest.spyOn(voiceFrame, 'getBoundingClientRect').mockReturnValue(box(430, 720));
+
+    fireEvent.click(screen.getByTestId('open-voice-assistant'));
+    await act(async () => {
+      voiceFrame.style.width = '430px';
+      voiceFrame.style.height = '720px';
+      await new Promise((resolve) => window.requestAnimationFrame(resolve));
+    });
+    voiceFrame.focus();
+    expect(document.activeElement).toBe(voiceFrame);
+
+    // × or Esc inside the frame collapses it back to the launcher size.
+    rect.mockReturnValue(box(112, 112));
+    await act(async () => {
+      voiceFrame.style.width = '112px';
+      voiceFrame.style.height = '112px';
+      await new Promise((resolve) => window.requestAnimationFrame(resolve));
+    });
+    expect(document.activeElement).toBe(screen.getByTestId('open-voice-assistant'));
+  });
+
   it('marks a provider unavailable when its public script fails instead of claiming readiness', () => {
     render(<AssistantsClient />);
 
