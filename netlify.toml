@@ -5,7 +5,7 @@
 [build.environment]
   # The upgraded AI SDK toolchain requires Node 22 or newer. Keep the build
   # and function runtimes aligned; AWS_LAMBDA_JS_RUNTIME is also nodejs22.x.
-  NODE_VERSION = "22"
+  NODE_VERSION = "22.23.4"
   # --shamefully-hoist flattens node_modules so Next.js and jest binaries
   # resolve correctly on Netlify. Without this the pnpm symlink layout
   # breaks Next's module resolution during `next build` and exits with

@@ -11,7 +11,7 @@
     "dev": "tsx scripts/dev-with-port.ts",
     "dev:port": "tsx scripts/dev-with-port.ts -p",
     "dev:original": "next dev --turbopack",
-    "prebuild": "pnpm prepare:maplibre && if [ \"$SKIP_TESTS\" = \"1\" ]; then echo '⏭️  SKIP_TESTS=1 — skipping pre-build checks'; else echo '🧪 Running pre-build checks...' && NODE_ENV=test pnpm test:unit && echo '✅ All pre-build checks passed!'; fi",
+    "prebuild": "pnpm prepare:maplibre && if [ \"$SKIP_TESTS\" = \"1\" ]; then echo '\u23ed\ufe0f  SKIP_TESTS=1 \u2014 skipping pre-build checks'; else echo '\ud83e\uddea Running pre-build checks...' && NODE_ENV=test pnpm test:unit && echo '\u2705 All pre-build checks passed!'; fi",
     "prebuild:skip-tests": "pnpm prepare:maplibre",
     "build": "next build",
     "build:skip-tests": "SKIP_TESTS=1 next build",
@@ -19,7 +19,7 @@
     "typecheck": "tsc --noEmit",
     "start": "next start",
     "lint": "eslint .",
-    "test": "pnpm test:unit && printf '\\nNote: the server-dependent API suite (__tests__/api/supertest.test.ts) is NOT part of this run.\\nIt needs a live app on TEST_BASE_URL (default http://localhost:3000) — run it with: pnpm test:api\\n\\n'",
+    "test": "pnpm test:unit && printf '\\nNote: the server-dependent API suite (__tests__/api/supertest.test.ts) is NOT part of this run.\\nIt needs a live app on TEST_BASE_URL (default http://localhost:3000) \u2014 run it with: pnpm test:api\\n\\n'",
     "test:unit": "jest --passWithNoTests --testPathIgnorePatterns='/e2e/' --testPathIgnorePatterns='supertest' --testPathIgnorePatterns='/.claude/'",
     "test:api": "jest --testPathPatterns='supertest'",
     "test:watch": "jest --watch",
@@ -53,7 +53,7 @@
     "@algolia/client-search": "^5.55.2",
     "@intercom/messenger-js-sdk": "^0.0.18",
     "@modelcontextprotocol/sdk": "^1.31.0",
-    "@sentry/nextjs": "^10.74.0",
+    "@sentry/nextjs": "10.75.2",
     "@stripe/react-stripe-js": "^4.0.2",
     "@stripe/stripe-js": "^7.9.0",
     "@workos-inc/node": "^10.13.0",
@@ -81,7 +81,7 @@
     "mongodb": "^6.21.0",
     "mongoose": "^8.24.1",
     "motion": "^12.42.2",
-    "next": "^16.3.8",
+    "next": "16.4.3",
     "next-intl": "^4.13.2",
     "openai": "^6.46.0",
     "pdf-lib": "^1.17.1",
@@ -99,7 +99,7 @@
     "rehype-raw": "^7.0.0",
     "rehype-sanitize": "^6.0.0",
     "remark-gfm": "^4.0.1",
-    "sanitize-html": "^2.17.7",
+    "sanitize-html": "2.18.1",
     "stripe": "^18.5.0",
     "styled-jsx": "5.1.6",
     "swiper": "^12.2.0",
@@ -150,7 +150,7 @@
       "@types/react-dom": "19.0.4",
       "baseline-browser-mapping": "2.11.21",
       "browserslist": "4.28.9",
-      "dompurify": "3.4.16",
+      "dompurify": "3.4.17",
       "fast-uri": "3.1.8",
       "fast-xml-parser": "5.7.0",
       "minimatch@>=10.2.0>brace-expansion": "5.0.12",
@@ -165,7 +165,12 @@
       "webpack": "5.104.1",
       "yaml": "2.8.3",
       "axios@>=1.0.0 <1.20.0": "1.20.0",
-      "ip-address@>=10.0.0 <10.7.1": "10.7.1"
+      "hono@>=4.0.0 <4.13.11": "4.13.11",
+      "follow-redirects@>=1.16.0 <1.16.1": "1.16.1",
+      "ip-address@>=10.0.0 <10.7.4": "10.7.4"
     }
+  },
+  "engines": {
+    "node": "22.23.4"
   }
 }

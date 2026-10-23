@@ -1,3 +1,5 @@
+import { logNodeRuntime } from '../lib/node-runtime.mjs';
+
 // Departure reminders and after-trip thank-yous are the two customer emails
 // this product owes on a clock. Both routes existed and were correct; nothing
 // scheduled them, so neither had ever been sent.
@@ -46,6 +48,7 @@ export function lifecycleEmailsEnabled(env = process.env) {
 }
 
 const dailyCustomerMail = async () => {
+  logNodeRuntime('daily-customer-mail');
   // Checked before anything else, including the secret: a deployment that has
   // not been switched on is not misconfigured, it is simply off, and must exit
   // cleanly rather than erroring or half-running.
