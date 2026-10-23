@@ -56,12 +56,12 @@ function postRequest(authorization?: string, body: Record<string, unknown> = {})
     accept: 'application/json, text/event-stream',
     ...(authorization ? { authorization } : {}),
   });
-  return {
+  // Exercise the actual streamed request body read by the transport.
+  return new EdgeRequest('https://egypt-excursionsonline.com/api/mcp/support', {
     method: 'POST',
-    url: 'https://egypt-excursionsonline.com/api/mcp/support',
     headers,
-    json: async () => body,
-  } as never;
+    body: JSON.stringify(body),
+  }) as never;
 }
 
 describe('private EEO booking-support MCP route', () => {

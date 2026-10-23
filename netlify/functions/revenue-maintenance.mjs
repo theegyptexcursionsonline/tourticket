@@ -1,3 +1,5 @@
+import { logNodeRuntime } from '../lib/node-runtime.mjs';
+
 // Revenue pricing summaries are an authoritative recovery path, not a
 // browser-driven task. Keep this schedule authenticated, bounded, and
 // independent of RevenuePilot's write switches. Payment/inventory recovery is
@@ -6,6 +8,7 @@ const BASE_URL = 'https://egypt-excursionsonline.com';
 const ROUTES = ['/api/cron/pricing-summaries'];
 
 const revenueMaintenance = async () => {
+  logNodeRuntime('revenue-maintenance');
   const secret = process.env.CRON_SECRET?.trim();
   if (!secret) {
     console.error(JSON.stringify({ level: 'error', message: 'Revenue maintenance is not configured.', code: 'CRON_SECRET_MISSING' }));

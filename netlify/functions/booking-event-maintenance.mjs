@@ -1,7 +1,10 @@
+import { logNodeRuntime } from '../lib/node-runtime.mjs';
+
 const BASE_URL = 'https://egypt-excursionsonline.com';
 const ROUTE = '/api/cron/booking-events';
 
 const bookingEventMaintenance = async () => {
+  logNodeRuntime('booking-event-maintenance');
   const secret = process.env.CRON_SECRET?.trim();
   if (!secret) {
     console.error(JSON.stringify({ level: 'error', message: 'Booking-event maintenance is not configured.', code: 'CRON_SECRET_MISSING' }));

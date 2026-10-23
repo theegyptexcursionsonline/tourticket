@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Clock, MapPin, Navigation, RefreshCw } from 'lucide-react';
+import { supportsWebGL2 } from '@/lib/maps/webglSupport';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import {
   completeItineraryRoute,
@@ -12,7 +13,17 @@ import {
 } from '@/lib/tours/itineraryMap';
 
 const OPENFREE_STYLE_URL = 'https://tiles.openfreemap.org/styles/bright';
+const MAPLIBRE_WORKER_URL = '/maplibre/maplibre-gl-worker.mjs';
 const MAP_LOAD_TIMEOUT_MS = 15000;
+
+/** A map that failed mid-construction can throw from remove(); cleanup must never crash the page. */
+function removeMapSafely(map: { remove: () => void } | null | undefined) {
+  try {
+    map?.remove();
+  } catch {
+    // The map never finished building; there is nothing left to release.
+  }
+}
 const ROUTE_SOURCE_ID = 'eeo-itinerary-route';
 const ROUTE_CASING_LAYER_ID = 'eeo-itinerary-route-casing';
 const ROUTE_LINE_LAYER_ID = 'eeo-itinerary-route-line';
@@ -179,8 +190,13 @@ function InteractiveItineraryMap({
     const initialize = async () => {
       setMapState('loading');
       setStyleLoaded(false);
+      if (!supportsWebGL2()) {
+        setMapState('unavailable');
+        return;
+      }
       try {
         const maplibre = await import('maplibre-gl');
+        maplibre.setWorkerUrl(MAPLIBRE_WORKER_URL);
         const first = positionsRef.current[0];
         if (cancelled || !mapElementRef.current || !first) return;
 
@@ -198,7 +214,7 @@ function InteractiveItineraryMap({
 
         loadTimer = setTimeout(() => {
           if (cancelled) return;
-          map.remove();
+          removeMapSafely(map);
           mapInstanceRef.current = null;
           maplibreRef.current = null;
           setMapState('unavailable');
@@ -223,7 +239,7 @@ function InteractiveItineraryMap({
       cancelled = true;
       if (loadTimer) clearTimeout(loadTimer);
       clearMarkers();
-      mapInstanceRef.current?.remove();
+      removeMapSafely(mapInstanceRef.current);
       mapInstanceRef.current = null;
       maplibreRef.current = null;
       focusedStageRef.current = null;

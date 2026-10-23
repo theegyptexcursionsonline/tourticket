@@ -1,7 +1,7 @@
 // next.config.js
 const createNextIntlPlugin = require('next-intl/plugin');
 const withNextIntl = createNextIntlPlugin('./i18n/request.ts');
-const { withSentryConfig } = require('@sentry/nextjs');
+const { withSentryConfig } = require('@sentry/nextjs/config');
 const configuredSearchOrigin = process.env.NEXT_PUBLIC_FOXES_SEARCH_ORIGIN || '';
 const searchWidgetOrigin = /^http:\/\/(localhost|127\.0\.0\.1):\d+$/.test(configuredSearchOrigin)
   ? configuredSearchOrigin
