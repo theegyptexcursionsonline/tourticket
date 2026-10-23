@@ -22,7 +22,8 @@ export const runtime = 'nodejs';
 const ROW_FIELDS = [
   'bookingReference', 'date', 'dateString', 'time', 'guests', 'adultGuests', 'childGuests', 'infantGuests', 'totalPrice',
   'currency', 'status', 'paymentStatus', 'paymentMethod', 'amountPaid', 'refundAmount', 'customerPhone', 'pickupLocation',
-  'hotelPickupDetails', 'hotelPickupLocation', 'selectedBookingOption', 'duplicateOf', 'paymentReconciliationState',
+  'hotelPickupDetails', 'hotelPickupLocation', 'selectedBookingOption', 'selectedAddOns', 'selectedAddOnDetails', 'addOnQuantityVersion',
+  'duplicateOf', 'paymentReconciliationState',
   'updatedAt', 'user', 'tour',
 ].join(' ');
 

@@ -92,6 +92,71 @@ describe('who may read the feed', () => {
 });
 
 describe('reading changes', () => {
+  it('projects booked extras from storage instead of the mutable catalogue, and preserves the charged total', async () => {
+    const tour = await Tour.collection.insertOne({
+      title: 'Saved tour', tenantId: 'default',
+      addOns: [{ id: 'upgrade', title: 'Current catalogue replacement', price: 999 }],
+    } as any);
+    await booking({
+      tour: tour.insertedId, totalPrice: 129.6, amountPaid: 129.6,
+      selectedAddOns: { upgrade: 1, entry: 1 },
+      selectedAddOnDetails: {
+        upgrade: { id: 'upgrade', title: 'Private Tour Upgrade', price: 20, perGuest: false },
+        entry: { id: 'entry', title: 'Entry Inside Great Pyramid', price: 30, perGuest: false },
+      },
+      addOnQuantityVersion: 1,
+    });
+    await booking({ tenantId: 'another-site', selectedAddOns: { private: 1 }, selectedAddOnDetails: { private: { title: 'Other tenant extra', price: 1 } } });
+    const result = await read('since=2000-01-01T00:00:00.000Z');
+    expect(result.status).toBe(200);
+    expect(result.body.data.items).toHaveLength(1);
+    expect(result.body.data.items[0]).toMatchObject({
+      amount: { value: '129.60', currency: 'USD' }, paymentStatus: 'paid',
+      extras: [
+        { id: 'entry', name: 'Entry Inside Great Pyramid', quantity: 1, selectedQuantity: 1, unitPrice: '30.00', totalPrice: '30.00', currency: 'USD' },
+        { id: 'upgrade', name: 'Private Tour Upgrade', quantity: 1, selectedQuantity: 1, unitPrice: '20.00', totalPrice: '20.00', currency: 'USD' },
+      ],
+    });
+    expect(JSON.stringify(result.body)).not.toContain('Current catalogue replacement');
+    expect(JSON.stringify(result.body)).not.toContain('Other tenant extra');
+  });
+
+  it('preserves absent versus explicitly empty extras in lean stored rows', async () => {
+    await booking({ bookingReference: 'EEO-QA-UNKNOWN' });
+    await booking({ bookingReference: 'EEO-QA-NONE', selectedAddOns: {}, selectedAddOnDetails: {} });
+    const result = await read('since=2000-01-01T00:00:00.000Z');
+    expect(result.body.data.items[0]).not.toHaveProperty('extras');
+    expect(result.body.data.items[1].extras).toEqual([]);
+  });
+
+  it('advances past a visibly refused malformed item, serves the next healthy booking, and can retry a repaired snapshot', async () => {
+    const spy = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+    try {
+      const invalid = await booking({
+        bookingReference: 'EEO-QA-INVALID-EXTRAS', selectedAddOns: { upgrade: 1 },
+        selectedAddOnDetails: { upgrade: { title: 'Saved extra', price: 'private-invalid-price', perGuest: false } },
+      });
+      await booking({ bookingReference: 'EEO-QA-HEALTHY', selectedAddOns: {} });
+      const first = await read('since=2000-01-01T00:00:00.000Z&limit=1');
+      expect(first.status).toBe(200);
+      expect(first.body.data.items[0]).toMatchObject({ externalRef: 'EEO-QA-INVALID-EXTRAS', extrasError: 'INVALID_BOOKED_EXTRAS' });
+      expect(first.body.data.items[0]).not.toHaveProperty('extras');
+      expect(JSON.stringify(first.body)).not.toContain('private-invalid-price');
+      expect(first.body.data.hasMore).toBe(true);
+      const second = await read(`limit=1&cursor=${first.body.data.nextCursor}`);
+      expect(second.status).toBe(200);
+      expect(second.body.data.items[0]).toMatchObject({ externalRef: 'EEO-QA-HEALTHY', extras: [] });
+      expect(second.body.data.nextCursor).not.toBe(first.body.data.nextCursor);
+      await Booking.collection.updateOne({ _id: invalid._id }, {
+        $set: { 'selectedAddOnDetails.upgrade.price': 25, updatedAt: new Date(Date.now() - 60_000) },
+      });
+      const repaired = await read(`limit=1&cursor=${second.body.data.nextCursor}`);
+      expect(repaired.body.data.items[0]).toMatchObject({ externalRef: 'EEO-QA-INVALID-EXTRAS', extras: [{ name: 'Saved extra', quantity: 1, totalPrice: '25.00' }] });
+      expect(repaired.body.data.items[0]).not.toHaveProperty('extrasError');
+      expect(spy).not.toHaveBeenCalled();
+    } finally { spy.mockRestore(); }
+  });
+
   it('pages through every change to the tail, oldest first, and starts where it left off', async () => {
     const tour = await Tour.collection.insertOne({ title: 'Giza Pyramids half-day tour', tenantId: 'default' } as any);
     const user = await User.collection.insertOne({ firstName: 'QA', lastName: 'Guest', email: 'qa-guest@example.invalid', phone: '+201000000000' } as any);

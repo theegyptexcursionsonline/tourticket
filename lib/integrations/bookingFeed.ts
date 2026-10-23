@@ -1,6 +1,7 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import mongoose from 'mongoose';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
+import { bookedExtrasForFeed } from './bookingFeedExtras';
 
 /**
  * The booking feed the Foxes booking API reads (booking platform Phase 2; blueprint
@@ -149,6 +150,9 @@ export type FeedBookingRow = {
   hotelPickupDetails?: string | null;
   hotelPickupLocation?: { name?: string | null; address?: string | null } | null;
   selectedBookingOption?: { title?: string | null } | null;
+  selectedAddOns?: unknown;
+  selectedAddOnDetails?: unknown;
+  addOnQuantityVersion?: unknown;
   duplicateOf?: unknown;
   paymentReconciliationState?: string | null;
   updatedAt?: Date | string | null;
@@ -242,6 +246,7 @@ export function toFeedItem(row: FeedBookingRow): Record<string, unknown> | null 
       ...(breakdown.length && adults + children + infants === totalGuests ? { breakdown } : {}),
     },
     amount: money(total, currency),
+    ...bookedExtrasForFeed(row),
     customer: {
       name,
       email: contact(user?.email, 254),

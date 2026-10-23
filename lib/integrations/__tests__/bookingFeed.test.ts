@@ -172,4 +172,30 @@ describe('an EEO booking as a feed item', () => {
     expect(toFeedItem(row({ bookingReference: '  ' }))).toBeNull();
     expect(toFeedItem(row({ updatedAt: null }))).toBeNull();
   });
+
+  it('adds the booked extras without repricing the booking, payment or amount to collect', () => {
+    const original = row({ totalPrice: 129.6, amountPaid: 129.6 });
+    const withExtras = toFeedItem({
+      ...original,
+      selectedAddOns: { upgrade: 1, entry: 2 },
+      selectedAddOnDetails: {
+        upgrade: { title: 'Private Tour Upgrade', price: 20, perGuest: false, quantity: 1 },
+        entry: { title: 'Entry Inside Great Pyramid', price: 15, perGuest: true, quantity: 2 },
+      },
+    })!;
+    const { extras, ...unchanged } = withExtras;
+    expect(unchanged).toEqual(toFeedItem(original));
+    expect(extras).toEqual([
+      { id: 'entry', name: 'Entry Inside Great Pyramid', quantity: 2, selectedQuantity: 2, perGuest: true, unitPrice: '15.00', totalPrice: '30.00', currency: 'USD' },
+      { id: 'upgrade', name: 'Private Tour Upgrade', quantity: 1, selectedQuantity: 1, perGuest: false, unitPrice: '20.00', totalPrice: '20.00', currency: 'USD' },
+    ]);
+    expect(withExtras.amount).toEqual({ value: '129.60', currency: 'USD' });
+  });
+
+  it('keeps an identifiable malformed-extras item visible for consumer refusal', () => {
+    const item = toFeedItem(row({ selectedAddOns: { 'opaque-id-only': 1 } }));
+    expect(item).toMatchObject({ externalRef: 'EEO-QA-1001', extrasError: 'INVALID_BOOKED_EXTRAS' });
+    expect(item).not.toHaveProperty('extras');
+    expect(JSON.stringify(item)).not.toContain('opaque-id-only');
+  });
 });
