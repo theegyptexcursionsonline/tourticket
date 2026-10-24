@@ -28,19 +28,8 @@ import { sanitizeRichHtml } from '@/lib/security/sanitizeHtml';
 import { imageMetadataFor, type ImageMetadata } from '@/lib/content/imageMetadata';
 import { tourContentPath } from '@/lib/content/contentUrl';
 import type { Destination } from '@/types';
+import { AuthorCard, type AuthorProfile } from './AuthorCard';
 
-interface AuthorProfile {
-  name: string;
-  slug?: string;
-  role?: string;
-  bio?: string;
-  avatar?: string;
-  twitter?: string;
-  facebook?: string;
-  website?: string;
-  email?: string;
-  postsCount?: number;
-}
 
 export interface TourPreview {
   _id?: string;
@@ -192,7 +181,7 @@ function ShareAndLike({ blog }: { blog: BlogPost }) {
         aria-pressed={liked}
         aria-label={liked ? `Liked. ${likes} likes` : `Like this post. ${likes} likes`}
         disabled={liked || isLiking}
-        className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition ${
+        className={`inline-flex min-h-11 min-w-11 items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition ${
           liked ? 'bg-red-100 text-red-600' : 'bg-slate-100 text-slate-700 hover:bg-red-50'
         } disabled:cursor-default disabled:opacity-80`}
       >
@@ -202,23 +191,24 @@ function ShareAndLike({ blog }: { blog: BlogPost }) {
 
       <div className="relative">
         <button
+          type="button"
           onClick={() => setOpen((v) => !v)}
           aria-expanded={open}
-          className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm bg-slate-100 hover:bg-amber-50 transition"
+          className="inline-flex min-h-11 items-center gap-2 px-3 py-2 rounded-lg text-sm bg-slate-100 hover:bg-amber-50 transition"
         >
           <Share2 className="h-4 w-4" />
           <span>Share</span>
         </button>
 
         {open && (
-          <div className="blog-card absolute right-0 z-40 mt-2 w-44 bg-white border rounded-lg shadow-lg p-2">
-            <button onClick={() => handleShare('facebook')} className="w-full text-left px-2 py-2 rounded hover:bg-slate-50 flex items-center gap-2">
+          <div className="blog-card absolute start-0 z-40 mt-2 w-44 bg-white border rounded-lg shadow-lg p-2 md:start-auto md:end-0">
+            <button onClick={() => handleShare('facebook')} className="w-full min-h-11 text-left px-2 py-2 rounded hover:bg-slate-50 flex items-center gap-2">
               <Facebook className="h-4 w-4 text-blue-600" /> Facebook
             </button>
-            <button onClick={() => handleShare('twitter')} className="w-full text-left px-2 py-2 rounded hover:bg-slate-50 flex items-center gap-2">
+            <button onClick={() => handleShare('twitter')} className="w-full min-h-11 text-left px-2 py-2 rounded hover:bg-slate-50 flex items-center gap-2">
               <Twitter className="h-4 w-4 text-sky-500" /> Twitter
             </button>
-            <button onClick={() => handleShare('copy')} className="w-full text-left px-2 py-2 rounded hover:bg-slate-50 flex items-center gap-2">
+            <button onClick={() => handleShare('copy')} className="w-full min-h-11 text-left px-2 py-2 rounded hover:bg-slate-50 flex items-center gap-2">
               <Copy className="h-4 w-4" /> Copy link
             </button>
           </div>
@@ -248,58 +238,6 @@ function MiniTourCard({ tour }: { tour: TourPreview }) {
         </div>
       </div>
     </Link>
-  );
-}
-
-/* ---------- Author Card ---------- */
-function AuthorCard({ author }: { author: AuthorProfile }) {
-  if (!author) return null;
-
-  const avatar = author.avatar || `/api/avatars/${encodeURIComponent(author.name || 'author')}`;
-  const authorSlug = getAuthorRouteSlug(author);
-
-  return (
-    <div className="blog-card bg-white rounded-2xl shadow p-6 flex gap-4 items-start">
-      <div className="w-20 h-20 rounded-full overflow-hidden bg-slate-100 flex-shrink-0">
-        <Image src={avatar} alt={author.name} width={80} height={80} className="object-cover" />
-      </div>
-      <div className="flex-1">
-        <div className="flex items-center justify-between">
-          <div>
-            <h4 className="text-lg font-semibold text-slate-900">{author.name}</h4>
-            {author.role && <div className="text-xs text-slate-500 mt-1">{author.role}</div>}
-          </div>
-          <div className="text-xs text-slate-400">{author.postsCount ? `${author.postsCount} posts` : ''}</div>
-        </div>
-
-        {author.bio && <p className="mt-3 text-sm text-slate-600 leading-relaxed">{author.bio}</p>}
-
-        <div className="mt-4 flex items-center gap-3">
-          {author.twitter && (
-            <a href={author.twitter} target="_blank" rel="noreferrer" className="text-sm font-medium text-sky-600 hover:underline inline-flex items-center gap-2">
-              <Twitter className="h-4 w-4" /> Twitter
-            </a>
-          )}
-          {author.facebook && (
-            <a href={author.facebook} target="_blank" rel="noreferrer" className="text-sm font-medium text-blue-600 hover:underline inline-flex items-center gap-2">
-              <Facebook className="h-4 w-4" /> Facebook
-            </a>
-          )}
-          {author.website && (
-            <a href={author.website} target="_blank" rel="noreferrer" className="ml-auto text-sm text-amber-600 font-medium hover:underline inline-flex items-center gap-2">
-              Visit site <ArrowRight className="h-3 w-3" />
-            </a>
-          )}
-        </div>
-
-        <div className="mt-4 flex gap-3">
-          {authorSlug ? (
-            <Link href={`/author/${authorSlug}`} className="px-3 py-2 border rounded-lg text-sm text-slate-700 hover:bg-slate-50">More articles</Link>
-          ) : null}
-          <a href={`mailto:${author.email || ''}`} className="px-3 py-2 bg-amber-600 text-white rounded-lg text-sm hover:bg-amber-700">Contact author</a>
-        </div>
-      </div>
-    </div>
   );
 }
 
@@ -504,13 +442,15 @@ export default function BlogPostClient({ blog, relatedPosts, relevantTours = [] 
         <div className={isPartnershipFeature ? '' : 'grid grid-cols-1 lg:grid-cols-4 gap-8'}>
           <article className={isPartnershipFeature ? 'space-y-8' : 'lg:col-span-3 space-y-6'}>
             {/* Standfirst (lead) + actions */}
-            {!isPartnershipFeature && <div className="flex items-start justify-between gap-6">
+            {/* On a phone the standfirst takes the full width and the actions sit on their own
+                row below it; the two share a row only from md up. */}
+            {!isPartnershipFeature && <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between md:gap-6">
               {blog.excerpt ? (
-                <p className="blog-serif text-xl md:text-2xl leading-relaxed text-stone-600 border-l-4 border-amber-500 pl-5">
+                <p className="blog-standfirst blog-serif min-w-0 text-xl md:text-2xl leading-relaxed text-stone-600 border-s-4 border-amber-500 ps-5">
                   {blog.excerpt}
                 </p>
-              ) : <span />}
-              <div className="shrink-0 pt-1">
+              ) : null}
+              <div className="md:ms-auto md:shrink-0 md:pt-1">
                 <ShareAndLike blog={blog} />
               </div>
             </div>}
