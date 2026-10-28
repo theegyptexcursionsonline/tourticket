@@ -15,6 +15,11 @@ const voiceWidgetOrigin = 'https://voice.foxestechnology.com';
 // in its loading state even though the organization is configured correctly.
 const bookingWidgetOrigin = 'https://booking.foxestechnology.com';
 const bookingApiOrigin = 'https://foxes-api-production.up.railway.app';
+// Stripe draws the payment window's card, Link, Apple Pay and Google Pay
+// buttons in frames served from this origin. A wallet can only run in a frame
+// this page's Permissions-Policy grants the payment feature to, so `self`
+// alone silently removes every wallet from checkout.
+const stripeFrameOrigin = 'https://js.stripe.com';
 const configuredAuthorityEmbedOrigin = (() => {
   try {
     const url = new URL(process.env.AUTHORITY_EMBED_ORIGIN || '');
@@ -192,7 +197,7 @@ const nextConfig = {
           { key: 'Strict-Transport-Security', value: 'max-age=31536000; includeSubDomains' },
           // The voice assistant runs in a cross-origin iframe; its allow="microphone"
           // can only delegate what this top-level policy grants that origin.
-          { key: 'Permissions-Policy', value: `camera=(), microphone=(self "${voiceWidgetOrigin}"), geolocation=(self), payment=(self)` },
+          { key: 'Permissions-Policy', value: `camera=(), microphone=(self "${voiceWidgetOrigin}"), geolocation=(self), payment=(self "${stripeFrameOrigin}")` },
           { key: 'Cross-Origin-Opener-Policy', value: 'same-origin-allow-popups' },
         ],
       },
