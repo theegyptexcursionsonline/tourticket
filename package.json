@@ -46,7 +46,8 @@
     "theme:generate": "tsx scripts/generate-dark-theme-css.ts",
     "theme:check": "tsx scripts/generate-dark-theme-css.ts --check",
     "seo:audit-content-readiness": "tsx scripts/audit-seo-content-readiness.ts --format=markdown",
-    "seo:audit-content-readiness:json": "tsx scripts/audit-seo-content-readiness.ts --format=json"
+    "seo:audit-content-readiness:json": "tsx scripts/audit-seo-content-readiness.ts --format=json",
+    "audit:prod": "pnpm audit --prod --audit-level high"
   },
   "dependencies": {
     "@ai-sdk/react": "^4.0.23",
@@ -105,7 +106,7 @@
     "swiper": "^12.2.0",
     "tailwindcss-rtl": "^0.9.0",
     "webpack": "5.104.1",
-    "zod": "^3.25.76"
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.6",
@@ -151,13 +152,13 @@
       "baseline-browser-mapping": "2.11.21",
       "browserslist": "4.28.9",
       "dompurify": "3.4.17",
-      "fast-uri": "3.1.8",
+      "fast-uri": "3.1.9",
       "fast-xml-parser": "5.7.0",
       "minimatch@>=10.2.0>brace-expansion": "5.0.12",
       "nanoid": "3.3.18",
       "postcss": "8.5.23",
       "protobufjs": "7.6.5",
-      "qs": "6.16.0",
+      "qs": "6.16.1",
       "sharp": "0.35.5",
       "source-map-js": "1.2.2",
       "proxy-addr": "2.0.8",
@@ -167,7 +168,8 @@
       "axios@>=1.0.0 <1.20.0": "1.20.0",
       "hono@>=4.0.0 <4.13.11": "4.13.11",
       "follow-redirects@>=1.16.0 <1.16.1": "1.16.1",
-      "ip-address@>=10.0.0 <10.7.4": "10.7.4"
+      "ip-address@>=10.0.0 <10.7.4": "10.7.4",
+      "body-parser@>=2.0.0 <2.4.0": "2.4.0"
     }
   },
   "engines": {

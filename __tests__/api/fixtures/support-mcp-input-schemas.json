@@ -1,0 +1,354 @@
+{
+  "verify_booking_identity": {
+    "type": "object",
+    "properties": {
+      "reference": {
+        "type": "string",
+        "minLength": 12,
+        "maxLength": 80
+      },
+      "proofType": {
+        "type": "string",
+        "enum": [
+          "provider_phone",
+          "verified_email"
+        ]
+      },
+      "proofValue": {
+        "type": "string",
+        "minLength": 3,
+        "maxLength": 254
+      },
+      "verificationId": {
+        "type": "string",
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9:_-]{7,159}$"
+      },
+      "binding": {
+        "type": "object",
+        "properties": {
+          "workspaceKey": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9_-]{1,79}$"
+          },
+          "conversationId": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{24}$"
+          },
+          "channel": {
+            "type": "string",
+            "enum": [
+              "widget",
+              "whatsapp"
+            ]
+          }
+        },
+        "required": [
+          "workspaceKey",
+          "conversationId",
+          "channel"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "required": [
+      "reference",
+      "proofType",
+      "proofValue",
+      "verificationId",
+      "binding"
+    ],
+    "additionalProperties": false,
+    "$schema": "http://json-schema.org/draft-07/schema#"
+  },
+  "get_booking_support_summary": {
+    "type": "object",
+    "properties": {
+      "handle": {
+        "type": "string",
+        "pattern": "^eih_[A-Za-z0-9_-]{43}$"
+      },
+      "binding": {
+        "type": "object",
+        "properties": {
+          "workspaceKey": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9_-]{1,79}$"
+          },
+          "conversationId": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{24}$"
+          },
+          "channel": {
+            "type": "string",
+            "enum": [
+              "widget",
+              "whatsapp"
+            ]
+          }
+        },
+        "required": [
+          "workspaceKey",
+          "conversationId",
+          "channel"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "required": [
+      "handle",
+      "binding"
+    ],
+    "additionalProperties": false,
+    "$schema": "http://json-schema.org/draft-07/schema#"
+  },
+  "get_pickup_support_status": {
+    "type": "object",
+    "properties": {
+      "handle": {
+        "type": "string",
+        "pattern": "^eih_[A-Za-z0-9_-]{43}$"
+      },
+      "binding": {
+        "type": "object",
+        "properties": {
+          "workspaceKey": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9_-]{1,79}$"
+          },
+          "conversationId": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{24}$"
+          },
+          "channel": {
+            "type": "string",
+            "enum": [
+              "widget",
+              "whatsapp"
+            ]
+          }
+        },
+        "required": [
+          "workspaceKey",
+          "conversationId",
+          "channel"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "required": [
+      "handle",
+      "binding"
+    ],
+    "additionalProperties": false,
+    "$schema": "http://json-schema.org/draft-07/schema#"
+  },
+  "revoke_booking_identity": {
+    "type": "object",
+    "properties": {
+      "handle": {
+        "type": "string",
+        "pattern": "^eih_[A-Za-z0-9_-]{43}$"
+      },
+      "binding": {
+        "type": "object",
+        "properties": {
+          "workspaceKey": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9_-]{1,79}$"
+          },
+          "conversationId": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{24}$"
+          },
+          "channel": {
+            "type": "string",
+            "enum": [
+              "widget",
+              "whatsapp"
+            ]
+          }
+        },
+        "required": [
+          "workspaceKey",
+          "conversationId",
+          "channel"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "required": [
+      "handle",
+      "binding"
+    ],
+    "additionalProperties": false,
+    "$schema": "http://json-schema.org/draft-07/schema#"
+  },
+  "propose_booking_support_request": {
+    "type": "object",
+    "properties": {
+      "handle": {
+        "type": "string",
+        "pattern": "^eih_[A-Za-z0-9_-]{43}$"
+      },
+      "actionKind": {
+        "type": "string",
+        "enum": [
+          "request_pickup_change",
+          "request_booking_change",
+          "request_cancellation",
+          "request_human_callback",
+          "resend_voucher"
+        ]
+      },
+      "customerRequest": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 600
+      },
+      "language": {
+        "type": "string",
+        "minLength": 2,
+        "maxLength": 8
+      },
+      "idempotencyKey": {
+        "type": "string",
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9:_-]{7,179}$"
+      },
+      "binding": {
+        "type": "object",
+        "properties": {
+          "workspaceKey": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9_-]{1,79}$"
+          },
+          "conversationId": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{24}$"
+          },
+          "channel": {
+            "type": "string",
+            "enum": [
+              "widget",
+              "whatsapp"
+            ]
+          }
+        },
+        "required": [
+          "workspaceKey",
+          "conversationId",
+          "channel"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "required": [
+      "handle",
+      "actionKind",
+      "customerRequest",
+      "language",
+      "idempotencyKey",
+      "binding"
+    ],
+    "additionalProperties": false,
+    "$schema": "http://json-schema.org/draft-07/schema#"
+  },
+  "confirm_booking_support_request": {
+    "type": "object",
+    "properties": {
+      "requestId": {
+        "type": "string",
+        "pattern": "^bsr_[a-f0-9]{24}$"
+      },
+      "idempotencyKey": {
+        "type": "string",
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9:_-]{7,179}$"
+      },
+      "approvedBy": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 120
+      },
+      "binding": {
+        "type": "object",
+        "properties": {
+          "workspaceKey": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9_-]{1,79}$"
+          },
+          "conversationId": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{24}$"
+          },
+          "channel": {
+            "type": "string",
+            "enum": [
+              "widget",
+              "whatsapp"
+            ]
+          }
+        },
+        "required": [
+          "workspaceKey",
+          "conversationId",
+          "channel"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "required": [
+      "requestId",
+      "idempotencyKey",
+      "approvedBy",
+      "binding"
+    ],
+    "additionalProperties": false,
+    "$schema": "http://json-schema.org/draft-07/schema#"
+  },
+  "withdraw_booking_support_request": {
+    "type": "object",
+    "properties": {
+      "requestId": {
+        "type": "string",
+        "pattern": "^bsr_[a-f0-9]{24}$"
+      },
+      "reason": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 200
+      },
+      "binding": {
+        "type": "object",
+        "properties": {
+          "workspaceKey": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9_-]{1,79}$"
+          },
+          "conversationId": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{24}$"
+          },
+          "channel": {
+            "type": "string",
+            "enum": [
+              "widget",
+              "whatsapp"
+            ]
+          }
+        },
+        "required": [
+          "workspaceKey",
+          "conversationId",
+          "channel"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "required": [
+      "requestId",
+      "reason",
+      "binding"
+    ],
+    "additionalProperties": false,
+    "$schema": "http://json-schema.org/draft-07/schema#"
+  }
+}
