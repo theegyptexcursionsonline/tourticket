@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 import { Link } from '@/i18n/routing';
 import { AnimatePresence, motion, useInView } from 'framer-motion';
 import {
@@ -49,7 +50,7 @@ import {
 import { meetingPointEmbedUrl, meetingPointMapUrl } from '@/lib/tours/meetingPointMap';
 import { effectiveTourPrice } from '@/lib/pricing/effectivePrice';
 import { provableRating, ratingLabel, reviewCountLabel } from '@/lib/tours/ratingDisplay';
-import { requestHostedAISearch } from '@/lib/hostedAISearch';
+import { askHostedAISearch } from '@/lib/hostedAISearch';
 
 // Enhanced interfaces for additional tour data
 interface ItineraryItem {
@@ -1129,6 +1130,7 @@ export default function TourPageClient({ tour, relatedTours, initialReviews = []
     rootLabel: 'Tours',
     rootHref: '/search',
   });
+  const router = useRouter();
   const { formatPrice } = useSettings();
   const tourBasePricing = effectiveTourPrice(tour);
   const { addToCart } = useCart();
@@ -1702,11 +1704,15 @@ export default function TourPageClient({ tour, relatedTours, initialReviews = []
                     <button 
                       onClick={(e) => {
                         e.preventDefault();
-                        requestHostedAISearch({
-                          query: `Tell me more about ${tour.title}`,
-                          mode: 'ai',
-                          locale: document.documentElement.lang.split('-')[0],
-                        });
+                        // Opens in place even though this page hides the floating launcher
+                        // (EEOSearchConcierge shows panels a visitor asked for).
+                        askHostedAISearch(
+                          {
+                            query: `Tell me more about ${tour.title}`,
+                            locale: document.documentElement.lang.split('-')[0],
+                          },
+                          (href) => router.push(href),
+                        );
                       }}
                       className="flex items-center gap-3 text-slate-600 hover:text-red-600 transition-colors w-full text-left"
                     >

@@ -351,4 +351,62 @@ describe('EEOSearchConcierge', () => {
     bookingBar.remove();
     await waitFor(() => expect(launcher.style.getPropertyValue('bottom')).toBe(''));
   });
+
+  describe('on a tour page, where the floating launcher stays hidden', () => {
+    let tour: HTMLElement;
+    let host: HTMLElement;
+    let panel: HTMLElement;
+    const closeListener = jest.fn();
+
+    beforeEach(async () => {
+      closeListener.mockClear();
+      window.addEventListener('foxes:search:close', closeListener);
+      render(<EEOSearchConcierge />);
+
+      tour = document.createElement('div');
+      tour.setAttribute('data-page-type', 'tour');
+      document.body.appendChild(tour);
+
+      host = document.createElement('div');
+      host.id = 'foxes-launcher-host';
+      const shadow = host.attachShadow({ mode: 'open' });
+      panel = document.createElement('div');
+      panel.id = 'foxes-search-dialog';
+      panel.hidden = true;
+      shadow.appendChild(panel);
+      document.body.appendChild(host);
+
+      await waitFor(() => expect(host.hidden).toBe(true));
+      closeListener.mockClear();
+    });
+
+    afterEach(() => {
+      window.removeEventListener('foxes:search:close', closeListener);
+      tour.remove();
+    });
+
+    it('shows a panel the visitor asked for, then hides the launcher again once it closes', async () => {
+      // "Ask AI about this tour": the launcher opens its panel, then announces it.
+      panel.hidden = false;
+      window.dispatchEvent(new CustomEvent('foxes:search:opened', { detail: { query: 'Tell me more', mode: 'ai' } }));
+
+      await waitFor(() => expect(host.hidden).toBe(false));
+      expect(closeListener).not.toHaveBeenCalled();
+
+      panel.hidden = true;
+      await waitFor(() => expect(host.hidden).toBe(true));
+    });
+
+    it('never leaves an unrequested panel open inside the hidden host, which would freeze scrolling', async () => {
+      panel.hidden = false;
+
+      await waitFor(() => expect(closeListener).toHaveBeenCalledTimes(1));
+      expect(host.hidden).toBe(true);
+
+      // Asked once only, while the launcher animates the panel out.
+      document.body.appendChild(document.createElement('span'));
+      await new Promise((resolve) => setTimeout(resolve, 60));
+      expect(closeListener).toHaveBeenCalledTimes(1);
+    });
+  });
 });

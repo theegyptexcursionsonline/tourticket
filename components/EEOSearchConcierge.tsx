@@ -4,12 +4,15 @@ import { useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import { useLocale } from 'next-intl';
 import { shouldRenderAISearchWidgetForHost } from '@/lib/aiSearchWidgetHosts';
+import { HOSTED_AI_SEARCH_OPENED_EVENT, HOSTED_AI_SEARCH_SCRIPT_ID } from '@/lib/hostedAISearch';
 import { isOpenBlockingModal } from '@/lib/ui/modalVisibility';
 
 const SEARCH_ORIGIN = process.env.NEXT_PUBLIC_FOXES_SEARCH_ORIGIN || 'https://search.foxestechnology.com';
 const WIDGET_ID = process.env.NEXT_PUBLIC_FOXES_SEARCH_WIDGET_ID || 'wgt_6JW5umlfasNQfJywtFPs6g';
-const SCRIPT_ID = 'eeo-search-concierge-script';
+const SCRIPT_ID = HOSTED_AI_SEARCH_SCRIPT_ID;
 const HOST_ID = 'foxes-launcher-host';
+// The launcher's search panel inside its shadow root (hidden while closed).
+const PANEL_SELECTOR = '#foxes-search-dialog';
 const CLOSE_EVENT = 'foxes:search:close';
 const DESTROY_EVENT = 'foxes:search:destroy';
 const SUPPORT_WIDGET_SELECTOR = 'iframe[id^="foxesconnect-widget-"]';
@@ -84,13 +87,40 @@ export default function EEOSearchConcierge() {
     const allowedHost = shouldRenderAISearchWidgetForHost(window.location.hostname);
 
     let dialogObserver: MutationObserver | null = null;
+    let panelObserver: MutationObserver | null = null;
+    let observedShadow: ShadowRoot | null = null;
     let syncFrame: number | null = null;
+    // Set when the launcher accepts a visitor's own request (the header's AI
+    // button, "Ask AI about this tour"); cleared once that panel closes. The
+    // launcher may defer the open until its domain check, so only an
+    // open-to-closed transition ends it.
+    let visitorOpenedPanel = false;
+    let panelWasOpen = false;
+    let panelCloseRequested = false;
 
     const syncLauncherVisibility = () => {
       const host = document.getElementById(HOST_ID);
       if (!host) return;
 
+      // The launcher opens and closes its panel inside its own shadow root,
+      // which the document observer below cannot see.
+      if (host.shadowRoot && host.shadowRoot !== observedShadow) {
+        panelObserver?.disconnect();
+        panelObserver = new MutationObserver(scheduleSync);
+        panelObserver.observe(host.shadowRoot, { subtree: true, attributes: true, attributeFilter: ['hidden'] });
+        observedShadow = host.shadowRoot;
+      }
+
       const launcher = host.shadowRoot?.querySelector<HTMLElement>('.launcher');
+      const panel = host.shadowRoot?.querySelector<HTMLElement>(PANEL_SELECTOR);
+      const panelOpen = Boolean(panel && !panel.hidden);
+      if (panelOpen) {
+        panelWasOpen = true;
+      } else if (panelWasOpen) {
+        panelWasOpen = false;
+        visitorOpenedPanel = false;
+        panelCloseRequested = false;
+      }
 
       // The hosted launcher intentionally uses a very high z-index. Keep it out
       // of the way while a first-party modal (booking, auth, lightbox, etc.) is
@@ -111,8 +141,13 @@ export default function EEOSearchConcierge() {
         document.querySelectorAll<HTMLIFrameElement>(SUPPORT_WIDGET_SELECTOR),
       ).some((frame) => window.getComputedStyle(frame).display !== 'none');
       const onTourPage = Boolean(document.querySelector(TOUR_PAGE_SELECTOR));
-      const suppressed = hasOpenAppDialog || hasOpenSupportWidget || onTourPage;
-      if (suppressed && !host.hidden) {
+      // On a tour page only the floating launcher stays away from the booking
+      // call to action; a panel the visitor asked for still shows.
+      const suppressed = hasOpenAppDialog || hasOpenSupportWidget || (onTourPage && !visitorOpenedPanel);
+      // An open panel locks page scrolling, so it must never stay open inside
+      // a hidden host. Ask once: the launcher hides it after its 430 ms exit.
+      if (suppressed && (!host.hidden || (panelOpen && !panelCloseRequested))) {
+        if (panelOpen) panelCloseRequested = true;
         window.dispatchEvent(new CustomEvent(CLOSE_EVENT));
       }
       if (host.hidden !== suppressed) {
@@ -151,8 +186,16 @@ export default function EEOSearchConcierge() {
       });
     };
 
+    const onVisitorOpenedPanel = () => {
+      visitorOpenedPanel = true;
+      scheduleSync();
+    };
+
     const removeWidget = () => {
       dialogObserver?.disconnect();
+      panelObserver?.disconnect();
+      panelObserver = null;
+      observedShadow = null;
       if (syncFrame !== null) {
         window.cancelAnimationFrame(syncFrame);
         syncFrame = null;
@@ -205,10 +248,12 @@ export default function EEOSearchConcierge() {
       attributeFilter: ['class', 'style', 'hidden', 'aria-modal', 'aria-hidden', 'open'],
     });
     window.addEventListener('resize', scheduleSync);
+    window.addEventListener(HOSTED_AI_SEARCH_OPENED_EVENT, onVisitorOpenedPanel);
     syncLauncherVisibility();
 
     return () => {
       window.removeEventListener('resize', scheduleSync);
+      window.removeEventListener(HOSTED_AI_SEARCH_OPENED_EVENT, onVisitorOpenedPanel);
       removeWidget();
     };
   }, [locale, pathname]);

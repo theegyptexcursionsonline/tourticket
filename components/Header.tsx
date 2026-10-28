@@ -16,17 +16,10 @@ import {
   LogOut,
   Calendar,
   Sparkles,
-  Bot,
-  Loader2,
-  ArrowLeft,
-  Send,
   MapPin,
   Compass,
   Tag,
   FileText,
-  ChevronLeft,
-  ChevronRight,
-  DollarSign
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
@@ -40,21 +33,18 @@ import { useNavData } from '@/contexts/NavDataContext';
 import { useSettings } from '@/hooks/useSettings';
 import { liteClient as algoliasearch } from 'algoliasearch/lite';
 import { InstantSearch, Index, useSearchBox, useHits, Configure } from 'react-instantsearch';
-import { useChat } from '@ai-sdk/react';
-import { DefaultChatTransport } from 'ai';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import { safeMarkdownRehypePlugins, safeMarkdownUrlTransform } from '@/lib/markdown/safeMarkdown';
 import { filterVisibleTaxonomyEntries } from '@/lib/utils/taxonomy';
 import {
   filterSearchHitsByTenant,
   filterTourSearchHitsByTenant,
 } from '@/lib/tenantSearchHitFilter';
-import { isRecord, isSearchHit, type ChatPart, type SearchHit } from '@/components/componentTypes';
+import { type SearchHit } from '@/components/componentTypes';
 import 'instantsearch.css/themes/satellite.css';
 import ThemeToggle from '@/components/ThemeToggle';
 import AppDownloadEntry from '@/components/AppDownloadEntry';
 import { useLocale } from 'next-intl';
+import { useRouter } from 'next/navigation';
+import { askHostedAISearch } from '@/lib/hostedAISearch';
 import { contentPath, localizedTourContentPath } from '@/lib/content/contentUrl';
 
 // =================================================================
@@ -66,7 +56,6 @@ const INDEX_TOURS = process.env.NEXT_PUBLIC_ALGOLIA_INDEX_NAME || 'foxes_technol
 const INDEX_DESTINATIONS = 'destinations';
 const INDEX_CATEGORIES = 'categories';
 const INDEX_BLOGS = 'blogs';
-const AGENT_ID = 'fb2ac93a-1b89-40e2-a9cb-c85c1bbd978e';
 
 const searchClient = algoliasearch(ALGOLIA_APP_ID, ALGOLIA_SEARCH_KEY);
 const DEFAULT_SEARCH_TENANT = 'default';
@@ -410,138 +399,19 @@ function BlogHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limit?: 
   );
 }
 
-// Tour Card Component for AI Chat
-const TourCard = ({ tour }: { tour: SearchHit }) => {
-  const locale = useLocale();
-  return (
-  <motion.a
-    href={localizedTourContentPath(tour, locale)}
-    target="_blank"
-    rel="noopener noreferrer"
-    className="group block flex-shrink-0 w-[240px] bg-white rounded-xl overflow-hidden border shadow-sm hover:shadow-lg transition-all duration-300"
-    whileHover={{ y: -4 }}
-  >
-    {tour.image && (
-      <div className="relative h-32 bg-gradient-to-br from-blue-100 to-purple-100 overflow-hidden">
-        <Image
-          src={tour.image}
-          alt={tour.title || 'Tour'}
-          fill
-          unoptimized
-          sizes="240px"
-          className="object-cover group-hover:scale-110 transition-transform duration-300"
-        />
-        {tour.duration && (
-          <div className="absolute top-2 right-2 bg-white/90 backdrop-blur-sm px-2 py-0.5 rounded-lg text-[10px] font-medium">
-            {tour.duration}
-          </div>
-        )}
-      </div>
-    )}
-    <div className="p-2.5">
-      <h3 className="font-semibold text-xs text-gray-900 mb-1.5 line-clamp-2 group-hover:text-blue-600 transition-colors">
-        {tour.title}
-      </h3>
-      {tour.location && (
-        <div className="flex items-center gap-1 text-[10px] mb-1.5">
-          <MapPin className="w-2.5 h-2.5 text-gray-400" />
-          <span className="line-clamp-1 text-gray-600">{tour.location}</span>
-        </div>
-      )}
-      {tour.rating && (
-        <div className="flex items-center gap-1 mb-1.5">
-          <Star className="w-2.5 h-2.5 fill-yellow-400 text-yellow-400" />
-          <span className="text-[10px] font-medium text-gray-900">{tour.rating}</span>
-          {tour.reviews && <span className="text-[10px] text-gray-400">({tour.reviews})</span>}
-        </div>
-      )}
-      {tour.price && (
-        <div className="flex items-center gap-1 text-blue-600 font-bold text-sm">
-          <DollarSign className="w-3 h-3" />
-          <span>{tour.price}</span>
-        </div>
-      )}
-    </div>
-  </motion.a>
-  );
-};
-
-// Tour Slider Component for AI Chat
-const TourSlider = ({ tours }: { tours: SearchHit[] }) => {
-  const sliderRef = useRef<HTMLDivElement>(null);
-
-  const scroll = (direction: 'left' | 'right') => {
-    if (!sliderRef.current) return;
-    const scrollAmount = 260;
-    sliderRef.current.scrollBy({
-      left: direction === 'left' ? -scrollAmount : scrollAmount,
-      behavior: 'smooth',
-    });
-  };
-
-  return (
-    <div className="relative w-full">
-      {tours.length > 1 && (
-        <>
-          <button
-            onClick={() => scroll('left')}
-            className="absolute left-0 top-1/2 -translate-y-1/2 z-10 w-7 h-7 bg-white/90 backdrop-blur-sm rounded-full shadow-lg flex items-center justify-center hover:bg-white transition-all"
-          >
-            <ChevronLeft className="w-3.5 h-3.5" />
-          </button>
-          <button
-            onClick={() => scroll('right')}
-            className="absolute right-0 top-1/2 -translate-y-1/2 z-10 w-7 h-7 bg-white/90 backdrop-blur-sm rounded-full shadow-lg flex items-center justify-center hover:bg-white transition-all"
-          >
-            <ChevronRight className="w-3.5 h-3.5" />
-          </button>
-        </>
-      )}
-      <div
-        ref={sliderRef}
-        className="flex gap-2.5 overflow-x-auto scrollbar-hide scroll-smooth py-1 px-1"
-      >
-        {tours.map((tour, idx) => (
-          <TourCard key={idx} tour={tour} />
-        ))}
-      </div>
-    </div>
-  );
-};
-
-// Mobile Inline Search Component with AI
+// Mobile Inline Search Component (live results; "AI" opens the hosted AI trip search)
 const MobileInlineSearch: FC<{ isOpen: boolean; onClose: () => void }> = React.memo(({ isOpen, onClose }) => {
   const [inputValue, setInputValue] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
-  const [chatMode, setChatMode] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
-  const chatContainerRef = useRef<HTMLDivElement>(null);
-
-  // AI SDK Chat Setup
-  const {
-    messages,
-    sendMessage,
-    status,
-    stop,
-  } = useChat({
-    transport: new DefaultChatTransport({
-      api: `https://${ALGOLIA_APP_ID}.algolia.net/agent-studio/1/agents/${AGENT_ID}/completions?stream=true&compatibilityMode=ai-sdk-5`,
-      headers: {
-        'x-algolia-application-id': ALGOLIA_APP_ID,
-        'x-algolia-api-key': ALGOLIA_SEARCH_KEY,
-      },
-    }),
-  });
-  const isGenerating = status === 'submitted' || status === 'streaming';
+  const locale = useLocale();
+  const router = useRouter();
 
   useOnClickOutside(containerRef, onClose);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        onClose();
-        setChatMode(false);
-      }
+      if (e.key === 'Escape') onClose();
     };
     if (isOpen) {
       window.addEventListener('keydown', handleKeyDown);
@@ -549,127 +419,19 @@ const MobileInlineSearch: FC<{ isOpen: boolean; onClose: () => void }> = React.m
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
 
-  // Track if user has manually scrolled away from bottom
-  const [userHasScrolledUp, setUserHasScrolledUp] = useState(false);
-  const isScrollingRef = useRef(false);
-  
-  // Auto-scroll only when user hasn't manually scrolled up
-  useEffect(() => {
-    if (!chatContainerRef.current || userHasScrolledUp) return;
-    
-    const container = chatContainerRef.current;
-    setTimeout(() => {
-      if (!userHasScrolledUp && container) {
-        container.scrollTop = container.scrollHeight;
-      }
-    }, 100);
-  }, [messages, isGenerating, userHasScrolledUp]);
-  
-  // Track manual scrolling - let user scroll freely
-  useEffect(() => {
-    const container = chatContainerRef.current;
-    if (!container || !chatMode) return;
-
-    let scrollTimeout: NodeJS.Timeout | undefined;
-
-    const handleScroll = () => {
-      // Don't interfere if this is a programmatic scroll
-      if (isScrollingRef.current) return;
-
-      if (scrollTimeout) clearTimeout(scrollTimeout);
-
-      // Check if user is at the bottom
-      const isAtBottom = Math.abs(container.scrollHeight - container.scrollTop - container.clientHeight) < 5;
-
-      if (isAtBottom) {
-        // User scrolled back to bottom - re-enable auto-scroll
-        setUserHasScrolledUp(false);
-      } else {
-        // User scrolled away from bottom - disable auto-scroll
-        setUserHasScrolledUp(true);
-      }
-    };
-
-    container.addEventListener('scroll', handleScroll, { passive: true });
-    return () => {
-      container.removeEventListener('scroll', handleScroll);
-      if (scrollTimeout) clearTimeout(scrollTimeout);
-    };
-  }, [chatMode]);
-
   const handleInputChange = (value: string) => {
     setInputValue(value);
-    if (!chatMode) {
-      setSearchQuery(value);
-    }
+    setSearchQuery(value);
   };
 
-  const handleChatSubmit = () => {
-    const message = inputValue.trim();
-    if (!message) return;
-    sendMessage({ text: message });
-    setInputValue('');
-  };
-
+  // "AI" hands the visitor's words to the one hosted AI trip search. This
+  // panel's own chat called a retired agent and answered with an empty bubble.
   const handleAskAI = () => {
-    setChatMode(true);
-    if (searchQuery) {
-      setTimeout(() => sendMessage({ text: searchQuery }), 300);
-      setInputValue('');
-      setSearchQuery('');
-    }
-  };
-
-  const handleBackToSearch = () => {
-    setChatMode(false);
-    setInputValue(searchQuery);
-  };
-
-  // Render tool outputs (tours)
-  const renderToolOutput = (value: unknown) => {
-    const candidates = Array.isArray(value)
-      ? value
-      : isRecord(value) && Array.isArray(value.hits)
-        ? value.hits
-        : [value];
-    const tours = filterTourSearchHitsByTenant(
-      candidates.filter(isSearchHit),
-      DEFAULT_SEARCH_TENANT,
-      'en'
-    ).filter((item) => item.title && item.slug);
-
-    if (tours.length > 0) return <TourSlider tours={tours} />;
-
-    return (
-      <pre className="bg-gray-900 text-gray-100 p-2 rounded-lg text-[10px] overflow-x-auto">
-        {JSON.stringify(value, null, 2)}
-      </pre>
-    );
-  };
-
-  // Render message content
-  const renderContent = (parts: ChatPart[]) => {
-    return parts.map((p, idx) => {
-      if (p.type === 'tool-result') {
-        const text = p.text || '';
-        try {
-          const obj: unknown = JSON.parse(text);
-          return <div key={idx} className="my-2">{renderToolOutput(obj)}</div>;
-        } catch {
-          return <pre key={idx} className="text-[10px]">{text}</pre>;
-        }
-      }
-      if (p.type === 'text') {
-        return (
-          <div key={idx} className="prose prose-sm max-w-none text-gray-800 leading-relaxed text-sm sm:text-[15px]">
-            <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={safeMarkdownRehypePlugins} urlTransform={safeMarkdownUrlTransform}>
-              {p.text || ''}
-            </ReactMarkdown>
-          </div>
-        );
-      }
-      return null;
-    });
+    const question = inputValue;
+    onClose();
+    setInputValue('');
+    setSearchQuery('');
+    askHostedAISearch({ query: question, locale }, (href) => router.push(href));
   };
 
   if (!isOpen) return null;
@@ -699,16 +461,9 @@ const MobileInlineSearch: FC<{ isOpen: boolean; onClose: () => void }> = React.m
                     type="text"
                     value={inputValue}
                     onChange={(e) => handleInputChange(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (chatMode && e.key === 'Enter' && !e.shiftKey) {
-                        e.preventDefault();
-                        handleChatSubmit();
-                      }
-                    }}
-                    placeholder={chatMode ? "Ask AI about Egypt tours..." : "Search tours, destinations..."}
+                    placeholder="Search tours, destinations..."
                     className="w-full pl-14 pr-32 py-4 text-base text-gray-900 placeholder:text-gray-400/70 placeholder:font-normal font-medium bg-transparent outline-none rounded-full"
                     autoFocus
-                    disabled={chatMode && isGenerating}
                   />
 
                   {/* Left Icon */}
@@ -725,44 +480,21 @@ const MobileInlineSearch: FC<{ isOpen: boolean; onClose: () => void }> = React.m
 
                   {/* Right Side Buttons */}
                   <div className="absolute right-4 top-1/2 transform -translate-y-1/2 flex items-center gap-2">
-                    {chatMode ? (
-                      <motion.button
-                        onClick={() => {
-                          if (isGenerating) {
-                            stop();
-                          } else {
-                            handleChatSubmit();
-                          }
-                        }}
-                        className={`px-3 py-1.5 rounded-xl font-semibold text-white flex items-center gap-1.5 text-xs ${isGenerating ? 'bg-red-500' : 'bg-gradient-to-r from-blue-600 to-purple-600'}`}
-                      >
-                        {isGenerating ? (
-                          <>
-                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                            <span>Stop</span>
-                          </>
-                        ) : (
-                          <>
-                            <Send className="w-3.5 h-3.5" />
-                            <span>Send</span>
-                          </>
-                        )}
-                      </motion.button>
-                    ) : (
-                      <motion.button
-                        onClick={handleAskAI}
-                        animate={{ rotate: [0, 15, -15, 0] }}
-                        transition={{ duration: 4, repeat: Infinity }}
-                        className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-blue-500 to-purple-600 text-white font-semibold text-xs flex items-center gap-1.5 hover:shadow-lg"
-                      >
-                        <Sparkles className="w-3.5 h-3.5" />
-                        <span>AI</span>
-                      </motion.button>
-                    )}
+                    <motion.button
+                      type="button"
+                      onClick={handleAskAI}
+                      aria-label="Ask AI about Egypt tours"
+                      animate={{ rotate: [0, 15, -15, 0] }}
+                      transition={{ duration: 4, repeat: Infinity }}
+                      className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-blue-500 to-purple-600 text-white font-semibold text-xs flex items-center gap-1.5 hover:shadow-lg"
+                    >
+                      <Sparkles className="w-3.5 h-3.5" />
+                      <span>AI</span>
+                    </motion.button>
                     <button
+                      type="button"
                       onClick={() => {
                         onClose();
-                        setChatMode(false);
                         setInputValue('');
                         setSearchQuery('');
                       }}
@@ -790,81 +522,17 @@ const MobileInlineSearch: FC<{ isOpen: boolean; onClose: () => void }> = React.m
                 <div className="px-5 py-3 border-b border-gray-100/50 bg-gradient-to-br from-white via-blue-50/30 to-purple-50/30">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      {chatMode && (
-                        <button
-                          onClick={handleBackToSearch}
-                          className="mr-1 p-1.5 hover:bg-white/80 rounded-lg transition-colors"
-                        >
-                          <ArrowLeft className="w-4 h-4 text-gray-600" />
-                        </button>
-                      )}
-                      {chatMode ? (
-                        <>
-                          <Bot className="w-4 h-4 text-blue-500" />
-                          <span className="text-xs font-bold text-gray-700 uppercase tracking-wider">
-                            AI Travel Assistant
-                          </span>
-                        </>
-                      ) : (
-                        <>
-                          <Sparkles className="w-4 h-4 text-blue-500" />
-                          <span className="text-xs font-bold text-gray-700 uppercase tracking-wider">
-                            {searchQuery ? 'Search Results' : 'Popular Searches'}
-                          </span>
-                        </>
-                      )}
+                      <Sparkles className="w-4 h-4 text-blue-500" />
+                      <span className="text-xs font-bold text-gray-700 uppercase tracking-wider">
+                        {searchQuery ? 'Search Results' : 'Popular Searches'}
+                      </span>
                     </div>
                   </div>
                 </div>
 
                 {/* Results Area */}
-                <div ref={chatContainerRef} className="overflow-y-auto" style={{ maxHeight: 'calc(65vh - 60px)' }}>
-                  {chatMode ? (
-                    /* Chat Interface */
-                    <div className="p-4 space-y-3">
-                      {messages.length === 0 && (
-                        <div className="bg-white p-4 rounded-xl border border-blue-100">
-                          <div className="flex items-start gap-2.5 mb-3">
-                            <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-500 rounded-lg flex items-center justify-center flex-shrink-0">
-                              <Bot className="text-white" size={16} />
-                            </div>
-                            <div>
-                              <p className="font-semibold text-gray-800 text-sm mb-1">
-                                Hi! I&apos;m your AI Egypt Travel Assistant
-                              </p>
-                              <p className="text-gray-500 text-xs leading-relaxed">
-                                Ask me anything — I&apos;ll help you find tours, trips, prices, destinations & more.
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-
-                      {messages.map((m) => (
-                        <div
-                          key={m.id}
-                          className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                        >
-                          <div
-                            className={`max-w-[85%] px-3.5 py-2.5 rounded-2xl text-sm ${
-                              m.role === 'user'
-                                ? 'bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-sm'
-                                : 'bg-white text-gray-800 border shadow-sm'
-                            }`}
-                          >
-                            {renderContent(m.parts)}
-                          </div>
-                        </div>
-                      ))}
-
-                      {isGenerating && (
-                        <div className="flex items-center gap-2 text-gray-500 bg-white px-4 py-2.5 rounded-lg border">
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                          <span className="text-sm">AI is thinking...</span>
-                        </div>
-                      )}
-                    </div>
-                  ) : searchQuery ? (
+                <div className="overflow-y-auto" style={{ maxHeight: 'calc(65vh - 60px)' }}>
+                  {searchQuery ? (
                     <InstantSearch searchClient={searchClient} indexName={INDEX_TOURS}>
                       <CustomSearchBox searchQuery={searchQuery} />
 

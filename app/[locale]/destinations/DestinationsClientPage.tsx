@@ -1,23 +1,15 @@
 'use client';
 
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 import { Link } from '@/i18n/routing';
-import { MapPin, Search, Sparkles, X, Bot, Loader2, ChevronLeft, ChevronRight, DollarSign, Star } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { useChat } from '@ai-sdk/react';
-import { DefaultChatTransport } from 'ai';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import { safeMarkdownRehypePlugins, safeMarkdownUrlTransform } from '@/lib/markdown/safeMarkdown';
+import { MapPin, Search, Sparkles, X } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { IDestination } from '@/lib/models/Destination';
 import { useLocale } from 'next-intl';
-import { contentPath, tourContentPath } from '@/lib/content/contentUrl';
-
-// Algolia Configuration for AI
-const ALGOLIA_APP_ID = process.env.NEXT_PUBLIC_ALGOLIA_APP_ID || 'WMDNV9WSOI';
-const ALGOLIA_SEARCH_KEY = process.env.NEXT_PUBLIC_ALGOLIA_SEARCH_API_KEY || 'f485b4906072cedbd2f51a46e5ac2637';
-const AGENT_ID = 'fb2ac93a-1b89-40e2-a9cb-c85c1bbd978e';
+import { contentPath } from '@/lib/content/contentUrl';
+import { askHostedAISearch } from '@/lib/hostedAISearch';
 
 interface DestinationWithCount extends IDestination {
     tourCount: number;
@@ -31,7 +23,6 @@ type DestinationsCopy = {
   title: string;
   subtitle: string;
   searchPlaceholder: string;
-  aiPlaceholder: string;
   clearSearchAria: string;
   openAiAssistantAria: string;
   foundResults: (count: number) => string;
@@ -39,14 +30,6 @@ type DestinationsCopy = {
   clearSearch: string;
   noDestinationsAvailable: string;
   toursAvailable: (count: number) => string;
-  aiAssistantTitle: string;
-  aiAssistantSubtitle: string;
-  aiWelcomeTitle: string;
-  aiWelcomeSubtitle: string;
-  aiPrompts: string[];
-  aiThinking: string;
-  aiInputPlaceholder: string;
-  send: string;
 };
 
 const DESTINATIONS_COPY: Record<'en' | 'ar', DestinationsCopy> = {
@@ -55,7 +38,6 @@ const DESTINATIONS_COPY: Record<'en' | 'ar', DestinationsCopy> = {
     subtitle:
       'From ancient wonders to modern marvels, find your next adventure in one of our handpicked locations.',
     searchPlaceholder: 'Search destinations...',
-    aiPlaceholder: 'Ask AI anything about Egypt tours...',
     clearSearchAria: 'Clear search',
     openAiAssistantAria: 'Open AI Assistant',
     foundResults: (count: number) =>
@@ -65,26 +47,12 @@ const DESTINATIONS_COPY: Record<'en' | 'ar', DestinationsCopy> = {
     clearSearch: 'Clear Search',
     noDestinationsAvailable: 'No destinations are currently available. Please check back later.',
     toursAvailable: (count: number) => `${count} tours available`,
-    aiAssistantTitle: 'AI Travel Assistant',
-    aiAssistantSubtitle: 'Ask anything about Egypt tours',
-    aiWelcomeTitle: "Hi! I'm your AI Egypt Travel Assistant",
-    aiWelcomeSubtitle:
-      "Ask me anything — I'll help you find tours, trips, prices, destinations & more.",
-    aiPrompts: [
-      'Find me the best Nile Cruise under $300',
-      'Plan a 7-day Egypt itinerary',
-      'Top tours near Cairo?',
-    ],
-    aiThinking: 'AI is thinking',
-    aiInputPlaceholder: 'Ask about tours, destinations, prices...',
-    send: 'Send',
   },
   ar: {
     title: 'استكشف وجهاتنا',
     subtitle:
       'من العجائب التاريخية إلى المعالم الحديثة، اعثر على مغامرتك القادمة في واحدة من الوجهات المختارة بعناية.',
     searchPlaceholder: 'ابحث في الوجهات...',
-    aiPlaceholder: 'اسأل الذكاء الاصطناعي أي شيء عن جولات مصر...',
     clearSearchAria: 'مسح البحث',
     openAiAssistantAria: 'فتح مساعد الذكاء الاصطناعي',
     foundResults: (count: number) =>
@@ -94,134 +62,7 @@ const DESTINATIONS_COPY: Record<'en' | 'ar', DestinationsCopy> = {
     clearSearch: 'مسح البحث',
     noDestinationsAvailable: 'لا توجد وجهات متاحة حاليًا. يرجى المحاولة لاحقًا.',
     toursAvailable: (count: number) => `${count} جولات متاحة`,
-    aiAssistantTitle: 'مساعد السفر الذكي',
-    aiAssistantSubtitle: 'اسأل أي شيء عن جولات مصر',
-    aiWelcomeTitle: 'مرحبًا! أنا مساعد السفر الذكي الخاص بمصر',
-    aiWelcomeSubtitle:
-      'اسألني أي شيء وسأساعدك في العثور على جولات ورحلات وأسعار ووجهات والمزيد.',
-    aiPrompts: [
-      'رشّح لي أفضل رحلة نيلية بأقل من 300 دولار',
-      'خطط لي برنامج 7 أيام في مصر',
-      'ما أفضل الجولات بالقرب من القاهرة؟',
-    ],
-    aiThinking: 'الذكاء الاصطناعي يفكر',
-    aiInputPlaceholder: 'اسأل عن الجولات أو الوجهات أو الأسعار...',
-    send: 'إرسال',
   },
-};
-
-interface ChatTour {
-  slug: string;
-  urlType?: string;
-  destination?: { slug?: string } | string;
-  parentPage?: { slug?: string } | null;
-  title: string;
-  image?: string;
-  duration?: string;
-  location?: string;
-  rating?: number;
-  reviews?: number;
-  price?: number;
-}
-
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null;
-
-const isChatTour = (value: unknown): value is ChatTour =>
-  isRecord(value) && typeof value.slug === 'string' && typeof value.title === 'string';
-
-// Tour Card Component for AI Chat
-const TourCard = ({ tour }: { tour: ChatTour }) => (
-  <motion.div whileHover={{ y: -4 }}>
-    <Link
-      href={tourContentPath(tour)}
-      className="group block flex-shrink-0 w-[240px] bg-white rounded-xl overflow-hidden border shadow-sm hover:shadow-lg transition-all duration-300"
-    >
-    {tour.image && (
-      <div className="relative h-32 bg-gradient-to-br from-blue-100 to-purple-100 overflow-hidden">
-        <Image
-          src={tour.image}
-          alt={tour.title}
-          fill
-          sizes="240px"
-          className="object-cover group-hover:scale-110 transition-transform duration-300"
-        />
-        {tour.duration && (
-          <div className="absolute top-2 right-2 bg-white/90 backdrop-blur-sm px-2 py-0.5 rounded-lg text-[10px] font-medium">
-            {tour.duration}
-          </div>
-        )}
-      </div>
-    )}
-    <div className="p-2.5">
-      <h3 className="font-semibold text-xs text-gray-900 mb-1.5 line-clamp-2 group-hover:text-blue-600 transition-colors">
-        {tour.title}
-      </h3>
-      {tour.location && (
-        <div className="flex items-center gap-1 text-[10px] mb-1.5">
-          <MapPin className="w-2.5 h-2.5 text-gray-400" />
-          <span className="line-clamp-1 text-gray-600">{tour.location}</span>
-        </div>
-      )}
-      {tour.rating && (
-        <div className="flex items-center gap-1 mb-1.5">
-          <Star className="w-2.5 h-2.5 fill-yellow-400 text-yellow-400" />
-          <span className="text-[10px] font-medium text-gray-900">{tour.rating}</span>
-          {tour.reviews && <span className="text-[10px] text-gray-400">({tour.reviews})</span>}
-        </div>
-      )}
-      {tour.price && (
-        <div className="flex items-center gap-1 text-blue-600 font-bold text-sm">
-          <DollarSign className="w-3 h-3" />
-          <span>{tour.price}</span>
-        </div>
-      )}
-    </div>
-    </Link>
-  </motion.div>
-);
-
-// Tour Slider Component for AI Chat
-const TourSlider = ({ tours }: { tours: ChatTour[] }) => {
-  const sliderRef = useRef<HTMLDivElement>(null);
-
-  const scroll = (direction: 'left' | 'right') => {
-    if (!sliderRef.current) return;
-    const scrollAmount = 260;
-    sliderRef.current.scrollBy({
-      left: direction === 'left' ? -scrollAmount : scrollAmount,
-      behavior: 'smooth',
-    });
-  };
-
-  return (
-    <div className="relative w-full">
-      {tours.length > 1 && (
-        <>
-          <button
-            onClick={() => scroll('left')}
-            className="absolute left-0 top-1/2 -translate-y-1/2 z-10 w-7 h-7 bg-white/90 backdrop-blur-sm rounded-full shadow-lg flex items-center justify-center hover:bg-white transition-all"
-          >
-            <ChevronLeft className="w-3.5 h-3.5" />
-          </button>
-          <button
-            onClick={() => scroll('right')}
-            className="absolute right-0 top-1/2 -translate-y-1/2 z-10 w-7 h-7 bg-white/90 backdrop-blur-sm rounded-full shadow-lg flex items-center justify-center hover:bg-white transition-all"
-          >
-            <ChevronRight className="w-3.5 h-3.5" />
-          </button>
-        </>
-      )}
-      <div
-        ref={sliderRef}
-        className="flex gap-2.5 overflow-x-auto scrollbar-hide scroll-smooth py-1 px-1"
-      >
-        {tours.map((tour, idx) => (
-          <TourCard key={idx} tour={tour} />
-        ))}
-      </div>
-    </div>
-  );
 };
 
 const DestinationCard = ({
@@ -255,30 +96,12 @@ const DestinationCard = ({
 export default function DestinationsClientPage({ destinations }: DestinationsClientPageProps) {
   const locale = useLocale();
   const copy = locale.startsWith('ar') ? DESTINATIONS_COPY.ar : DESTINATIONS_COPY.en;
-  const [query, setQuery] = useState(''); // Unified input for both search and chat
-  const [showAIChat, setShowAIChat] = useState(false);
-  const chatContainerRef = useRef<HTMLDivElement>(null);
-
-  // AI SDK Chat Setup
-  const {
-    messages,
-    sendMessage,
-    status,
-  } = useChat({
-    transport: new DefaultChatTransport({
-      api: `https://${ALGOLIA_APP_ID}.algolia.net/agent-studio/1/agents/${AGENT_ID}/completions?stream=true&compatibilityMode=ai-sdk-5`,
-      headers: {
-        'x-algolia-application-id': ALGOLIA_APP_ID,
-        'x-algolia-api-key': ALGOLIA_SEARCH_KEY,
-      },
-    }),
-  });
-
-  const isLoading = status === 'streaming' || status === 'submitted';
+  const [query, setQuery] = useState('');
+  const router = useRouter();
 
   // Filter destinations based on search query
   const filteredDestinations = useMemo(() => {
-    if (!query.trim() || showAIChat) return destinations;
+    if (!query.trim()) return destinations;
 
     const searchText = query.toLowerCase();
     return destinations.filter(dest =>
@@ -286,118 +109,13 @@ export default function DestinationsClientPage({ destinations }: DestinationsCli
       dest.country?.toLowerCase().includes(searchText) ||
       dest.description?.toLowerCase().includes(searchText)
     );
-  }, [destinations, query, showAIChat]);
+  }, [destinations, query]);
 
+  // The AI button hands the typed question to the one hosted AI trip search.
+  // This page's own chat called a retired agent and answered with an empty bubble.
   const handleOpenAI = () => {
-    setShowAIChat(true);
-    if (query) {
-      setTimeout(() => sendMessage({ text: query }), 300);
-      setQuery(''); // Clear input after sending
-    }
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!query.trim()) return;
-
-    if (showAIChat) {
-      // Send as chat message
-      sendMessage({ text: query });
-      setQuery(''); // Clear input after sending
-    }
-    // For search mode, just filter results (no submit action needed)
-  };
-
-  // Track if user has manually scrolled away from bottom
-  const [userHasScrolledUp, setUserHasScrolledUp] = useState(false);
-  const isScrollingRef = useRef(false);
-  
-  // Auto-scroll only when user hasn't manually scrolled up
-  useEffect(() => {
-    if (!chatContainerRef.current || userHasScrolledUp) return;
-    
-    const container = chatContainerRef.current;
-    setTimeout(() => {
-      if (!userHasScrolledUp && container) {
-        container.scrollTop = container.scrollHeight;
-      }
-    }, 100);
-  }, [messages, isLoading, userHasScrolledUp]);
-  
-  // Track manual scrolling - let user scroll freely
-  useEffect(() => {
-    const container = chatContainerRef.current;
-    if (!container || !showAIChat) return;
-    
-    let scrollTimeout: NodeJS.Timeout | undefined;
-
-    const handleScroll = () => {
-      // Don't interfere if this is a programmatic scroll
-      if (isScrollingRef.current) return;
-
-      if (scrollTimeout) clearTimeout(scrollTimeout);
-      
-      // Check if user is at the bottom
-      const isAtBottom = Math.abs(container.scrollHeight - container.scrollTop - container.clientHeight) < 5;
-      
-      if (isAtBottom) {
-        // User scrolled back to bottom - re-enable auto-scroll
-        setUserHasScrolledUp(false);
-      } else {
-        // User scrolled away from bottom - disable auto-scroll
-        setUserHasScrolledUp(true);
-      }
-    };
-    
-    container.addEventListener('scroll', handleScroll, { passive: true });
-    return () => {
-      container.removeEventListener('scroll', handleScroll);
-      if (scrollTimeout) clearTimeout(scrollTimeout);
-    };
-  }, [showAIChat]);
-
-  // Render tool outputs (tours)
-  const renderToolOutput = (obj: unknown) => {
-    if (Array.isArray(obj)) {
-      const tours = obj.filter(isChatTour);
-      if (tours.length > 0) return <TourSlider tours={tours} />;
-    }
-    if (isChatTour(obj)) return <TourSlider tours={[obj]} />;
-    if (isRecord(obj) && Array.isArray(obj.hits)) {
-      const tours = obj.hits.filter(isChatTour);
-      if (tours.length > 0) return <TourSlider tours={tours} />;
-    }
-    return (
-      <pre className="bg-gray-900 text-gray-100 p-2 rounded-lg text-[10px] overflow-x-auto">
-        {JSON.stringify(obj, null, 2)}
-      </pre>
-    );
-  };
-
-  // Render message content
-  const renderContent = (parts: unknown[]) => {
-    return parts.map((part, idx) => {
-      if (!isRecord(part)) return null;
-      const text = typeof part.text === 'string' ? part.text : '';
-      if (part.type === 'tool-result') {
-        try {
-          const obj: unknown = JSON.parse(text);
-          return <div key={idx} className="my-2">{renderToolOutput(obj)}</div>;
-        } catch {
-          return <pre key={idx} className="text-[10px]">{text}</pre>;
-        }
-      }
-      if (part.type === 'text') {
-        return (
-          <div key={idx} className="prose prose-sm max-w-none text-gray-800 leading-relaxed text-[11px]">
-            <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={safeMarkdownRehypePlugins} urlTransform={safeMarkdownUrlTransform}>
-              {text}
-            </ReactMarkdown>
-          </div>
-        );
-      }
-      return null;
-    });
+    askHostedAISearch({ query, locale }, (href) => router.push(href));
+    setQuery('');
   };
 
   return (
@@ -408,9 +126,9 @@ export default function DestinationsClientPage({ destinations }: DestinationsCli
           {copy.subtitle}
         </p>
 
-        {/* Unified Search/Chat Input */}
+        {/* Search Input */}
         <div className="mt-8 max-w-2xl mx-auto">
-          <form onSubmit={handleSubmit}>
+          <form onSubmit={(e) => e.preventDefault()}>
             <motion.div
               whileHover={{ y: -2, scale: 1.01 }}
               whileTap={{ scale: 0.99 }}
@@ -423,9 +141,8 @@ export default function DestinationsClientPage({ destinations }: DestinationsCli
                     type="text"
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
-                    placeholder={showAIChat ? copy.aiPlaceholder : copy.searchPlaceholder}
+                    placeholder={copy.searchPlaceholder}
                     className="w-full pl-14 md:pl-16 pr-24 md:pr-28 py-4 text-sm md:text-base text-gray-900 placeholder:text-gray-400/70 placeholder:font-normal font-medium bg-transparent outline-none rounded-full relative z-10"
-                    disabled={isLoading && showAIChat}
                   />
 
                 {/* Left Icon */}
@@ -464,7 +181,7 @@ export default function DestinationsClientPage({ destinations }: DestinationsCli
         </form>
 
           {/* Search Results Count */}
-          {query && !showAIChat && (
+          {query && (
             <motion.p
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
@@ -500,7 +217,7 @@ export default function DestinationsClientPage({ destinations }: DestinationsCli
           animate={{ opacity: 1 }}
           className="text-center py-16"
         >
-          {query && !showAIChat ? (
+          {query ? (
             <>
               <p className="text-slate-500 mb-4">
                 {copy.noDestinationsForQuery(query)}
@@ -518,132 +235,6 @@ export default function DestinationsClientPage({ destinations }: DestinationsCli
         </motion.div>
       )}
 
-      {/* AI Chat Modal */}
-      <AnimatePresence>
-        {showAIChat && (
-          <>
-            {/* Backdrop */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 0.4 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black z-50"
-              onClick={() => setShowAIChat(false)}
-            />
-
-            {/* Chat Modal */}
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              transition={{ duration: 0.2 }}
-              className="fixed inset-4 md:inset-8 lg:inset-16 z-50 bg-white shadow-2xl rounded-2xl flex flex-col overflow-hidden max-w-5xl mx-auto"
-            >
-              {/* Header */}
-              <div className="px-4 py-3 flex items-center justify-between border-b bg-gradient-to-r from-blue-50 to-purple-50">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-9 h-9 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
-                    <Bot className="text-white" size={18} />
-                  </div>
-                  <div>
-                    <h2 className="font-bold text-base bg-gradient-to-r from-blue-600 to-purple-600 text-transparent bg-clip-text">
-                      {copy.aiAssistantTitle}
-                    </h2>
-                    <p className="text-[11px] text-gray-500">{copy.aiAssistantSubtitle}</p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setShowAIChat(false)}
-                  className="w-8 h-8 flex items-center justify-center hover:bg-white/60 rounded-lg transition-colors"
-                >
-                  <X className="text-gray-600" size={18} />
-                </button>
-              </div>
-
-              {/* Messages */}
-              <div
-                ref={chatContainerRef}
-                className="flex-1 overflow-y-auto p-4 bg-gradient-to-b from-gray-50 to-white space-y-3"
-              >
-                {messages.length === 0 && (
-                  <div className="bg-white p-4 rounded-xl border border-blue-100">
-                    <div className="flex items-start gap-2 mb-3">
-                      <div className="w-7 h-7 bg-gradient-to-br from-blue-500 to-purple-500 rounded-lg flex items-center justify-center flex-shrink-0">
-                        <Bot className="text-white" size={14} />
-                      </div>
-                      <div>
-                        <p className="font-semibold text-gray-800 text-sm mb-1">
-                          {copy.aiWelcomeTitle}
-                        </p>
-                        <p className="text-gray-500 text-xs leading-relaxed">
-                          {copy.aiWelcomeSubtitle}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex flex-wrap gap-1.5">
-                      {copy.aiPrompts.map((s) => (
-                        <button
-                          key={s}
-                          onClick={() => sendMessage({ text: s })}
-                          className="px-2.5 py-1.5 bg-gradient-to-r from-blue-50 to-purple-50 hover:from-blue-100 hover:to-purple-100 border border-blue-100 rounded-lg text-xs font-medium text-gray-700 transition-all"
-                        >
-                          {s}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {messages.map((m) => (
-                  <div
-                    key={m.id}
-                    className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                  >
-                    <div
-                      className={`max-w-[85%] px-3 py-2.5 rounded-xl ${
-                        m.role === 'user'
-                          ? 'bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-sm'
-                          : 'bg-white text-gray-800 border shadow-sm'
-                      }`}
-                    >
-                      {renderContent(m.parts)}
-                    </div>
-                  </div>
-                ))}
-
-                {isLoading && (
-                  <div className="flex items-center gap-2 text-gray-500 bg-white px-3 py-2 rounded-lg border">
-                    <Loader2 className="w-3 h-3 animate-spin" />
-                    <span className="text-[10px]">{copy.aiThinking}</span>
-                  </div>
-                )}
-              </div>
-
-              {/* Input - Using unified query state */}
-              <form
-                onSubmit={handleSubmit}
-                className="border-t p-3 bg-white flex items-center gap-2"
-              >
-                <input
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  placeholder={copy.aiInputPlaceholder}
-                  disabled={isLoading}
-                  className="flex-1 px-3 py-2.5 rounded-lg border bg-gray-50 text-sm outline-none focus:ring-2 focus:ring-blue-400 focus:bg-white transition-all disabled:opacity-50"
-                />
-                <button
-                  type="submit"
-                  disabled={isLoading || !query.trim()}
-                  className="px-5 py-2.5 rounded-lg bg-gradient-to-r from-blue-600 to-purple-600 text-white text-sm font-semibold shadow-sm hover:shadow-md hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                >
-                  {copy.send}
-                </button>
-              </form>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
     </div>
   );
 }
