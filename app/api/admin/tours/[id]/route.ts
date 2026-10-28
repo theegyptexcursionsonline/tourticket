@@ -1,5 +1,6 @@
 import { bookingCutoffPayloadError, cutoffScheduleError } from '@/lib/bookings/bookingCutoff';
 import { withAdminAudit } from '@/lib/admin/adminAudit';
+import { isMissingMainImage, MAIN_IMAGE_REQUIRED_MESSAGE } from '@/lib/admin/tourMainImage';
 import { NextRequest, NextResponse } from "next/server";
 import dbConnect from "@/lib/dbConnect";
 import Tour from "@/lib/models/Tour";
@@ -124,6 +125,11 @@ async function PUTHandler(
         if (!body || typeof body !== 'object' || Array.isArray(body)) return NextResponse.json({ error: 'A tour update object is required.' }, { status: 400 });
         const cutoffError = bookingCutoffPayloadError(body);
         if (cutoffError) return NextResponse.json({ error: cutoffError }, { status: 400 });
+        // An update that sets the main image must set a real one; a partial
+        // update that leaves the image alone is unaffected.
+        if (body.image !== undefined && isMissingMainImage(body.image)) {
+            return NextResponse.json({ success: false, error: MAIN_IMAGE_REQUIRED_MESSAGE }, { status: 400 });
+        }
         const cutoffOnly = Object.keys(body).length === 1 && Object.prototype.hasOwnProperty.call(body, 'bookingCutoffMinutes');
         if (cutoffOnly || Object.prototype.hasOwnProperty.call(body, 'bookingCutoffMinutes') || Object.prototype.hasOwnProperty.call(body, 'availability') || Object.prototype.hasOwnProperty.call(body, 'bookingOptions')) {
             const currentTour = await Tour.findOne({ _id: id, ...DEFAULT_TENANT_FILTER }).select('bookingCutoffMinutes availability bookingOptions').lean();

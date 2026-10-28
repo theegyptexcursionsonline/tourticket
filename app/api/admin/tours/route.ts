@@ -1,4 +1,5 @@
 import { bookingCutoffPayloadError, cutoffScheduleError } from '@/lib/bookings/bookingCutoff';
+import { isMissingMainImage, MAIN_IMAGE_REQUIRED_MESSAGE } from '@/lib/admin/tourMainImage';
 // app/api/admin/tours/route.ts
 import { withAdminAudit } from '@/lib/admin/adminAudit';
 import dbConnect from '@/lib/dbConnect';
@@ -124,6 +125,11 @@ async function POSTHandler(request: NextRequest) {
         if (cutoffError) return NextResponse.json({ error: cutoffError }, { status: 400 });
         const scheduleError = cutoffScheduleError(body);
         if (scheduleError) return NextResponse.json({ error: scheduleError }, { status: 400 });
+        // A main image that is blank or the never-existing placeholder is
+        // refused; the schema already requires one, so there is no fallback.
+        if (body.image !== undefined && isMissingMainImage(body.image)) {
+          return NextResponse.json({ success: false, error: MAIN_IMAGE_REQUIRED_MESSAGE }, { status: 400 });
+        }
 
     Object.assign(body, sanitizeContentNavigation(body));
     const tourId = randomBytes(12).toString('hex');
