@@ -3,11 +3,12 @@ import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import AssistantsClient from './AssistantsClient';
 
-// Customer-facing showcase for the three hosted travel assistants. It remains
-// out of search indexes while Booking is intentionally in no-payment preview.
+// Customer-facing showcase for the three hosted travel assistants. It stays out
+// of search indexes because the booking card runs the Foxes sample catalogue:
+// its "Reserve now" makes a real (unpaid) reservation with the demo business.
 export const metadata: Metadata = {
   title: 'Travel Assistants | Egypt Excursions Online',
-  description: 'Search Egypt tours with AI, open the voice concierge, or preview the guided booking assistant.',
+  description: 'Search Egypt tours with AI, open the voice concierge, or try the booking widget with sample experiences.',
   robots: { index: false, follow: false },
 };
 

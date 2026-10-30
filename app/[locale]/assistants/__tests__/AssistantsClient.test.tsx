@@ -110,10 +110,28 @@ describe('AssistantsClient', () => {
 
     expect(screen.getByRole('heading', { name: 'AI trip search' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Voice concierge' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Booking preview' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Booking widget demo' })).toBeInTheDocument();
     expect(screen.getAllByText('Connecting…')).toHaveLength(3);
     expect(screen.getByTestId('open-search-assistant')).toBeDisabled();
-    expect(screen.getByText(/no payment is charged/i)).toBeInTheDocument();
+  });
+
+  // The booking card runs the Foxes sample catalogue, and its "Reserve now" makes
+  // a real reservation and emails a confirmation. It once called itself "a guided
+  // preview only" with "no payment in preview" (30 Oct): every language must say
+  // what the button really does and never promise a preview.
+  it.each([
+    ['en', /Sample catalogue, not EEO tours\. “Reserve now” makes a real reservation .* emails you a confirmation\. Nothing is charged\./],
+    ['ar', /كتالوج نموذجي وليس رحلات EEO\. زر «احجز الآن» ينشئ حجزاً فعلياً .* تأكيداً بالبريد الإلكتروني/],
+    ['de', /Beispielkatalog, keine EEO-Touren\. „Reserve now“ erstellt eine echte Reservierung .* Bestätigung per E-Mail/],
+    ['fr', /Catalogue d’exemple, pas les excursions EEO\. « Reserve now » crée une vraie réservation .* confirmation par e-mail/],
+    ['es', /Catálogo de ejemplo, no son tours de EEO\. «Reserve now» crea una reserva real .* confirmación por correo/],
+  ])('tells %s visitors that the booking demo makes a real reservation', (pageLocale, disclosure) => {
+    locale = pageLocale;
+    render(<AssistantsClient />);
+
+    expect(screen.getByText(disclosure)).toBeInTheDocument();
+    const page = screen.getByTestId('assistants-page').textContent || '';
+    expect(page).not.toMatch(/preview|معاينة|Vorschau|aperçu|vista previa/i);
   });
 
   it('enables real launch actions only after each rendered widget is usable', async () => {
@@ -278,7 +296,7 @@ describe('AssistantsClient', () => {
 
     expect(document.getElementById(BOOKING_SCRIPT_ID)).toBeNull();
     expect(screen.getByTestId('open-booking-assistant')).toBeDisabled();
-    expect(screen.getByText('Booking preview')).toBeInTheDocument();
+    expect(screen.getByText('Booking widget demo')).toBeInTheDocument();
   });
 
   it('cleans provider chrome and restores the host page on route exit', async () => {
