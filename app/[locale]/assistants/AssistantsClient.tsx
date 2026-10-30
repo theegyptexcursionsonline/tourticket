@@ -26,7 +26,9 @@ const SEARCH_CLOSE_EVENT = 'foxes:search:close';
 const SEARCH_SHOWCASE_STYLE = 'eeo-assistants-search-style';
 
 const BOOKING_ORIGIN = process.env.NEXT_PUBLIC_FOXES_BOOKING_ORIGIN || 'https://booking.foxestechnology.com';
-const BOOKING_WIDGET_RELEASE = process.env.NEXT_PUBLIC_FOXES_BOOKING_WIDGET_RELEASE || '683bc4a';
+// The widget's CDN keeps a browser copy for four hours whatever the origin says, so each widget
+// release that should reach returning visitors at once moves this token (30 Oct 2026: sidebar v5).
+const BOOKING_WIDGET_RELEASE = process.env.NEXT_PUBLIC_FOXES_BOOKING_WIDGET_RELEASE || '38cc70c';
 const BOOKING_SCRIPT_ID = 'eeo-assistants-booking-script';
 const BOOKING_TRIGGER_ID = 'foxes-v2-trigger';
 const BOOKING_ROOT_SELECTOR = '.foxes-widget-v2';

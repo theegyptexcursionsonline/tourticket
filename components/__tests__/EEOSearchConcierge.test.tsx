@@ -44,7 +44,7 @@ describe('EEOSearchConcierge', () => {
       expect(script.dataset.locale).toBe('en');
       expect(script.dataset.collapsible).toBe('true');
       expect(script.dataset.rememberCollapse).toBe('true');
-      expect(script.src).toContain('/widget/foxes-launcher.js?v=20261011-stream-recovery-v5');
+      expect(script.src).toContain('/widget/foxes-launcher.js?v=20261030-solid-panel');
     });
   });
 
@@ -106,7 +106,7 @@ describe('EEOSearchConcierge', () => {
       expect(script).toBeInTheDocument();
       expect(script.dataset.color).toBe('#4385F6');
       expect(script.dataset.placeholder).toBe('Search Egypt tours...');
-      expect(script.src).toContain('/widget/foxes-launcher.js?v=20261011-stream-recovery-v5');
+      expect(script.src).toContain('/widget/foxes-launcher.js?v=20261030-solid-panel');
     });
   });
 

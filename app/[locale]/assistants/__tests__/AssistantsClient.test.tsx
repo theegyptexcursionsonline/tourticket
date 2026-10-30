@@ -97,7 +97,7 @@ describe('AssistantsClient', () => {
 
     const bookingScript = document.getElementById(BOOKING_SCRIPT_ID) as HTMLScriptElement;
     expect(bookingScript.src).toBe(
-      'https://booking.foxestechnology.com/widget/foxes-booking-v2.js?v=683bc4a',
+      'https://booking.foxestechnology.com/widget/foxes-booking-v2.js?v=38cc70c',
     );
     expect(bookingScript.getAttribute('data-org-id')).toBe('qa-booking-org');
     expect(bookingScript.getAttribute('data-api-url')).toBe(
