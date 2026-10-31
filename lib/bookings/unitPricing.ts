@@ -155,3 +155,39 @@ export function unitPricingForOption(
   }
   return { unitSize, unitPrice };
 }
+
+/**
+ * A unit option's time-slot price is the price of the WHOLE couple, family
+ * or group. A slot priced at (or near) one member's share of the option
+ * price is a per-person figure typed into a per-unit field — the #1791
+ * defect, where a group of 5 paid $13.54 instead of $67.70. The 10% margin
+ * catches rounded shares ($61.38 for a $609.20 group of 10) while leaving
+ * genuine time-of-day reductions possible. Legacy groups with no unit size
+ * have no share to compare against and are left alone.
+ */
+const PER_MEMBER_SHARE_MARGIN = 1.1;
+
+export type UnitSlotPriceInput = UnitCapacityOption & {
+  label?: string | null;
+  price?: unknown;
+  timeSlots?: Array<{ time?: string | null; price?: unknown }> | null;
+};
+
+export function unitSlotPriceIssue(option: UnitSlotPriceInput, name: string): string | null {
+  const unitSize = effectiveUnitSize(option);
+  const optionPrice = Number(option.price);
+  if (!unitSize || unitSize < 2 || !Number.isFinite(optionPrice) || optionPrice <= 0) return null;
+  const share = optionPrice / unitSize;
+  for (const slot of option.timeSlots || []) {
+    if (slot?.price === undefined || slot.price === null || slot.price === '') continue;
+    const slotPrice = Number(slot.price);
+    if (!Number.isFinite(slotPrice)) continue;
+    if (slotPrice < share * PER_MEMBER_SHARE_MARGIN) {
+      const noun = UNIT_NOUNS[normalizedType(option.type)]?.[0] || 'unit';
+      return `${name}: the ${slot.time || 'time slot'} price ${slotPrice.toFixed(2)} looks like a per-person price. `
+        + `Slot prices for this option are for the whole ${noun} of ${unitSize} (the option price is ${optionPrice.toFixed(2)}). `
+        + `Enter the ${noun} price, or leave the slot blank to use the option price.`;
+    }
+  }
+  return null;
+}

@@ -63,7 +63,7 @@ import { pruneBookingOptionTimeSlots } from '@/lib/pricing/bookingOptionSlots';
 import ContentNavigationFields from '@/components/admin/ContentNavigationFields';
 import type { ParentPageValue } from '@/lib/content/contentNavigation';
 import { practicalDefaultText, type PracticalDefaultKey } from '@/lib/tours/practicalDefaults';
-import { defaultMinCapacity, isUnitPricedType, minCapacityRequired } from '@/lib/bookings/unitPricing';
+import { defaultMinCapacity, isUnitPricedType, minCapacityRequired, unitSlotPriceIssue } from '@/lib/bookings/unitPricing';
 
 // --- Interface Definitions ---
 interface Category {
@@ -1099,6 +1099,13 @@ const addItineraryItem = () => {
             if (min === undefined && minCapacityRequired(option.type) && defaultMinCapacity(option.type) === null) {
                 return `${name}: enter a minimum capacity — a ${option.type} option cannot be saved without one.`;
             }
+            const slotPriceIssue = unitSlotPriceIssue({
+                type: option.type,
+                minCapacity: min,
+                price: option.price,
+                timeSlots: option.timeSlots,
+            }, name);
+            if (slotPriceIssue) return slotPriceIssue;
         }
         return null;
     };
@@ -2966,7 +2973,7 @@ const addItineraryItem = () => {
                                                                                         <p className="text-xs text-slate-500">Capacity {slot.capacity}</p>
                                                                                     </div>
                                                                                     <div className="col-span-2 sm:col-span-1">
-                                                                                        <label className="mb-1 block text-xs font-medium text-slate-500" htmlFor={`option-${index}-slot-${slot.time}-price`}>Adult</label>
+                                                                                        <label className="mb-1 block text-xs font-medium text-slate-500" htmlFor={`option-${index}-slot-${slot.time}-price`}>{isUnitPricedType(option.type) ? `Price per ${String(option.type).replace(/^per\s+/i, '').toLowerCase()}` : 'Adult'}</label>
                                                                                         <input
                                                                                             id={`option-${index}-slot-${slot.time}-price`}
                                                                                             type="number"
@@ -2979,7 +2986,9 @@ const addItineraryItem = () => {
                                                                                             placeholder={`Use ${selectedCurrency.symbol}${option.price || 0}`}
                                                                                         />
                                                                                     </div>
-                                                                                    {(['child', 'infant'] as const).map((guest) => (
+                                                                                    {/* A couple, family or group is charged as one unit, so per-guest
+                                                                                        slot prices never apply to it (#1791). */}
+                                                                                    {!isUnitPricedType(option.type) && (['child', 'infant'] as const).map((guest) => (
                                                                                         <div key={guest} className="col-span-2 sm:col-span-1">
                                                                                             <label className="mb-1 block text-xs font-medium capitalize text-slate-500" htmlFor={`option-${index}-slot-${slot.time}-${guest}`}>{guest}</label>
                                                                                             <input

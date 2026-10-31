@@ -1,4 +1,4 @@
-import { defaultMinCapacity, minCapacityRequired } from '@/lib/bookings/unitPricing';
+import { defaultMinCapacity, minCapacityRequired, unitSlotPriceIssue } from '@/lib/bookings/unitPricing';
 
 type BookingOptionInput = Record<string, unknown> & {
   pricingKey?: string;
@@ -16,6 +16,7 @@ type BookingOptionInput = Record<string, unknown> & {
   discount?: unknown;
   minCapacity?: unknown;
   maxCapacity?: unknown;
+  timeSlots?: Array<{ time?: string; price?: unknown }>;
 };
 
 const OPTIONAL_TEXT_FIELDS = ['badge', 'description', 'duration', 'groupSize'] as const;
@@ -89,6 +90,13 @@ export function bookingOptionCapacityError(options: BookingOptionInput[]): strin
       // Couple/Family were defaulted above, so only Per Group can land here.
       return `${name}: a ${String(option.type)} option needs a minimum capacity before it can be saved`;
     }
+    const slotPriceIssue = unitSlotPriceIssue({
+      type: option.type,
+      minCapacity: option.minCapacity as number | undefined,
+      price: option.price,
+      timeSlots: Array.isArray(option.timeSlots) ? option.timeSlots : [],
+    }, name);
+    if (slotPriceIssue) return slotPriceIssue;
   }
   return null;
 }
