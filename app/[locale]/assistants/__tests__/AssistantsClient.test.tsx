@@ -138,8 +138,9 @@ describe('AssistantsClient', () => {
     render(<AssistantsClient />);
     const { searchHost, voiceFrame, bookingTrigger } = await exposeReadyWidgets();
 
+    // Hidden while closed; the open panel's text box (the .expanded bar) stays visible.
     expect(searchHost.shadowRoot?.getElementById('eeo-assistants-search-style')).toHaveTextContent(
-      '.launcher{display:none!important}',
+      '.launcher:not(.expanded){display:none!important}',
     );
     expect(voiceFrame.style.visibility).toBe('hidden');
     expect(voiceFrame.style.getPropertyPriority('visibility')).toBe('important');

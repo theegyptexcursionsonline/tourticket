@@ -361,7 +361,10 @@ export default function AssistantsClient() {
       if (!shadow || shadow.getElementById(SEARCH_SHOWCASE_STYLE)) return;
       const style = document.createElement('style');
       style.id = SEARCH_SHOWCASE_STYLE;
-      style.textContent = '.launcher{display:none!important}';
+      // Hide the floating search bar only while its panel is closed: the open panel
+      // loads with composer=parent, so the bar (then .expanded) is the panel's only
+      // text box. Hiding it always left "Open AI search" with nowhere to type (31 Oct 2026).
+      style.textContent = '.launcher:not(.expanded){display:none!important}';
       shadow.appendChild(style);
     };
 
