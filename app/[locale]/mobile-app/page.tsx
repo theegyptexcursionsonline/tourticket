@@ -6,6 +6,7 @@ import Footer from '@/components/Footer';
 import { Link } from '@/i18n/routing';
 import { metadataAlternates } from '@/lib/i18n/seoAlternates';
 import { mobileAppIsLive, mobileAppStores } from '@/lib/config/mobileApp';
+import { requireRouteLocale } from '@/lib/i18n/routeLocale';
 
 export const revalidate = 1800; // 30 min — storefront content; edge serves stale-while-revalidate so clicks stay instant
 
@@ -15,6 +16,8 @@ interface MobileAppPageProps {
 
 export async function generateMetadata({ params }: MobileAppPageProps): Promise<Metadata> {
   const { locale } = await params;
+  // Probes such as /wp-good.php reach here with a fake locale: answer 404, not a server error.
+  requireRouteLocale(locale);
   const t = await getTranslations({ locale, namespace: 'mobileAppPage' });
 
   return {

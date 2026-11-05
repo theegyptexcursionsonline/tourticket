@@ -3,6 +3,7 @@ import { metadataAlternates } from '@/lib/i18n/seoAlternates';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import TechnologyPageContent from './TechnologyPageContent';
+import { requireRouteLocale } from '@/lib/i18n/routeLocale';
 
 export const revalidate = 1800;
 
@@ -36,6 +37,8 @@ const META: Record<string, { title: string; description: string }> = {
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
   const { locale } = await params;
+  // Probes such as /wp-good.php reach here with a fake locale: answer 404, not a server error.
+  requireRouteLocale(locale);
   const meta = META[locale] || META.en;
   return {
     title: meta.title,

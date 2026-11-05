@@ -12,6 +12,7 @@ import { selectLocalizedTaxonomyEntries } from '@/lib/i18n/localizedCollections'
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 import { filterVisibleTaxonomyEntries } from '@/lib/utils/taxonomy';
 import { metadataAlternates } from '@/lib/i18n/seoAlternates';
+import { requireRouteLocale } from '@/lib/i18n/routeLocale';
 
 // Enable ISR with 60 second revalidation for instant page loads
 export const revalidate = 1800; // 30 min — storefront content; edge serves stale-while-revalidate so clicks stay instant
@@ -23,6 +24,8 @@ export async function generateMetadata({
   params: Promise<{ locale: string }>;
 }): Promise<Metadata> {
   const { locale } = await params;
+  // Probes such as /wp-good.php reach here with a fake locale: answer 404, not a server error.
+  requireRouteLocale(locale);
   return {
     title: 'All Categories & Interests | Egypt Excursions Online',
     description: 'Explore all tour categories and interests in Egypt. Discover adventure tours, cultural experiences, boat tours, desert experiences, and more.',

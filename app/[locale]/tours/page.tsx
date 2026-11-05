@@ -14,6 +14,7 @@ import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 import { metadataAlternates } from '@/lib/i18n/seoAlternates';
 import { toToursIndexPayload } from '@/lib/content/storefrontTourPayload';
 import { unstable_cache } from 'next/cache';
+import { requireRouteLocale } from '@/lib/i18n/routeLocale';
 
 // Netlify exposes the production database only to the runtime function. Static
 // generation therefore produced and cached an empty catalogue at deploy time.
@@ -53,6 +54,8 @@ export async function generateMetadata({
   params: Promise<{ locale: string }>;
 }): Promise<Metadata> {
   const { locale } = await params;
+  // Probes such as /wp-good.php reach here with a fake locale: answer 404, not a server error.
+  requireRouteLocale(locale);
   const meta = getPageMeta(locale);
 
   return {

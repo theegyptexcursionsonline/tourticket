@@ -7,6 +7,7 @@ import { Metadata } from 'next';
 import { setRequestLocale } from 'next-intl/server';
 import HomePageServer from './HomePageServer';
 import { metadataAlternates, openGraphLocale } from '@/lib/i18n/seoAlternates';
+import { requireRouteLocale } from '@/lib/i18n/routeLocale';
 
 export async function generateMetadata({
   params,
@@ -14,6 +15,8 @@ export async function generateMetadata({
   params: Promise<{ locale: string }>;
 }): Promise<Metadata> {
   const { locale } = await params;
+  // Probes such as /wp-good.php reach here with a fake locale: answer 404, not a server error.
+  requireRouteLocale(locale);
   return {
     title: 'Egypt Excursions Online - Tours, Activities & Experiences',
     description: 'Discover Egypt\'s wonders with unforgettable tours and experiences. From Pyramids to Nile cruises, book your adventure today.',
