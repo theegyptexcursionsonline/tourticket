@@ -88,6 +88,28 @@ describe('GET /api/catalogue/export', () => {
     expect(Object.keys(body.documents[0]).sort()).toEqual(['contentHash', 'id', 'slug', 'text', 'title', 'updatedAt', 'url']);
   });
 
+  it('ships the main photo as an https address, outside the text and its hash', async () => {
+    const photo = 'https://res.cloudinary.com/demo/image/upload/v1/tours/fictional.jpg';
+    mockFind.mockReturnValue(chain([tour({ image: photo })]));
+    const body = await (await GET(new Request('https://site.test/api/catalogue/export'))).json();
+    expect(body.documents[0].imageUrl).toBe(photo);
+    expect(body.documents[0].text).not.toContain(photo);
+    expect(mockFind.mock.results[0].value.select.mock.calls[0][0].split(' ')).toContain('image');
+    // Adding a photo must not make every consumer re-embed the tour.
+    expect(buildCatalogueDoc(tour({ image: photo }), 'https://site.test')?.contentHash)
+      .toBe(buildCatalogueDoc(tour(), 'https://site.test')?.contentHash);
+  });
+
+  it('a site-relative photo resolves on the site; an insecure or malformed one is left out', () => {
+    const doc = (image: unknown) => buildCatalogueDoc(tour({ image }), 'https://site.test/');
+    expect(doc('/images/tours/fictional.jpg')?.imageUrl).toBe('https://site.test/images/tours/fictional.jpg');
+    expect(doc('http://cdn.example.test/x.jpg')).not.toHaveProperty('imageUrl');
+    expect(doc('https://user:pw@cdn.example.test/x.jpg')).not.toHaveProperty('imageUrl');
+    expect(doc('data:image/png;base64,AAAA')).not.toHaveProperty('imageUrl');
+    expect(doc('')).not.toHaveProperty('imageUrl');
+    expect(doc(42)).not.toHaveProperty('imageUrl');
+  });
+
   it('an unchanged tour hashes identically and a content change does not', () => {
     const a = buildCatalogueDoc(tour(), 'https://site.test');
     const b = buildCatalogueDoc(tour(), 'https://site.test');

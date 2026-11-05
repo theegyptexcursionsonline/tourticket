@@ -48,6 +48,7 @@ export type CatalogueTourInput = {
   category?: Taxonomy | Taxonomy[];
   faq?: Array<{ question?: string; answer?: string }>;
   itinerary?: Array<{ title?: string; description?: string; duration?: string }>;
+  image?: string;
   updatedAt?: Date | string;
 };
 
@@ -59,6 +60,8 @@ export type CatalogueDoc = {
   updatedAt: string | null;
   contentHash: string;
   text: string;
+  /** The tour's main photo (https), for cards a consumer shows; not part of `text` or `contentHash`. */
+  imageUrl?: string;
 };
 
 /** Public fields only. Keep this list in sync with the projection below. */
@@ -67,8 +70,27 @@ export const CATALOGUE_TOUR_PROJECTION = [
   'languages', 'ageRestriction', 'cancellationPolicy', 'highlights', 'whatsIncluded',
   'whatsNotIncluded', 'includes', 'whatToBring', 'needToKnow', 'notSuitableFor',
   'transportationDetails', 'mealInfo', 'price', 'discountPrice', 'currency', 'destination',
-  'category', 'faq', 'itinerary', 'updatedAt',
+  'category', 'faq', 'itinerary', 'image', 'updatedAt',
 ].join(' ');
+
+/**
+ * The main photo as an absolute https address, or undefined. A site-relative
+ * path resolves against the public site; anything that is not plain https
+ * (http, data:, credentials in the address) is left out rather than shipped.
+ */
+function photoUrl(value: unknown, base: string): string | undefined {
+  if (typeof value !== 'string') return undefined;
+  const raw = value.trim();
+  if (!raw || raw.length > 2048) return undefined;
+  try {
+    const parsed = new URL(raw, `${base}/`);
+    if (parsed.protocol !== 'https:' || parsed.username || parsed.password) return undefined;
+    parsed.hash = '';
+    return parsed.toString();
+  } catch {
+    return undefined;
+  }
+}
 
 function clean(value: unknown, max = 4000): string {
   return String(value ?? '').replace(/\s+/g, ' ').trim().slice(0, max);
@@ -153,6 +175,7 @@ export function buildCatalogueDoc(tour: CatalogueTourInput, baseUrl: string): Ca
     updatedAt: tour.updatedAt ? new Date(tour.updatedAt).toISOString() : null,
     contentHash: createHash('sha256').update(text).digest('hex'),
     text,
+    ...(photoUrl(tour.image, base) ? { imageUrl: photoUrl(tour.image, base) } : {}),
   };
 }
 
