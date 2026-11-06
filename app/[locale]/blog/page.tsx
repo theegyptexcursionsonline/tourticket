@@ -78,17 +78,22 @@ async function getBlogsWithCategoryCounts(): Promise<{
       .limit(3)
       .populate(blogRelatedPopulations('list'));
 
-    // Get category counts
-    const categoryCounts = await Promise.all(
-      categories.map(async (category) => {
-        const count = await Blog.countDocuments({
+    // Category counts: one grouped query instead of one count per category.
+    const grouped = await Blog.aggregate<{ _id: string; count: number }>([
+      {
+        $match: {
           status: 'published',
-          category: category.value,
+          category: { $in: categories.map((category) => category.value) },
           ...DEFAULT_TENANT_FILTER,
-        });
-        return { ...category, count };
-      })
-    );
+        },
+      },
+      { $group: { _id: '$category', count: { $sum: 1 } } },
+    ]);
+    const countByCategory = new Map(grouped.map((row) => [row._id, row.count]));
+    const categoryCounts = categories.map((category) => ({
+      ...category,
+      count: countByCategory.get(category.value) ?? 0,
+    }));
 
     return {
       blogs: JSON.parse(JSON.stringify(blogs)),
