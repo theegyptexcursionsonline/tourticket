@@ -8,6 +8,7 @@ import deMessages from '@/messages/de.json';
 import enMessages from '@/messages/en.json';
 import esMessages from '@/messages/es.json';
 import frMessages from '@/messages/fr.json';
+import { safeLocalStorage } from '@/lib/browserStorage';
 
 // --- Interface Definitions ---
 interface SettingsContextType {
@@ -58,7 +59,7 @@ const usePersistentState = <T,>(key: string, defaultValue: T): [T, (value: T) =>
   
   useEffect(() => {
     try {
-      const item = window.localStorage.getItem(key);
+      const item = safeLocalStorage.getItem(key);
       if (item) {
         // Try to parse as JSON first
         try {
@@ -90,7 +91,7 @@ const usePersistentState = <T,>(key: string, defaultValue: T): [T, (value: T) =>
       console.error(`Error loading ${key} from localStorage:`, error);
       // Clear corrupted data
       try {
-        window.localStorage.removeItem(key);
+        safeLocalStorage.removeItem(key);
       } catch (clearError) {
         console.error(`Error clearing corrupted ${key} from localStorage:`, clearError);
       }
@@ -103,7 +104,7 @@ const usePersistentState = <T,>(key: string, defaultValue: T): [T, (value: T) =>
     try {
       setState(value);
       if (isLoaded) {
-        window.localStorage.setItem(key, JSON.stringify(value));
+        safeLocalStorage.setItem(key, JSON.stringify(value));
       }
     } catch (error) {
       console.error(`Error saving ${key} to localStorage:`, error);
@@ -120,7 +121,7 @@ const fetchExchangeRates = async (): Promise<{ [key: string]: number }> => {
   
   try {
     // Check cached rates first
-    const cached = localStorage.getItem(CACHE_KEY);
+    const cached = safeLocalStorage.getItem(CACHE_KEY);
     if (cached) {
       const { rates, timestamp } = JSON.parse(cached);
       if (Date.now() - timestamp < CACHE_DURATION) {
@@ -155,7 +156,7 @@ const fetchExchangeRates = async (): Promise<{ [key: string]: number }> => {
           
           // Cache the successful response
           try {
-            localStorage.setItem(CACHE_KEY, JSON.stringify({
+            safeLocalStorage.setItem(CACHE_KEY, JSON.stringify({
               rates,
               timestamp: Date.now(),
             }));

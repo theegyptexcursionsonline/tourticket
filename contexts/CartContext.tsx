@@ -10,6 +10,7 @@ import {
     type AuthoritativePriceQuote,
     type StoredCartPricingFields,
 } from '@/lib/cart/authoritativeCart';
+import { safeLocalStorage } from '@/lib/browserStorage';
 
 interface CartContextType {
     cart: CartItem[];
@@ -196,14 +197,14 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
         const timeoutId = window.setTimeout(() => {
             if (!isAuthenticated) {
                 try {
-                    const storedCart = localStorage.getItem('cart');
+                    const storedCart = safeLocalStorage.getItem('cart');
                     if (storedCart) {
                         const parsed = JSON.parse(storedCart);
                         setCart(Array.isArray(parsed) ? parsed.map(normalizeCartItem) : []);
                     }
                 } catch (error) {
                     console.error("Failed to parse cart from localStorage", error);
-                    localStorage.removeItem('cart');
+                    safeLocalStorage.removeItem('cart');
                 }
                 setHasSyncedFromServer(false);
                 setHasLoadedGuestCart(true);
@@ -231,7 +232,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
                     const data = await response.json();
                     if (data.success && data.cart) {
                         // Get local cart
-                        const localCart = JSON.parse(localStorage.getItem('cart') || '[]');
+                        const localCart = JSON.parse(safeLocalStorage.getItem('cart') || '[]');
 
                         // Transform server cart to CartItem format (then normalize add-ons)
                         const serverCart = (data.cart as RawCartItem[]).map((item) => {
@@ -273,7 +274,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
                         }
 
                         // Clear local storage since we're now using server
-                        localStorage.removeItem('cart');
+                        safeLocalStorage.removeItem('cart');
                     }
                 }
             } catch (error) {
@@ -291,7 +292,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     useEffect(() => {
         if (!isAuthenticated && hasLoadedGuestCart) {
             try {
-                localStorage.setItem('cart', JSON.stringify(cart));
+                safeLocalStorage.setItem('cart', JSON.stringify(cart));
             } catch (error) {
                 console.error("Failed to save cart to localStorage", error);
             }
@@ -367,7 +368,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
 
     const clearCart = useCallback(async () => {
         setCart([]);
-        localStorage.removeItem('cart');
+        safeLocalStorage.removeItem('cart');
 
         // Sync to server if authenticated
         if (isAuthenticated && token) {
@@ -393,7 +394,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
                 if (!token) return false;
                 await syncCartToServer(token, replacement.cart);
             } else {
-                localStorage.setItem('cart', JSON.stringify(replacement.cart));
+                safeLocalStorage.setItem('cart', JSON.stringify(replacement.cart));
             }
             cartRef.current = replacement.cart;
             setCart(replacement.cart);

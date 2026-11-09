@@ -14,6 +14,7 @@ import { useLocale, useTranslations } from 'next-intl';
 import { isRTL } from '@/i18n/config';
 import { getErrorMessage, isRecord } from './componentTypes';
 import { tourContentPath } from '@/lib/content/contentUrl';
+import { safeLocalStorage } from '@/lib/browserStorage';
 
 const normalizeDayTrips = (value: unknown, untitledTour: string): Tour[] => {
   if (!Array.isArray(value)) return [];
@@ -233,7 +234,7 @@ export default function DayTripsSection({ initialTours }: DayTripsSectionProps =
       setFetchError(null);
 
       try {
-        const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+        const token = typeof window !== 'undefined' ? safeLocalStorage.getItem('token') : null;
         const headers: Record<string, string> = {
           'Accept': 'application/json',
           'Content-Type': 'application/json',

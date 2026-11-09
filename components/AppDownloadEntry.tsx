@@ -13,6 +13,7 @@ import {
   mobileAppStores,
   type MobileAppStores,
 } from '@/lib/config/mobileApp';
+import { safeLocalStorage } from '@/lib/browserStorage';
 
 /**
  * "Get the app" entry in the storefront header (client ask, 10 Oct 2026: an app
@@ -49,7 +50,7 @@ function track(action: EntryEvent, live: boolean, store?: 'ios' | 'android') {
 
 function readQuietUntil(): number {
   try {
-    const raw = window.localStorage.getItem(APP_ENTRY_STORAGE_KEY);
+    const raw = safeLocalStorage.getItem(APP_ENTRY_STORAGE_KEY);
     const value = raw ? (JSON.parse(raw) as { quietUntil?: unknown }).quietUntil : undefined;
     return typeof value === 'number' ? value : 0;
   } catch {
@@ -59,7 +60,7 @@ function readQuietUntil(): number {
 
 function rememberShown(now: number) {
   try {
-    window.localStorage.setItem(
+    safeLocalStorage.setItem(
       APP_ENTRY_STORAGE_KEY,
       JSON.stringify({ quietUntil: now + AUTO_OPEN_QUIET_DAYS * 24 * 60 * 60 * 1000 }),
     );

@@ -30,6 +30,7 @@ import { useNavData } from '@/contexts/NavDataContext';
 import { useLocale } from 'next-intl';
 import type { SearchHit } from './componentTypes';
 import { contentPath, localizedTourContentPath } from '@/lib/content/contentUrl';
+import { safeLocalStorage } from '@/lib/browserStorage';
 
 type AuthUser = NonNullable<ReturnType<typeof useAuth>['user']>;
 
@@ -41,7 +42,7 @@ const useRecentSearches = (storageKey = 'recentTravelSearches') => {
   useEffect(() => {
     let active = true;
     try {
-      const storedItems = window.localStorage.getItem(storageKey);
+      const storedItems = safeLocalStorage.getItem(storageKey);
       if (storedItems) {
         const parsedItems = JSON.parse(storedItems);
         queueMicrotask(() => {
@@ -63,7 +64,7 @@ const useRecentSearches = (storageKey = 'recentTravelSearches') => {
     setRecentSearches(prev => {
       const newSearches = [trimmed, ...prev.filter(s => s.toLowerCase() !== trimmed.toLowerCase())].slice(0, 5);
       try {
-        window.localStorage.setItem(storageKey, JSON.stringify(newSearches));
+        safeLocalStorage.setItem(storageKey, JSON.stringify(newSearches));
       } catch (error) {
         console.error('Failed to save recent searches', error);
       }
@@ -75,7 +76,7 @@ const useRecentSearches = (storageKey = 'recentTravelSearches') => {
     setRecentSearches(prev => {
       const newSearches = prev.filter(s => s.toLowerCase() !== term.toLowerCase());
       try {
-        window.localStorage.setItem(storageKey, JSON.stringify(newSearches));
+        safeLocalStorage.setItem(storageKey, JSON.stringify(newSearches));
       } catch (error) {
         console.error('Failed to save recent searches', error);
       }
