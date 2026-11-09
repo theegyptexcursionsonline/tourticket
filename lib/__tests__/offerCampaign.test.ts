@@ -93,7 +93,7 @@ describe('conversion mechanics', () => {
 
   it('exit rescue is once-per-session, desktop-only, accessible and honest', () => {
     const rescue = client.slice(client.indexOf('function ExitRescue'));
-    expect(rescue).toContain('sessionStorage.getItem(key)');
+    expect(rescue).toContain('safeSessionStorage.getItem(key)');
     expect(rescue).toContain("matchMedia('(pointer: fine)')");
     expect(rescue).toContain('role="dialog"');
     expect(rescue).toContain('aria-modal="true"');
