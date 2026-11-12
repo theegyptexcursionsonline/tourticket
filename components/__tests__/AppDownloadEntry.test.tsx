@@ -219,11 +219,23 @@ function placeWithSize(id: string, width: number, height: number, tag = 'div') {
   return node;
 }
 
+function placeSearchPanel(hidden: boolean) {
+  const host = document.createElement('div');
+  host.id = 'foxes-launcher-host';
+  const root = host.attachShadow({ mode: 'open' });
+  const panel = document.createElement('div');
+  panel.id = 'foxes-search-dialog';
+  panel.hidden = hidden;
+  root.appendChild(panel);
+  document.body.appendChild(host);
+  return panel;
+}
+
 describe('assistant panels', () => {
   it('never opens by itself over an open search panel', () => {
     jest.useFakeTimers();
     setDesktop(true);
-    placeWithSize('foxes-search-dialog', 420, 640);
+    placeSearchPanel(false);
     renderEntry();
     act(() => { jest.advanceTimersByTime(APP_ENTRY_AUTO_OPEN_DELAY_MS); });
     expect(screen.queryByTestId('app-entry-card')).not.toBeInTheDocument();
@@ -238,12 +250,15 @@ describe('assistant panels', () => {
     expect(screen.queryByTestId('app-entry-card')).not.toBeInTheDocument();
   });
 
-  it('still opens beside a collapsed voice launcher or a hidden search panel', () => {
+  it('still opens beside a collapsed voice launcher or a closed search panel', () => {
     jest.useFakeTimers();
     setDesktop(true);
     placeWithSize('foxes-voice-widget-frame', 220, 72, 'iframe');
-    placeWithSize('foxes-search-dialog', 0, 0);
+    const panel = placeSearchPanel(true);
     expect(assistantPanelOpen()).toBe(false);
+    panel.hidden = false;
+    expect(assistantPanelOpen()).toBe(true);
+    panel.hidden = true;
     renderEntry();
     act(() => { jest.advanceTimersByTime(APP_ENTRY_AUTO_OPEN_DELAY_MS); });
     expect(screen.getByTestId('app-entry-card')).toBeInTheDocument();

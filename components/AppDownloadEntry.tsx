@@ -40,6 +40,9 @@ const NO_AUTO_OPEN_ROUTES = [
   '/accept-invitation', '/redirecting',
 ];
 const TOUR_PAGE_SELECTOR = '[data-page-type="tour"]';
+// The hosted search launcher keeps its panel inside its own shadow root and
+// marks it `hidden` while closed (see EEOSearchConcierge).
+const SEARCH_HOST_ID = 'foxes-launcher-host';
 const SEARCH_PANEL_SELECTOR = '#foxes-search-dialog';
 const VOICE_FRAME_SELECTOR = '#foxes-voice-widget-frame';
 // The collapsed voice launcher is well under this height; an open panel is far taller.
@@ -89,11 +92,13 @@ function isShown(node: Element | null): boolean {
 
 /**
  * A visitor talking to the search or voice assistant is never interrupted: the
- * card stays shut while either panel is open (the voice panel lives in its own
- * frame, so its open state is read from the frame's size, not a dialog role).
+ * card stays shut while either panel is open. Neither is a dialog the page can
+ * see: the search panel sits in the launcher's shadow root, and the voice panel
+ * in its own frame, whose open state is read from the frame's size.
  */
 export function assistantPanelOpen(): boolean {
-  if (isShown(document.querySelector(SEARCH_PANEL_SELECTOR))) return true;
+  const searchPanel = document.getElementById(SEARCH_HOST_ID)?.shadowRoot?.querySelector<HTMLElement>(SEARCH_PANEL_SELECTOR);
+  if (searchPanel && !searchPanel.hidden) return true;
   const frame = document.querySelector(VOICE_FRAME_SELECTOR);
   return isShown(frame) && (frame as HTMLElement).getBoundingClientRect().height >= VOICE_PANEL_MIN_HEIGHT_PX;
 }
