@@ -80,7 +80,7 @@
     "mailgun.js": "^12.9.0",
     "maplibre-gl": "6.4.1",
     "mongodb": "^6.21.0",
-    "mongoose": "^8.24.1",
+    "mongoose": "^8.24.8",
     "motion": "^12.42.2",
     "next": "16.4.3",
     "next-intl": "^4.13.2",
