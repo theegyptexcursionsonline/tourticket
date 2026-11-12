@@ -36,10 +36,14 @@ const DESKTOP_QUERY = '(min-width: 1024px)';
 // account screens stay clean, and a tour page owns its booking call to action.
 const NO_AUTO_OPEN_ROUTES = [
   '/admin', '/checkout', '/payment', '/booking', '/user', '/login', '/signup', '/forgot',
-  '/reset-password', '/offer', '/tour', '/tools', '/cart', '/assistants', '/mobile-app',
+  '/reset-password', '/offer', '/tour', '/tools', '/cart', '/assistants', '/ai-voice', '/mobile-app',
   '/accept-invitation', '/redirecting',
 ];
 const TOUR_PAGE_SELECTOR = '[data-page-type="tour"]';
+const SEARCH_PANEL_SELECTOR = '#foxes-search-dialog';
+const VOICE_FRAME_SELECTOR = '#foxes-voice-widget-frame';
+// The collapsed voice launcher is well under this height; an open panel is far taller.
+const VOICE_PANEL_MIN_HEIGHT_PX = 240;
 
 type EntryEvent = 'open' | 'auto_open' | 'close' | 'store_click' | 'landing_click';
 
@@ -73,6 +77,25 @@ function rememberShown(now: number) {
 function isTyping(): boolean {
   const active = document.activeElement as HTMLElement | null;
   return Boolean(active && (active.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(active.tagName)));
+}
+
+function isShown(node: Element | null): boolean {
+  if (!node) return false;
+  const box = node.getBoundingClientRect();
+  if (box.width === 0 || box.height === 0) return false;
+  const style = window.getComputedStyle(node);
+  return style.display !== 'none' && style.visibility !== 'hidden' && style.opacity !== '0';
+}
+
+/**
+ * A visitor talking to the search or voice assistant is never interrupted: the
+ * card stays shut while either panel is open (the voice panel lives in its own
+ * frame, so its open state is read from the frame's size, not a dialog role).
+ */
+export function assistantPanelOpen(): boolean {
+  if (isShown(document.querySelector(SEARCH_PANEL_SELECTOR))) return true;
+  const frame = document.querySelector(VOICE_FRAME_SELECTOR);
+  return isShown(frame) && (frame as HTMLElement).getBoundingClientRect().height >= VOICE_PANEL_MIN_HEIGHT_PX;
 }
 
 /** Auto-open is allowed on browsing pages only. */
@@ -136,7 +159,7 @@ export default function AppDownloadEntry({ isTransparent, headerLinkClasses, sto
     const timer = window.setTimeout(() => {
       if (document.querySelector(TOUR_PAGE_SELECTOR)) return;
       const blockingDialog = document.querySelector('[role="dialog"][aria-modal="true"]');
-      if (blockingDialog || isTyping() || readQuietUntil() > Date.now()) return;
+      if (blockingDialog || assistantPanelOpen() || isTyping() || readQuietUntil() > Date.now()) return;
       rememberShown(Date.now());
       setOpenOn(pathname);
       track('auto_open', live);

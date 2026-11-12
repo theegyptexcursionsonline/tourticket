@@ -3,6 +3,7 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import AppDownloadEntry, {
   APP_ENTRY_AUTO_OPEN_DELAY_MS,
   APP_ENTRY_STORAGE_KEY,
+  assistantPanelOpen,
   autoOpenAllowedOnPath,
 } from '../AppDownloadEntry';
 import type { MobileAppStores } from '@/lib/config/mobileApp';
@@ -210,10 +211,57 @@ describe('opening by itself', () => {
   });
 });
 
+function placeWithSize(id: string, width: number, height: number, tag = 'div') {
+  const node = document.createElement(tag);
+  node.id = id;
+  node.getBoundingClientRect = () => ({ width, height, top: 0, left: 0, right: width, bottom: height, x: 0, y: 0, toJSON: () => ({}) }) as DOMRect;
+  document.body.appendChild(node);
+  return node;
+}
+
+describe('assistant panels', () => {
+  it('never opens by itself over an open search panel', () => {
+    jest.useFakeTimers();
+    setDesktop(true);
+    placeWithSize('foxes-search-dialog', 420, 640);
+    renderEntry();
+    act(() => { jest.advanceTimersByTime(APP_ENTRY_AUTO_OPEN_DELAY_MS); });
+    expect(screen.queryByTestId('app-entry-card')).not.toBeInTheDocument();
+  });
+
+  it('never opens by itself over an open voice panel', () => {
+    jest.useFakeTimers();
+    setDesktop(true);
+    placeWithSize('foxes-voice-widget-frame', 430, 720, 'iframe');
+    renderEntry();
+    act(() => { jest.advanceTimersByTime(APP_ENTRY_AUTO_OPEN_DELAY_MS); });
+    expect(screen.queryByTestId('app-entry-card')).not.toBeInTheDocument();
+  });
+
+  it('still opens beside a collapsed voice launcher or a hidden search panel', () => {
+    jest.useFakeTimers();
+    setDesktop(true);
+    placeWithSize('foxes-voice-widget-frame', 220, 72, 'iframe');
+    placeWithSize('foxes-search-dialog', 0, 0);
+    expect(assistantPanelOpen()).toBe(false);
+    renderEntry();
+    act(() => { jest.advanceTimersByTime(APP_ENTRY_AUTO_OPEN_DELAY_MS); });
+    expect(screen.getByTestId('app-entry-card')).toBeInTheDocument();
+  });
+
+  it('treats a voice frame hidden by its own style as closed', () => {
+    const frame = placeWithSize('foxes-voice-widget-frame', 430, 720, 'iframe');
+    expect(assistantPanelOpen()).toBe(true);
+    frame.style.display = 'none';
+    expect(assistantPanelOpen()).toBe(false);
+  });
+});
+
 describe('autoOpenAllowedOnPath', () => {
   it.each([
     ['/', true], ['/de', true], ['/tours', true], ['/destinations/luxor', true],
     ['/checkout', false], ['/fr/offer/abc', false], ['/tour/pyramids', false], ['/admin', false],
+    ['/ai-voice', false], ['/ar/ai-voice', false], ['/assistants', false],
   ])('%s → %s', (path, allowed) => {
     expect(autoOpenAllowedOnPath(path)).toBe(allowed);
   });
