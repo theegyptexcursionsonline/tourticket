@@ -40,7 +40,10 @@ describe('blog article dark-mode contrast contract', () => {
     expect(source).toContain('partnership-hero');
     expect(source).toContain('story-metrics');
     expect(source).toContain('feature-article-body');
-    expect(source).toContain('Success story');
+    // The label itself now lives in the blog messages, in every language.
+    expect(source).toContain("t('partnership.badge')");
+    const english = JSON.parse(readFileSync(join(process.cwd(), 'messages/en.json'), 'utf8'));
+    expect(english.blog.partnership.badge).toBe('Success story');
   });
 
   it('renders responsive story photography with captions in either theme', () => {

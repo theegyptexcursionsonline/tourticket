@@ -24,7 +24,7 @@ export function blogRelatedPopulations(surface: 'admin' | 'list' | 'detail'): Po
   const match = surface === 'admin' ? { ...DEFAULT_TENANT_FILTER } : { ...DEFAULT_TENANT_FILTER, ...PUBLIC_CONTENT_FILTER };
   return [
     { path: 'relatedDestinations', select: surface === 'admin' ? 'name slug' : surface === 'list' ? 'name slug urlType parentPage' : 'name slug image urlType parentPage', match },
-    { path: 'relatedTours', select: surface === 'admin' ? 'title slug' : surface === 'list' ? 'title slug urlType parentPage' : 'title slug image discountPrice urlType destination parentPage', match,
+    { path: 'relatedTours', select: surface === 'admin' ? 'title slug' : surface === 'list' ? 'title slug urlType parentPage' : 'title slug image price discountPrice duration urlType destination parentPage translations', match,
       ...(surface === 'detail' ? { populate: { path: 'destination', select: 'slug', match } } : {}) },
   ];
 }

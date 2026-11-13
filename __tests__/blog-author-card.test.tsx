@@ -4,6 +4,9 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { AuthorCard, authorInitials } from '@/app/[locale]/blog/[slug]/AuthorCard';
 
+// The card reads its labels from the blog messages; the tests read the real English ones.
+jest.mock('next-intl', () => jest.requireActual('@/test-support/blogIntl').realIntl(() => 'en'));
+
 jest.mock('@/i18n/routing', () => ({
   Link: ({ href, children, ...props }: React.AnchorHTMLAttributes<HTMLAnchorElement>) => (
     <a href={String(href)} {...props}>{children}</a>

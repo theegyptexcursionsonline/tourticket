@@ -23,8 +23,16 @@ export async function GET() {
     const posts = (docs as unknown as Record<string, unknown>[]).map((d) => {
       // translations is a Mongoose Map under lean() — normalize to a plain object.
       const raw = d.translations as unknown;
-      const translations =
+      const stored =
         raw instanceof Map ? Object.fromEntries(raw) : (raw as Record<string, unknown>) || {};
+      // The home section prints a title and a summary. A stored translation also
+      // holds the whole translated article, which has no business in this response.
+      const translations = Object.fromEntries(
+        Object.entries(stored).map(([locale, bucket]) => {
+          const fields = (bucket && typeof bucket === 'object' ? bucket : {}) as Record<string, unknown>;
+          return [locale, { title: fields.title, excerpt: fields.excerpt }];
+        }),
+      );
       return {
         slug: d.slug,
         title: d.title,

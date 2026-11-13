@@ -8,9 +8,11 @@ import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import BlogClientPage from './BlogClientPage';
 import CollectionSchema from '@/components/schema/CollectionSchema';
-import { IBlog } from '@/lib/models/Blog';
 import { metadataAlternates } from '@/lib/i18n/seoAlternates';
 import { requireRouteLocale } from '@/lib/i18n/routeLocale';
+import { getTranslations } from 'next-intl/server';
+import { BLOG_CATEGORIES } from '@/lib/blog/blogDisplay';
+import { toBlogCard, type BlogCardData } from '@/lib/blog/blogCards';
 
 // Enable ISR with 60 second revalidation for instant page loads
 export const revalidate = 1800; // 30 min — storefront content; edge serves stale-while-revalidate so clicks stay instant
@@ -24,39 +26,25 @@ export async function generateMetadata({
   const { locale } = await params;
   // Probes such as /wp-good.php reach here with a fake locale: answer 404, not a server error.
   requireRouteLocale(locale);
+  const t = await getTranslations({ locale, namespace: 'blog.meta' });
   return {
-    title: 'Travel Blog - Tips, Guides & Stories | Egypt Excursions Online',
-    description: 'Discover travel tips, destination guides, and inspiring stories from Egypt. Expert advice for planning your perfect Egyptian adventure.',
+    title: t('title'),
+    description: t('description'),
     openGraph: {
-      title: 'Travel Blog | Egypt Excursions Online',
-      description: 'Discover travel tips, destination guides, and inspiring stories from Egypt.',
+      title: t('ogTitle'),
+      description: t('ogDescription'),
       type: 'website',
     },
     alternates: metadataAlternates(locale, '/blog'),
   };
 }
 
-const categories = [
-  { value: 'travel-tips', label: 'Travel Tips' },
-  { value: 'destination-guides', label: 'Destination Guides' },
-  { value: 'food-culture', label: 'Food & Culture' },
-  { value: 'adventure', label: 'Adventure' },
-  { value: 'budget-travel', label: 'Budget Travel' },
-  { value: 'luxury-travel', label: 'Luxury Travel' },
-  { value: 'solo-travel', label: 'Solo Travel' },
-  { value: 'family-travel', label: 'Family Travel' },
-  { value: 'photography', label: 'Photography' },
-  { value: 'local-insights', label: 'Local Insights' },
-  { value: 'seasonal-travel', label: 'Seasonal Travel' },
-  { value: 'transportation', label: 'Transportation' },
-  { value: 'accommodation', label: 'Accommodation' },
-  { value: 'news-updates', label: 'News & Updates' },
-];
+type PlainPost = Record<string, unknown>;
 
 async function getBlogsWithCategoryCounts(): Promise<{
-  blogs: IBlog[];
-  categoryCounts: { value: string; label: string; count: number }[];
-  featuredPosts: IBlog[];
+  blogs: PlainPost[];
+  categoryCounts: { value: string; count: number }[];
+  featuredPosts: PlainPost[];
 }> {
   // Skip database fetch during build if MONGODB_URI is not set
   if (!process.env.MONGODB_URI) {
@@ -83,16 +71,16 @@ async function getBlogsWithCategoryCounts(): Promise<{
       {
         $match: {
           status: 'published',
-          category: { $in: categories.map((category) => category.value) },
+          category: { $in: [...BLOG_CATEGORIES] },
           ...DEFAULT_TENANT_FILTER,
         },
       },
       { $group: { _id: '$category', count: { $sum: 1 } } },
     ]);
     const countByCategory = new Map(grouped.map((row) => [row._id, row.count]));
-    const categoryCounts = categories.map((category) => ({
-      ...category,
-      count: countByCategory.get(category.value) ?? 0,
+    const categoryCounts = BLOG_CATEGORIES.map((value) => ({
+      value,
+      count: countByCategory.get(value) ?? 0,
     }));
 
     return {
@@ -112,23 +100,29 @@ export default async function BlogIndexPage({
   params: Promise<{ locale: string }>;
 }) {
   const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: 'blog.list' });
   const { blogs, categoryCounts, featuredPosts } = await getBlogsWithCategoryCounts();
+
+  // Cards carry the language of the visitor (English per untranslated field) and only
+  // the fields a card shows; post bodies and translations stay on the server.
+  const cards: BlogCardData[] = blogs.map((post) => toBlogCard(post, locale));
+  const featuredCards: BlogCardData[] = featuredPosts.map((post) => toBlogCard(post, locale));
 
   return (
     <>
       <CollectionSchema
         locale={locale}
-        name="Travel Stories & Insights"
-        description="Discover amazing destinations, travel tips, and cultural experiences from around the world"
+        name={t('title')}
+        description={t('subtitle')}
         url="/blog"
-        items={blogs.map((blog) => ({ name: blog.title, url: `/blog/${blog.slug}`, image: blog.featuredImage }))}
+        items={cards.map((card) => ({ name: card.title, url: `/blog/${card.slug}`, image: card.featuredImage }))}
       />
       <Header startSolid />
       <main className="min-h-screen pt-20">
         <BlogClientPage
-          blogs={blogs}
+          blogs={cards}
           categories={categoryCounts}
-          featuredPosts={featuredPosts}
+          featuredPosts={featuredCards}
         />
       </main>
       <Footer />

@@ -25,6 +25,9 @@ jest.mock('@/lib/models/Blog', () => ({
   },
 }));
 jest.mock('@/lib/content/blogReferences', () => ({ blogRelatedPopulations: () => [] }));
+jest.mock('next-intl/server', () => ({
+  getTranslations: async () => (key: string) => key,
+}));
 jest.mock('@/components/Header', () => () => null);
 jest.mock('@/components/Footer', () => () => null);
 jest.mock('@/components/schema/CollectionSchema', () => () => null);

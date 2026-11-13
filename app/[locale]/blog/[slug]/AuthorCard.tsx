@@ -3,6 +3,8 @@
 import React, { useState } from 'react';
 import Image from 'next/image';
 import { ArrowRight, Facebook, Twitter, User } from 'lucide-react';
+import { useTranslations } from 'next-intl';
+import { countValues } from '@/lib/blog/blogDisplay';
 import { Link } from '@/i18n/routing';
 import { getAuthorRouteSlug } from '@/lib/blogAuthors';
 
@@ -77,6 +79,7 @@ function AuthorAvatar({ name, avatar }: { name: string; avatar?: string }) {
 }
 
 export function AuthorCard({ author }: { author: AuthorProfile }) {
+  const t = useTranslations('blog.author');
   if (!author) return null;
   const authorSlug = getAuthorRouteSlug(author);
   const authorPath = authorSlug ? `/author/${authorSlug}` : null;
@@ -98,7 +101,7 @@ export function AuthorCard({ author }: { author: AuthorProfile }) {
             </h4>
             {author.role && <div className="mt-1 text-xs text-slate-500">{author.role}</div>}
           </div>
-          {author.postsCount ? <div className="text-xs text-slate-500">{author.postsCount} posts</div> : null}
+          {author.postsCount ? <div className="text-xs text-slate-500">{t('posts', countValues(author.postsCount))}</div> : null}
         </div>
 
         {author.bio && <p className="mt-3 text-sm leading-relaxed text-slate-600">{author.bio}</p>}
@@ -107,17 +110,17 @@ export function AuthorCard({ author }: { author: AuthorProfile }) {
           <div className="mt-4 flex flex-wrap items-center gap-3">
             {author.twitter && (
               <a href={author.twitter} target="_blank" rel="noreferrer" className="inline-flex min-h-11 items-center gap-2 text-sm font-medium text-sky-600 hover:underline">
-                <Twitter className="h-4 w-4" /> Twitter
+                <Twitter className="h-4 w-4" /> {t('twitter')}
               </a>
             )}
             {author.facebook && (
               <a href={author.facebook} target="_blank" rel="noreferrer" className="inline-flex min-h-11 items-center gap-2 text-sm font-medium text-blue-600 hover:underline">
-                <Facebook className="h-4 w-4" /> Facebook
+                <Facebook className="h-4 w-4" /> {t('facebook')}
               </a>
             )}
             {author.website && (
               <a href={author.website} target="_blank" rel="noreferrer" className="inline-flex min-h-11 items-center gap-2 text-sm font-medium text-amber-600 hover:underline">
-                Visit site <ArrowRight className="h-3 w-3" />
+                {t('visitSite')} <ArrowRight className="h-3 w-3 rtl:rotate-180" />
               </a>
             )}
           </div>
@@ -129,7 +132,7 @@ export function AuthorCard({ author }: { author: AuthorProfile }) {
         {authorPath ? (
           <div className="mt-4">
             <Link href={authorPath} className="inline-flex min-h-11 items-center gap-2 rounded-lg border px-4 text-sm font-medium text-slate-700 hover:bg-slate-50">
-              More articles <ArrowRight className="h-3 w-3" />
+              {t('moreArticles')} <ArrowRight className="h-3 w-3 rtl:rotate-180" />
             </Link>
           </div>
         ) : null}

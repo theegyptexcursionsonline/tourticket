@@ -23,12 +23,14 @@ import {
   Sparkles,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { useLocale } from 'next-intl';
+import { useTranslations } from 'next-intl';
 import { sanitizeRichHtml } from '@/lib/security/sanitizeHtml';
 import { imageMetadataFor, type ImageMetadata } from '@/lib/content/imageMetadata';
 import { tourContentPath } from '@/lib/content/contentUrl';
 import type { Destination } from '@/types';
 import { AuthorCard, type AuthorProfile } from './AuthorCard';
+import { BlogNewsletterForm } from './BlogNewsletterForm';
+import { blogCategoryLabel, blogReadMinutes, countValues, tourDisplayPrice } from '@/lib/blog/blogDisplay';
 
 
 export interface TourPreview {
@@ -59,8 +61,9 @@ export interface BlogPost {
   categoryDisplay?: string;
   featured?: boolean;
   publishedAt?: string | Date;
+  /** The publish date as the page prints it, formatted on the server for the page language. */
+  publishedDateText?: string;
   readTime?: number;
-  readTimeText?: string;
   views?: number;
   likes?: number;
   tags?: string[];
@@ -93,33 +96,16 @@ interface Props {
  * - Ensure next.config.js includes allowed image domains for featuredImage / avatars.
  */
 
-const DATE_LOCALES: Record<string, string> = {
-  en: 'en-US',
-  de: 'de-DE',
-  es: 'es-ES',
-  fr: 'fr-FR',
-  ar: 'ar-EG',
-};
-
-function formatDate(date: string | Date | undefined, locale: string) {
-  if (!date) return '';
-  const d = typeof date === 'string' ? new Date(date) : date;
-  return d.toLocaleDateString(DATE_LOCALES[locale] || 'en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    timeZone: 'UTC',
-  });
-}
-
-function ReadTimeText(blog: BlogPost) {
-  if (blog.readTimeText) return blog.readTimeText;
-  if (blog.readTime) return `${blog.readTime} min read`;
-  return '5 min read';
+/** "5 min read" in the page language, or nothing when the post has no stored read time. */
+function useReadTimeText(blog: BlogPost): string | null {
+  const t = useTranslations('blog');
+  const minutes = blogReadMinutes(blog.readTime);
+  return minutes === null ? null : t('readTime', countValues(minutes));
 }
 
 /* ---------- Share & Like (kept lightweight) ---------- */
 function ShareAndLike({ blog }: { blog: BlogPost }) {
+  const t = useTranslations('blog.article');
   const [open, setOpen] = useState(false);
   const [likes, setLikes] = useState(blog?.likes ?? 0);
   const [liked, setLiked] = useState(false);
@@ -151,7 +137,7 @@ function ShareAndLike({ blog }: { blog: BlogPost }) {
     } else if (type === 'twitter') {
       window.open(`https://twitter.com/intent/tweet?url=${encodeURIComponent(url)}&text=${encodeURIComponent(blog.title)}`, '_blank', 'noopener');
     } else {
-      navigator.clipboard.writeText(url).then(() => toast.success('Link copied to clipboard'));
+      navigator.clipboard.writeText(url).then(() => toast.success(t('linkCopied')));
     }
     setOpen(false);
   };
@@ -162,12 +148,16 @@ function ShareAndLike({ blog }: { blog: BlogPost }) {
     try {
       const response = await fetch(`/api/blog/${encodeURIComponent(blog.slug)}/like`, { method: 'POST' });
       const result = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(result.error || 'Unable to save this like right now.');
+      // The route answers in English; the reader is told in the page language.
+      if (!response.ok) {
+        toast.error(response.status === 429 ? t('likeTooMany') : t('likeError'));
+        return;
+      }
       if (Number.isFinite(result.likes)) setLikes(result.likes);
       setLiked(true);
-      toast.success(result.message || 'Thanks for liking!');
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Unable to like right now');
+      toast.success(result.replayed === true ? t('likeReplayed') : t('likeThanks'));
+    } catch {
+      toast.error(t('likeError'));
     } finally {
       setIsLiking(false);
     }
@@ -179,7 +169,7 @@ function ShareAndLike({ blog }: { blog: BlogPost }) {
         type="button"
         onClick={handleLike}
         aria-pressed={liked}
-        aria-label={liked ? `Liked. ${likes} likes` : `Like this post. ${likes} likes`}
+        aria-label={t(liked ? 'likedLabel' : 'likeLabel', { n: String(likes) })}
         disabled={liked || isLiking}
         className={`inline-flex min-h-11 min-w-11 items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition ${
           liked ? 'bg-red-100 text-red-600' : 'bg-slate-100 text-slate-700 hover:bg-red-50'
@@ -197,19 +187,19 @@ function ShareAndLike({ blog }: { blog: BlogPost }) {
           className="inline-flex min-h-11 items-center gap-2 px-3 py-2 rounded-lg text-sm bg-slate-100 hover:bg-amber-50 transition"
         >
           <Share2 className="h-4 w-4" />
-          <span>Share</span>
+          <span>{t('share')}</span>
         </button>
 
         {open && (
           <div className="blog-card absolute start-0 z-40 mt-2 w-44 bg-white border rounded-lg shadow-lg p-2 md:start-auto md:end-0">
-            <button onClick={() => handleShare('facebook')} className="w-full min-h-11 text-left px-2 py-2 rounded hover:bg-slate-50 flex items-center gap-2">
-              <Facebook className="h-4 w-4 text-blue-600" /> Facebook
+            <button onClick={() => handleShare('facebook')} className="w-full min-h-11 text-start px-2 py-2 rounded hover:bg-slate-50 flex items-center gap-2">
+              <Facebook className="h-4 w-4 text-blue-600" /> {t('shareFacebook')}
             </button>
-            <button onClick={() => handleShare('twitter')} className="w-full min-h-11 text-left px-2 py-2 rounded hover:bg-slate-50 flex items-center gap-2">
-              <Twitter className="h-4 w-4 text-sky-500" /> Twitter
+            <button onClick={() => handleShare('twitter')} className="w-full min-h-11 text-start px-2 py-2 rounded hover:bg-slate-50 flex items-center gap-2">
+              <Twitter className="h-4 w-4 text-sky-500" /> {t('shareTwitter')}
             </button>
-            <button onClick={() => handleShare('copy')} className="w-full min-h-11 text-left px-2 py-2 rounded hover:bg-slate-50 flex items-center gap-2">
-              <Copy className="h-4 w-4" /> Copy link
+            <button onClick={() => handleShare('copy')} className="w-full min-h-11 text-start px-2 py-2 rounded hover:bg-slate-50 flex items-center gap-2">
+              <Copy className="h-4 w-4" /> {t('copyLink')}
             </button>
           </div>
         )}
@@ -220,6 +210,9 @@ function ShareAndLike({ blog }: { blog: BlogPost }) {
 
 /* ---------- Small Tour Card used in sidebar CTA ---------- */
 function MiniTourCard({ tour }: { tour: TourPreview }) {
+  const t = useTranslations('blog.article');
+  // Only what the tour really carries: no stand-in length and no stand-in price.
+  const price = tourDisplayPrice(tour);
   return (
     <Link href={tour?.slug ? tourContentPath(tour) : '#'} className="blog-card flex gap-3 items-center p-3 rounded-lg border hover:shadow-md transition bg-white">
       <div className="relative w-20 h-14 rounded-lg overflow-hidden bg-slate-100 flex-shrink-0">
@@ -231,11 +224,13 @@ function MiniTourCard({ tour }: { tour: TourPreview }) {
       </div>
       <div className="flex-1">
         <div className="text-sm font-semibold text-slate-900 line-clamp-2">{tour?.title}</div>
-        <div className="text-xs text-slate-500 mt-1">{tour?.duration || 'Half day'}</div>
-        <div className="mt-2 flex items-center justify-between">
-          <div className="text-sm font-medium text-amber-600">{tour?.discountPrice ? `$${tour.discountPrice}` : tour?.price ? `$${tour.price}` : 'From $49'}</div>
-          <div className="text-xs text-slate-500">per person</div>
-        </div>
+        {tour?.duration ? <div className="text-xs text-slate-500 mt-1">{tour.duration}</div> : null}
+        {price !== null ? (
+          <div className="mt-2 flex items-center justify-between">
+            <div className="text-sm font-medium text-amber-600">${price}</div>
+            <div className="text-xs text-slate-500">{t('perPerson')}</div>
+          </div>
+        ) : null}
       </div>
     </Link>
   );
@@ -243,6 +238,7 @@ function MiniTourCard({ tour }: { tour: TourPreview }) {
 
 /* ---------- Structured Sidebar component (travel-focused) ---------- */
 function Sidebar({ blog }: { blog: BlogPost }) {
+  const t = useTranslations('blog.sidebar');
   // prepare lists from blog.relatedTours
   const relatedTours = blog.relatedTours || [];
 
@@ -251,43 +247,40 @@ function Sidebar({ blog }: { blog: BlogPost }) {
       <div className="space-y-6 sticky top-6">
         {/* Book a tour CTA */}
         <div className="blog-card bg-white rounded-2xl shadow p-6">
-          <h4 className="text-lg font-bold mb-3">Book a Tour</h4>
-          <p className="text-sm text-slate-600 mb-4">Want to experience this? Book one of our recommended tours below, or contact our travel team to build a custom itinerary.</p>
+          <h4 className="text-lg font-bold mb-3">{t('bookTitle')}</h4>
+          <p className="text-sm text-slate-600 mb-4">{t('bookBody')}</p>
 
           {relatedTours.length > 0 ? (
             <div className="space-y-3 mb-4">
               {relatedTours.slice(0, 2).map((t) => <MiniTourCard key={t._id || t.slug} tour={t} />)}
             </div>
           ) : (
-            <div className="text-sm text-slate-500 mb-4">No direct tours linked — browse all tours <Link href="/tours" className="text-amber-600 font-medium">here</Link>.</div>
+            <div className="text-sm text-slate-500 mb-4">
+              {t.rich('noTours', {
+                link: (chunks) => <Link href="/tours" className="text-amber-600 font-medium">{chunks}</Link>,
+              })}
+            </div>
           )}
 
           <Link href="/tours" className="block text-center w-full px-4 py-2 bg-amber-600 text-white rounded-lg font-medium hover:bg-amber-700 transition">
-            Browse All Tours
+            {t('browseAll')}
           </Link>
 
-          <div className="mt-3 text-xs text-slate-500">Need urgent help? <a className="text-amber-600" href="tel:+201142255624"><Phone className="inline h-3 w-3 mr-1" /> <bdi dir="ltr">+20 11 42255624</bdi></a></div>
+          <div className="mt-3 text-xs text-slate-500">{t('urgentHelp')} <a className="text-amber-600" href="tel:+201142255624"><Phone className="inline h-3 w-3 me-1" /> <bdi dir="ltr" className="whitespace-nowrap">+20 11 42255624</bdi></a></div>
         </div>
 
         {/* Travel Essentials */}
         <div className="blog-card bg-white rounded-2xl shadow p-6">
-          <h4 className="font-semibold mb-3">Travel Essentials</h4>
+          <h4 className="font-semibold mb-3">{t('essentialsTitle')}</h4>
           <ul className="text-sm text-slate-600 space-y-2">
-            <li className="flex items-start gap-2"><MapPin className="h-4 w-4 text-amber-500 mt-1" /> Passport & visa check</li>
-            <li className="flex items-start gap-2"><Star className="h-4 w-4 text-amber-500 mt-1" /> Comfortable walking shoes</li>
-            <li className="flex items-start gap-2"><Clock className="h-4 w-4 text-amber-500 mt-1" /> Plan mornings & evenings</li>
+            <li className="flex items-start gap-2"><MapPin className="h-4 w-4 text-amber-500 mt-1" /> {t('essentialPassport')}</li>
+            <li className="flex items-start gap-2"><Star className="h-4 w-4 text-amber-500 mt-1" /> {t('essentialShoes')}</li>
+            <li className="flex items-start gap-2"><Clock className="h-4 w-4 text-amber-500 mt-1" /> {t('essentialPlan')}</li>
           </ul>
         </div>
 
-        {/* Newsletter */}
-        <div className="blog-card bg-white rounded-2xl shadow p-6 text-center">
-          <h4 className="font-semibold mb-2">Get Trip Ideas</h4>
-          <p className="text-sm text-slate-600 mb-3">Subscribe for the best Egypt tours & insider tips.</p>
-          <form onSubmit={(e) => { e.preventDefault(); toast.success('Subscribed'); }}>
-            <input type="email" required placeholder="Your email" className="w-full px-3 py-2 rounded border mb-3 text-sm" />
-            <button className="w-full px-3 py-2 bg-amber-600 text-white rounded-lg text-sm font-medium">Subscribe</button>
-          </form>
-        </div>
+        {/* Newsletter: a real request to the subscribe route of the site, never a stand-in success */}
+        <BlogNewsletterForm />
 
       </div>
     </aside>
@@ -316,7 +309,9 @@ function ReadingProgress() {
 
 /* ---------- Main component ---------- */
 export default function BlogPostClient({ blog, relatedPosts, relevantTours = [] }: Props) {
-  const locale = useLocale();
+  const t = useTranslations('blog');
+  const readTimeText = useReadTimeText(blog);
+  const categoryLabel = blogCategoryLabel(t, blog.category);
   const isPartnershipFeature = blog.slug === 'egypt-excursions-online-getyourguide-partnership';
   const authorSlug = getAuthorRouteSlug({
     slug: blog.authorSlug,
@@ -331,18 +326,18 @@ export default function BlogPostClient({ blog, relatedPosts, relevantTours = [] 
         <header className="partnership-hero text-white">
           <div className="container mx-auto max-w-6xl px-4 pb-12 pt-7 md:pb-16 md:pt-10">
             <Link href="/blog" className="inline-flex items-center gap-2 text-sm text-slate-300 transition hover:text-white">
-              <ChevronLeft className="h-4 w-4" /> EEO stories
+              <ChevronLeft className="h-4 w-4 rtl:rotate-180" /> {t('partnership.back')}
             </Link>
 
             <div className="mt-10 grid items-end gap-10 lg:grid-cols-[minmax(0,1fr)_auto]">
               <div className="max-w-4xl">
                 <div className="mb-6 flex flex-wrap items-center gap-3 text-sm text-slate-200">
                   <span className="rounded-full bg-amber-400 px-3 py-1 font-semibold uppercase tracking-[0.12em] text-slate-950">
-                    Success story
+                    {t('partnership.badge')}
                   </span>
-                  <span>{ReadTimeText(blog)}</span>
-                  <span aria-hidden>•</span>
-                  <span>{formatDate(blog.publishedAt, locale)}</span>
+                  {readTimeText ? <span>{readTimeText}</span> : null}
+                  {readTimeText && blog.publishedDateText ? <span aria-hidden>•</span> : null}
+                  {blog.publishedDateText ? <span>{blog.publishedDateText}</span> : null}
                 </div>
                 <h1 className="text-balance text-4xl font-black leading-[1.02] tracking-[-0.035em] sm:text-5xl lg:text-7xl">
                   {blog.title}
@@ -388,7 +383,7 @@ export default function BlogPostClient({ blog, relatedPosts, relevantTours = [] 
           <div className="bg-white border-b border-stone-200">
             <div className="container mx-auto px-4 py-3">
               <Link href="/blog" className="inline-flex items-center gap-2 text-stone-600 hover:text-amber-700">
-                <ChevronLeft className="h-4 w-4" /> Back to articles
+                <ChevronLeft className="h-4 w-4 rtl:rotate-180" /> {t('article.back')}
               </Link>
             </div>
           </div>
@@ -411,8 +406,8 @@ export default function BlogPostClient({ blog, relatedPosts, relevantTours = [] 
 
             <div className="absolute left-0 right-0 bottom-0 p-6 md:p-12 container mx-auto max-w-4xl text-white">
               <div className="flex flex-wrap items-center gap-3 mb-5">
-                <span className="px-3 py-1 rounded-full bg-amber-600/95 text-xs font-semibold uppercase tracking-wide">{blog.categoryDisplay || blog.category}</span>
-                {blog.featured && <span className="px-3 py-1 rounded-full bg-yellow-500/95 text-stone-900 text-xs font-semibold inline-flex items-center gap-1"><Sparkles className="h-3 w-3" /> Featured</span>}
+                {categoryLabel ? <span className="px-3 py-1 rounded-full bg-amber-600/95 text-xs font-semibold uppercase tracking-wide">{categoryLabel}</span> : null}
+                {blog.featured && <span className="px-3 py-1 rounded-full bg-yellow-500/95 text-stone-900 text-xs font-semibold inline-flex items-center gap-1"><Sparkles className="h-3 w-3" /> {t('featured')}</span>}
               </div>
 
               <h1 className="blog-serif text-3xl md:text-5xl font-bold leading-[1.12] mb-5 max-w-4xl">{blog.title}</h1>
@@ -428,9 +423,9 @@ export default function BlogPostClient({ blog, relatedPosts, relevantTours = [] 
                     <span>{blog.author}</span>
                   )}
                 </div>
-                <div className="flex items-center gap-2"><Calendar className="h-4 w-4" /> <span>{formatDate(blog.publishedAt, locale)}</span></div>
-                <div className="flex items-center gap-2"><Clock className="h-4 w-4" /> <span>{ReadTimeText(blog)}</span></div>
-                <div className="flex items-center gap-2"><Eye className="h-4 w-4" /> <span>{blog.views ?? 0} views</span></div>
+                {blog.publishedDateText ? <div className="flex items-center gap-2"><Calendar className="h-4 w-4" /> <span>{blog.publishedDateText}</span></div> : null}
+                {readTimeText ? <div className="flex items-center gap-2"><Clock className="h-4 w-4" /> <span>{readTimeText}</span></div> : null}
+                <div className="flex items-center gap-2"><Eye className="h-4 w-4" /> <span>{t('views', countValues(blog.views ?? 0))}</span></div>
               </div>
             </div>
           </header>
@@ -456,10 +451,10 @@ export default function BlogPostClient({ blog, relatedPosts, relevantTours = [] 
             </div>}
 
             {isPartnershipFeature ? (
-              <div className="story-metrics" aria-label="Partnership highlights">
-                <div><strong>2011</strong><span>Partnership began</span></div>
-                <div><strong>15 years</strong><span>Growing together</span></div>
-                <div><strong>108%</strong><span>Growth in two years</span></div>
+              <div className="story-metrics" aria-label={t('partnership.highlightsLabel')}>
+                <div><strong>2011</strong><span>{t('partnership.began')}</span></div>
+                <div><strong>{t('partnership.yearsValue')}</strong><span>{t('partnership.growing')}</span></div>
+                <div><strong>108%</strong><span>{t('partnership.growth')}</span></div>
               </div>
             ) : null}
 
@@ -472,11 +467,11 @@ export default function BlogPostClient({ blog, relatedPosts, relevantTours = [] 
             {/* Tags */}
             {Array.isArray(blog.tags) && blog.tags.length > 0 && (
               <div className="blog-card bg-white rounded-2xl shadow p-6">
-                <h3 className="font-semibold mb-3 flex items-center gap-2"><Tag className="h-4 w-4 text-amber-600" /> Tags</h3>
+                <h3 className="font-semibold mb-3 flex items-center gap-2"><Tag className="h-4 w-4 text-amber-600" /> {t('article.tags')}</h3>
                 <div className="flex flex-wrap gap-2">
-                  {blog.tags.map((t: string) => (
-                    <Link key={t} href={`/blog?tag=${encodeURIComponent(t)}`} className="px-3 py-1 bg-slate-100 rounded-full text-sm hover:bg-amber-50">
-                      #{t}
+                  {blog.tags.map((tag: string) => (
+                    <Link key={tag} href={`/blog?tag=${encodeURIComponent(tag)}`} className="px-3 py-1 bg-slate-100 rounded-full text-sm hover:bg-amber-50">
+                      #{tag}
                     </Link>
                   ))}
                 </div>
@@ -486,7 +481,7 @@ export default function BlogPostClient({ blog, relatedPosts, relevantTours = [] 
             {/* Author */}
             <div className="blog-card bg-white rounded-2xl shadow p-6">
               <AuthorCard author={blog.authorObject ?? {
-                name: blog.author || 'Author',
+                name: blog.author || t('article.authorFallback'),
                 role: blog.authorRole,
                 bio: blog.authorBio,
                 avatar: blog.authorAvatar,
@@ -502,33 +497,35 @@ export default function BlogPostClient({ blog, relatedPosts, relevantTours = [] 
             {relevantTours && relevantTours.length > 0 && (
               <div className="blog-card bg-white rounded-2xl shadow p-6">
                 <h3 className="font-semibold mb-4 flex items-center gap-2">
-                  <MapPin className="h-4 w-4 text-amber-600" /> Tours you&apos;ll love
+                  <MapPin className="h-4 w-4 text-amber-600" /> {t('article.toursHeading')}
                 </h3>
                 <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {relevantTours.slice(0, 6).map((t) => {
-                    const img = t?.image || (Array.isArray(t?.images) ? t.images[0] : undefined);
+                  {relevantTours.slice(0, 6).map((tour) => {
+                    const img = tour?.image || (Array.isArray(tour?.images) ? tour.images[0] : undefined);
+                    // Length and price appear only when the tour carries them.
+                    const price = tourDisplayPrice(tour);
                     return (
-                      <Link key={t._id || t.slug} href={tourContentPath(t)} className="blog-card group block rounded-xl border overflow-hidden hover:shadow-md transition bg-white">
+                      <Link key={tour._id || tour.slug} href={tourContentPath(tour)} className="blog-card group block rounded-xl border overflow-hidden hover:shadow-md transition bg-white">
                         <div className="relative h-32 bg-slate-100">
                           {img ? (
-                            <Image src={img} alt={t.title} fill className="object-cover transition group-hover:scale-105" />
+                            <Image src={img} alt={tour.title} fill className="object-cover transition group-hover:scale-105" />
                           ) : null}
                         </div>
                         <div className="p-3">
-                          <div className="text-sm font-semibold text-slate-900 line-clamp-2">{t.title}</div>
-                          <div className="mt-1 flex items-center justify-between">
-                            <span className="text-xs text-slate-500">{t.duration || 'Day trip'}</span>
-                            <span className="text-sm font-semibold text-amber-600">
-                              {t.discountPrice ? `$${t.discountPrice}` : t.price ? `$${t.price}` : 'Book'}
-                            </span>
-                          </div>
+                          <div className="text-sm font-semibold text-slate-900 line-clamp-2">{tour.title}</div>
+                          {tour.duration || price !== null ? (
+                            <div className="mt-1 flex items-center justify-between">
+                              <span className="text-xs text-slate-500">{tour.duration || null}</span>
+                              {price !== null ? <span className="text-sm font-semibold text-amber-600">${price}</span> : null}
+                            </div>
+                          ) : null}
                         </div>
                       </Link>
                     );
                   })}
                 </div>
                 <Link href="/tours" className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-amber-700 hover:text-amber-800">
-                  Browse all tours <ArrowRight className="h-3.5 w-3.5" />
+                  {t('article.browseAllTours')} <ArrowRight className="h-3.5 w-3.5 rtl:rotate-180" />
                 </Link>
               </div>
             )}
@@ -536,7 +533,7 @@ export default function BlogPostClient({ blog, relatedPosts, relevantTours = [] 
             {/* Related posts — horizontal carousel */}
             {relatedPosts && relatedPosts.length > 0 && (
               <div className="blog-card bg-white rounded-2xl shadow p-6">
-                <h3 className="font-semibold mb-4">Related Articles</h3>
+                <h3 className="font-semibold mb-4">{t('article.relatedHeading')}</h3>
                 <div className="flex gap-4 overflow-x-auto snap-x snap-mandatory pb-2 -mx-1 px-1">
                   {relatedPosts.map((p) => (
                     <Link key={p._id} href={`/blog/${p.slug}`} className="blog-card snap-start shrink-0 w-64 rounded-xl border overflow-hidden hover:shadow-md transition bg-white">
@@ -701,6 +698,18 @@ export default function BlogPostClient({ blog, relatedPosts, relevantTours = [] 
           color: #b45309; /* amber-700 */
           padding: 0.06em 0.1em 0 0;
         }
+        /* Arabic letters join: lifting the first one out of its word and
+           floating it to the far side breaks the word, so a right-to-left
+           article opens with plain text. */
+        [dir="rtl"] .blog-content > p:first-of-type::first-letter {
+          float: none;
+          font-family: inherit;
+          font-size: inherit;
+          line-height: inherit;
+          font-weight: inherit;
+          color: inherit;
+          padding: 0;
+        }
         .blog-content a {
           color: #b45309; /* amber-700 */
           font-weight: 600;
@@ -720,10 +729,13 @@ export default function BlogPostClient({ blog, relatedPosts, relevantTours = [] 
           font-weight: 700;
         }
         .blog-content blockquote {
-          border-left: 3px solid #d97706; /* amber-600 */
+          border-inline-start: 3px solid #d97706; /* amber-600 */
           background: #fdf7ee;
           padding: 0.9rem 1.25rem;
-          border-radius: 0 0.5rem 0.5rem 0;
+          border-start-start-radius: 0;
+          border-end-start-radius: 0;
+          border-start-end-radius: 0.5rem;
+          border-end-end-radius: 0.5rem;
           margin: 1.8em 0;
           font-family: Georgia, serif;
           font-style: italic;
@@ -737,12 +749,12 @@ export default function BlogPostClient({ blog, relatedPosts, relevantTours = [] 
         .blog-content ol {
           margin-top: 1.1em;
           margin-bottom: 1.1em;
-          padding-left: 1.6rem;
+          padding-inline-start: 1.6rem;
         }
         .blog-content li {
           margin-top: 0.45em;
           margin-bottom: 0.45em;
-          padding-left: 0.2rem;
+          padding-inline-start: 0.2rem;
         }
         .blog-content ul > li::marker,
         .blog-content ol > li::marker {
@@ -840,7 +852,7 @@ export default function BlogPostClient({ blog, relatedPosts, relevantTours = [] 
         .blog-content td {
           border: 1px solid #d6d3d1;
           padding: 0.75rem;
-          text-align: left;
+          text-align: start;
           vertical-align: top;
         }
         .blog-content th {

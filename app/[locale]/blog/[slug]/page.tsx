@@ -13,6 +13,9 @@ import BlogPostSchema from '@/components/schema/BlogPostSchema';
 import { localizeHtmlLinks } from '@/lib/i18n/localizeHtmlLinks';
 import { localizedDocumentMetadata } from '@/lib/i18n/seoAlternates';
 import { localizeEntityFields } from '@/lib/i18n/contentLocalization';
+import { localizeBlogSummary } from '@/lib/blog/blogCards';
+import { formatBlogDate } from '@/lib/blog/blogDisplay';
+import { getTranslations } from 'next-intl/server';
 import ContextualDiscoveryLinks from '@/components/seo/ContextualDiscoveryLinks';
 import {
   localizedContentPath,
@@ -21,6 +24,8 @@ import {
 } from '@/lib/content/contentUrl';
 
 const LOCALIZED_BLOG_FIELDS = ['title', 'excerpt', 'content', 'metaTitle', 'metaDescription'];
+// A linked tour shows its name and length in the language of the visitor when the tour has them.
+const LOCALIZED_TOUR_FIELDS = ['title', 'duration'];
 
 type Params = { locale: string; slug: string };
 
@@ -35,12 +40,13 @@ export async function generateStaticParams() {
 }
 
 export async function generateMetadata({ params }: { params: Promise<Params> }) {
+  const { slug, locale } = await params;
+  const t = await getTranslations({ locale, namespace: 'blog.meta' });
   try {
     await dbConnect();
-    const { slug, locale } = await params;
     const blog = await Blog.findOne({ slug, status: 'published', ...DEFAULT_TENANT_FILTER }).lean();
 
-    if (!blog) return { title: 'Blog Post Not Found' };
+    if (!blog) return { title: t('notFoundTitle') };
 
     // Serialize first so the translations Map becomes a plain object that
     // localizeEntityFields can read; keep `blog` for the Date fields.
@@ -83,7 +89,7 @@ export async function generateMetadata({ params }: { params: Promise<Params> }) 
     };
   } catch (err) {
     console.error('generateMetadata error:', err);
-    return { title: 'Blog' };
+    return { title: t('fallbackTitle') };
   }
 }
 
@@ -111,7 +117,7 @@ async function getBlogPost(slug: string) {
   })
     .limit(8)
     .sort({ publishedAt: -1 })
-    .select('title slug excerpt featuredImage imageMetadata author publishedAt readTime')
+    .select('title slug excerpt featuredImage imageMetadata author publishedAt readTime translations')
     .lean();
 
   // Relevant tours must share an explicit stored tag with the article. Do not
@@ -119,11 +125,10 @@ async function getBlogPost(slug: string) {
   const blogTags: string[] = Array.isArray((blog as { tags?: unknown }).tags)
     ? ((blog as { tags?: string[] }).tags as string[])
     : [];
-  const tourSelect = 'title slug urlType parentPage destination image images price discountPrice duration location';
   const relevantTours = blogTags.length
     ? await TourModel.find({ ...DEFAULT_TENANT_FILTER, ...PUBLIC_CONTENT_FILTER, tags: { $in: blogTags } })
         .limit(6)
-        .select(tourSelect)
+        .select('title slug urlType parentPage destination image images price discountPrice duration location translations')
         .populate('destination', 'slug')
         .lean()
     : [];
@@ -152,6 +157,18 @@ export default async function BlogPostPage({ params }: { params: Promise<Params>
   if (localized.content) {
     localized.content = localizeHtmlLinks(localized.content, locale);
   }
+  // The page needs one language. Every other translation of the body, and the
+  // translations of the linked tours, stay on the server instead of riding along to the browser.
+  delete (localized as { translations?: unknown }).translations;
+  const localizeTourPreview = (tour: TourPreview) =>
+    localizeBlogSummary(tour as unknown as Record<string, unknown>, locale, LOCALIZED_TOUR_FIELDS) as unknown as TourPreview;
+  localized.relatedTours = (localized.relatedTours || []).map(localizeTourPreview);
+  // Formatted once here so the server render and the browser print the same date.
+  localized.publishedDateText = formatBlogDate(localized.publishedAt, locale);
+  const localizedRelatedPosts = relatedPosts.map(
+    (post) => localizeBlogSummary(post as unknown as Record<string, unknown>, locale) as unknown as BlogPost,
+  );
+  const localizedRelevantTours = relevantTours.map(localizeTourPreview);
   const contextualLinks = [
     ...(localized.relatedDestinations || []).map((destination) => ({
       label: destination.name,
@@ -168,7 +185,7 @@ export default async function BlogPostPage({ params }: { params: Promise<Params>
       label: tour.title,
       href: localizedTourContentPath(tour, locale),
     })),
-    ...relatedPosts.map((post) => ({
+    ...localizedRelatedPosts.map((post) => ({
       label: post.title,
       href: localizedRoutePath(`/blog/${post.slug}`, locale),
     })),
@@ -190,7 +207,7 @@ export default async function BlogPostPage({ params }: { params: Promise<Params>
       />
       <Header startSolid />
       <main className="pt-20">
-        <BlogPostClient blog={localized} relatedPosts={relatedPosts} relevantTours={relevantTours} />
+        <BlogPostClient blog={localized} relatedPosts={localizedRelatedPosts} relevantTours={localizedRelevantTours} />
         <ContextualDiscoveryLinks locale={locale} links={contextualLinks} />
       </main>
       <Footer />
