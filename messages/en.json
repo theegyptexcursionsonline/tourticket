@@ -31,7 +31,13 @@
     "empty": "Your cart is empty",
     "subtotal": "Subtotal",
     "checkout": "Proceed to Checkout",
-    "addedToCart": "Added to cart!"
+    "addedToCart": "Added to cart!",
+    "close": "Close cart",
+    "emptyHint": "Find a tour to start your next adventure!",
+    "startExploring": "Start Exploring",
+    "items": "Items ({count})",
+    "remove": "Remove {title} from cart",
+    "dateNotSet": "Date not set"
   },
   "tour": {
     "duration": "Duration",
@@ -44,7 +50,10 @@
     "instantConfirmation": "Instant confirmation",
     "languages": "Languages",
     "spotsLeft": "{count} spots left",
-    "tieredRefunds": "Tiered refunds"
+    "tieredRefunds": "Tiered refunds",
+    "selectDateTime": "Select Date & Time",
+    "added": "Added",
+    "quickAdd": "Quick Add to Cart"
   },
   "common": {
     "loading": "Loading...",
@@ -162,7 +171,12 @@
     "tieredCancellation": "Tiered cancellation policy",
     "whatsIncluded": "What's Included",
     "dateClosed": "This date is closed for booking. Please choose another date.",
-    "optionNotReady": "This option cannot be booked online right now. Please choose another option or contact us."
+    "optionNotReady": "This option cannot be booked online right now. Please choose another option or contact us.",
+    "perPersonShort": "per person",
+    "selectYourDate": "Select your date",
+    "howManyParticipants": "How many participants?",
+    "atTime": "at {time}",
+    "nextAvailableDate": "Next available date: {date}"
   },
   "offers": {
     "save": "Save up to 20% on combi deals and city passes!"

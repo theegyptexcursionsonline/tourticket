@@ -51,6 +51,7 @@ import { meetingPointEmbedUrl, meetingPointMapUrl } from '@/lib/tours/meetingPoi
 import { effectiveTourPrice } from '@/lib/pricing/effectivePrice';
 import { provableRating, ratingLabel, reviewCountLabel } from '@/lib/tours/ratingDisplay';
 import { askHostedAISearch } from '@/lib/hostedAISearch';
+import { useTranslations } from 'next-intl';
 
 // Enhanced interfaces for additional tour data
 interface ItineraryItem {
@@ -1131,6 +1132,7 @@ export default function TourPageClient({ tour, relatedTours, initialReviews = []
     rootHref: '/search',
   });
   const router = useRouter();
+  const t = useTranslations();
   const { formatPrice } = useSettings();
   const tourBasePricing = effectiveTourPrice(tour);
   const { addToCart } = useCart();
@@ -1635,7 +1637,7 @@ export default function TourPageClient({ tour, relatedTours, initialReviews = []
                     >
                       <span className="shimmer-line"></span>
                       <Calendar size={20} />
-                      <span>Select Date & Time</span>
+                      <span>{t('tour.selectDateTime')}</span>
                     </button>
 
                     <button
@@ -1669,12 +1671,12 @@ export default function TourPageClient({ tour, relatedTours, initialReviews = []
                       {added ? (
                         <>
                           <CheckCircle size={18} />
-                          <span>Added</span>
+                          <span>{t('tour.added')}</span>
                         </>
                       ) : (
                         <>
                           <ShoppingCart size={18} />
-                          <span>Quick Add to Cart</span>
+                          <span>{t('tour.quickAdd')}</span>
                         </>
                       )}
                     </button>

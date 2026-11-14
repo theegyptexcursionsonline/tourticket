@@ -27,11 +27,17 @@
     "title": "Selectionner une Langue"
   },
   "cart": {
-    "title": "Votre Panier",
+    "title": "Votre panier",
     "empty": "Votre panier est vide",
     "subtotal": "Sous-total",
-    "checkout": "Proceder au Paiement",
-    "addedToCart": "Ajouté au panier!"
+    "checkout": "Passer au paiement",
+    "addedToCart": "Ajouté au panier !",
+    "close": "Fermer le panier",
+    "emptyHint": "Trouvez une visite pour votre prochaine aventure !",
+    "startExploring": "Commencer à explorer",
+    "items": "Articles ({count})",
+    "remove": "Retirer {title} du panier",
+    "dateNotSet": "Date non choisie"
   },
   "tour": {
     "duration": "Duree",
@@ -44,7 +50,10 @@
     "instantConfirmation": "Confirmation instantanée",
     "languages": "Langues",
     "spotsLeft": "{count} places disponibles",
-    "tieredRefunds": "Remboursement échelonné"
+    "tieredRefunds": "Remboursement échelonné",
+    "selectDateTime": "Choisir la date et l’heure",
+    "added": "Ajouté",
+    "quickAdd": "Ajout rapide au panier"
   },
   "common": {
     "loading": "Chargement...",
@@ -162,7 +171,12 @@
     "tieredCancellation": "Annulation selon un barème",
     "whatsIncluded": "Ce qui est inclus",
     "dateClosed": "Cette date est fermée à la réservation. Veuillez choisir une autre date.",
-    "optionNotReady": "Cette option ne peut pas être réservée en ligne pour le moment. Veuillez choisir une autre option ou nous contacter."
+    "optionNotReady": "Cette option ne peut pas être réservée en ligne pour le moment. Veuillez choisir une autre option ou nous contacter.",
+    "perPersonShort": "par personne",
+    "selectYourDate": "Choisissez votre date",
+    "howManyParticipants": "Combien de participants ?",
+    "atTime": "à {time}",
+    "nextAvailableDate": "Prochaine date disponible : {date}"
   },
   "offers": {
     "save": "Economisez jusqu'a 20% sur les offres combinees et les pass ville!"

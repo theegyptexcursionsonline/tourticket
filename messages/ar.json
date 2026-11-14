@@ -31,7 +31,13 @@
     "empty": "سلة التسوق فارغة",
     "subtotal": "المجموع الفرعي",
     "checkout": "متابعة الدفع",
-    "addedToCart": "تمت الإضافة إلى السلة!"
+    "addedToCart": "تمت الإضافة إلى السلة!",
+    "close": "إغلاق السلة",
+    "emptyHint": "اختر رحلة وابدأ مغامرتك القادمة!",
+    "startExploring": "ابدأ الاستكشاف",
+    "items": "العناصر ({count})",
+    "remove": "إزالة {title} من السلة",
+    "dateNotSet": "لم يُحدَّد التاريخ"
   },
   "tour": {
     "duration": "المدة",
@@ -44,7 +50,10 @@
     "instantConfirmation": "تأكيد فوري",
     "languages": "اللغات",
     "spotsLeft": "{count} أماكن متبقية",
-    "tieredRefunds": "استرداد متدرّج"
+    "tieredRefunds": "استرداد متدرّج",
+    "selectDateTime": "اختر التاريخ والوقت",
+    "added": "تمت الإضافة",
+    "quickAdd": "إضافة سريعة إلى السلة"
   },
   "common": {
     "loading": "جاري التحميل...",
@@ -162,7 +171,12 @@
     "tieredCancellation": "سياسة إلغاء متدرجة",
     "whatsIncluded": "ما يشمله الخيار",
     "dateClosed": "هذا التاريخ مغلق للحجز. يرجى اختيار تاريخ آخر.",
-    "optionNotReady": "لا يمكن حجز هذا الخيار عبر الإنترنت حالياً. يرجى اختيار خيار آخر أو التواصل معنا."
+    "optionNotReady": "لا يمكن حجز هذا الخيار عبر الإنترنت حالياً. يرجى اختيار خيار آخر أو التواصل معنا.",
+    "perPersonShort": "للشخص",
+    "selectYourDate": "اختر التاريخ",
+    "howManyParticipants": "كم عدد المشاركين؟",
+    "atTime": "الساعة {time}",
+    "nextAvailableDate": "أقرب تاريخ متاح: {date}"
   },
   "offers": {
     "save": "وفّر حتى 20% على العروض المجمعة وبطاقات المدن!"

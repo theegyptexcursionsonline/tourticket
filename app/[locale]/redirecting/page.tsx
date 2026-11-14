@@ -1,7 +1,8 @@
 'use client';
 
 import React, { Suspense, useEffect, useRef, useState, useSyncExternalStore } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
+import { useRouter } from '@/i18n/routing';
 import Image from 'next/image';
 import { useTranslations } from 'next-intl';
 import { safeRelativeRedirect } from '@/lib/security/safeRedirect';

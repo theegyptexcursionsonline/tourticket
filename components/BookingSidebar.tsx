@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo, useCallback, useRef, useLayoutEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useRouter } from 'next/navigation';
+import { useRouter } from '@/i18n/routing';
 import Image from 'next/image';
 import {
   X, ArrowRight, ArrowLeft, Calendar, ShoppingCart, CreditCard,
@@ -566,7 +566,7 @@ export const CalendarWidget: React.FC<{
             <button type="button" className="mb-3 w-full rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-semibold text-red-700" onClick={() => {
               const [year, month, day] = nextAvailableKey.split('-').map(Number);
               onDateSelect(new Date(year, month - 1, day));
-            }}>Next available date: {new Date(`${nextAvailableKey}T12:00:00`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</button>
+            }}>{t('booking.nextAvailableDate', { date: new Date(`${nextAvailableKey}T12:00:00`).toLocaleDateString(`${locale}-u-nu-latn`, { day: 'numeric', month: 'short' }) })}</button>
           )}
           {!nextAvailableKey && <p className="mb-3 text-xs text-slate-600">No departures are available this month. Please try another month.</p>}
           {/* Day names */}
@@ -1335,8 +1335,10 @@ const BookingSummaryCard: React.FC<{
   onEditClick: (section: 'date' | 'guests' | 'language') => void;
 }> = ({ bookingData, tour, availability, onEditClick }) => {
   const t = useTranslations();
+  const locale = useLocale();
   const formatDate = (date: Date) => {
-    return date.toLocaleDateString('en-US', {
+    // Western digits in every language, Arabic included, like the rest of the site.
+    return date.toLocaleDateString(`${locale}-u-nu-latn`, {
       weekday: 'long',
       month: 'long',
       day: 'numeric',
@@ -1347,10 +1349,10 @@ const BookingSummaryCard: React.FC<{
   const formatParticipants = () => {
     const total = bookingData.adults + bookingData.children + bookingData.infants;
     const parts = [];
-    if (bookingData.adults > 0) parts.push(`${bookingData.adults} Adult${bookingData.adults > 1 ? 's' : ''}`);
-    if (bookingData.children > 0) parts.push(`${bookingData.children} Child${bookingData.children > 1 ? 'ren' : ''}`);
-    if (bookingData.infants > 0) parts.push(`${bookingData.infants} Infant${bookingData.infants > 1 ? 's' : ''}`);
-    return `${total} Participant${total > 1 ? 's' : ''} (${parts.join(', ')})`;
+    if (bookingData.adults > 0) parts.push(`${bookingData.adults} ${bookingData.adults > 1 ? t('booking.adults') : t('booking.adult')}`);
+    if (bookingData.children > 0) parts.push(`${bookingData.children} ${bookingData.children > 1 ? t('booking.children') : t('booking.child')}`);
+    if (bookingData.infants > 0) parts.push(`${bookingData.infants} ${bookingData.infants > 1 ? t('booking.infants') : t('booking.infant')}`);
+    return `${total} ${total > 1 ? t('booking.participants') : t('booking.participant')} (${parts.join(', ')})`;
   };
 
   // Get tour display data with proper fallbacks
@@ -1389,7 +1391,7 @@ const BookingSummaryCard: React.FC<{
                 {bookingData.selectedDate ? formatDate(bookingData.selectedDate) : t('booking.noDateSelected')}
               </div>
               <div className="text-xs sm:text-sm text-slate-500">
-                {bookingData.selectedTimeSlot ? `at ${bookingData.selectedTimeSlot.time}` : t('booking.noTimeSelected')}
+                {bookingData.selectedTimeSlot ? t('booking.atTime', { time: bookingData.selectedTimeSlot.time }) : t('booking.noTimeSelected')}
               </div>
             </div>
           </div>
@@ -2577,13 +2579,13 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
   }, [isProcessing, onClose, router, bookingData, availability, tourDisplayData, addToCart, tour.bookingCutoffMinutes, tour.title, t]);
 
   const formatDate = useCallback((date: Date) => {
-    return date.toLocaleDateString('en-US', {
+    return date.toLocaleDateString(`${locale}-u-nu-latn`, {
       weekday: 'long',
       month: 'long',
       day: 'numeric',
       year: 'numeric'
     });
-  }, []);
+  }, [locale]);
 
   // Handle editing from final step
   const handleEditClick = useCallback((section: 'date' | 'guests' | 'language') => {
@@ -2721,7 +2723,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
                     {percentageOff(tourBasePricing.originalPrice, tourBasePricing.price)}% OFF
                   </span>
                 )}
-                <span className="text-xs text-gray-500">per person</span>
+                <span className="text-xs text-gray-500">{t('booking.perPersonShort')}</span>
               </div>
               <div className="flex items-center gap-2 text-green-700 font-semibold bg-green-100 px-3 py-1 rounded-full text-sm">
                 <BadgeDollarSign size={16} />
@@ -2739,14 +2741,14 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
               ))}
               {tourDisplayData?.highlights && tourDisplayData.highlights.length > 2 && (
                 <div className="text-xs text-red-600 font-medium text-center">
-                  +{tourDisplayData.highlights.length - 2} more benefits included
+                  +{tourDisplayData.highlights.length - 2} {t('booking.moreBenefits')}
                 </div>
               )}
             </div>
 
             {/* Date Picker */}
             <div ref={datePickerRef} className="date-picker-dropdown">
-              <h3 className="font-semibold text-gray-800 mb-2 text-sm">1. Select your date</h3>
+              <h3 className="font-semibold text-gray-800 mb-2 text-sm">1. {t('booking.selectYourDate')}</h3>
               <div className="relative">
                 <motion.button
                   onClick={() => setShowDatePicker(!showDatePicker)}
@@ -2789,7 +2791,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
 
             {/* Participants */}
             <div ref={participantsRef} className="participants-dropdown">
-              <h3 className="font-semibold text-gray-800 mb-2 text-sm">2. How many participants?</h3>
+              <h3 className="font-semibold text-gray-800 mb-2 text-sm">2. {t('booking.howManyParticipants')}</h3>
               <div className="relative">
                 <motion.button
                   onClick={() => setShowParticipantsDropdown(!showParticipantsDropdown)}
@@ -3261,7 +3263,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
                             ) : (
                               <CreditCard size={18} />
                             )}
-                            Book Now
+                            {t('booking.bookNow')}
                           </motion.button>
                         </>
                       )}

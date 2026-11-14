@@ -27,11 +27,17 @@
     "title": "Seleccionar un Idioma"
   },
   "cart": {
-    "title": "Tu Carrito",
-    "empty": "Tu carrito esta vacio",
+    "title": "Tu carrito",
+    "empty": "Tu carrito está vacío",
     "subtotal": "Subtotal",
-    "checkout": "Proceder al Pago",
-    "addedToCart": "¡Añadido al carrito!"
+    "checkout": "Ir al pago",
+    "addedToCart": "¡Añadido al carrito!",
+    "close": "Cerrar carrito",
+    "emptyHint": "¡Encuentra un tour para tu próxima aventura!",
+    "startExploring": "Empezar a explorar",
+    "items": "Artículos ({count})",
+    "remove": "Quitar {title} del carrito",
+    "dateNotSet": "Fecha sin elegir"
   },
   "tour": {
     "duration": "Duracion",
@@ -44,7 +50,10 @@
     "instantConfirmation": "Confirmación instantánea",
     "languages": "Idiomas",
     "spotsLeft": "{count} plazas disponibles",
-    "tieredRefunds": "Reembolso escalonado"
+    "tieredRefunds": "Reembolso escalonado",
+    "selectDateTime": "Elegir fecha y hora",
+    "added": "Añadido",
+    "quickAdd": "Añadir rápido al carrito"
   },
   "common": {
     "loading": "Cargando...",
@@ -162,7 +171,12 @@
     "tieredCancellation": "Cancelación escalonada",
     "whatsIncluded": "Qué incluye",
     "dateClosed": "Esta fecha no admite reservas. Por favor, elige otra fecha.",
-    "optionNotReady": "Esta opción no se puede reservar en línea ahora mismo. Por favor, elige otra opción o contáctanos."
+    "optionNotReady": "Esta opción no se puede reservar en línea ahora mismo. Por favor, elige otra opción o contáctanos.",
+    "perPersonShort": "por persona",
+    "selectYourDate": "Elige tu fecha",
+    "howManyParticipants": "¿Cuántos participantes?",
+    "atTime": "a las {time}",
+    "nextAvailableDate": "Próxima fecha disponible: {date}"
   },
   "offers": {
     "save": "Ahorra hasta un 20% en paquetes combinados y pases de ciudad!"

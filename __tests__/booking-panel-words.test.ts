@@ -70,3 +70,22 @@ describe('booking panel words', () => {
     expect(panel).toContain('{option.difficulty && (');
   });
 });
+
+describe('the way to checkout keeps the visitor language', () => {
+  // The cart, the booking panel and the hand-off screen moved with the plain
+  // router, which dropped /ar, so an Arabic visitor reached an English checkout.
+  it('uses the language-aware router on every step to checkout', () => {
+    for (const file of ['components/CartSidebar.tsx', 'components/BookingSidebar.tsx', 'app/[locale]/redirecting/page.tsx']) {
+      const source = fs.readFileSync(path.join(root, file), 'utf8');
+      expect(source).toContain("import { useRouter } from '@/i18n/routing';");
+      expect(source).not.toMatch(/import \{[^}]*\buseRouter\b[^}]*\} from 'next\/navigation'/);
+    }
+  });
+
+  it('writes review dates and participants in the visitor language', () => {
+    expect(panel).not.toMatch(/toLocaleDateString\('en-US'/);
+    expect(panel).not.toContain("Participant${total > 1 ? 's' : ''}");
+    expect(panel).not.toContain('`at ${bookingData.selectedTimeSlot.time}`');
+    for (const locale of Object.keys(messages)) expect(messages[locale].atTime).toContain('{time}');
+  });
+});

@@ -74,7 +74,7 @@ describe('CartSidebar', () => {
   it('should render when open', () => {
     render(<CartSidebar />)
 
-    expect(screen.getByText(/cart/i)).toBeInTheDocument()
+    expect(screen.getByText(/cart\.title/)).toBeInTheDocument()
   })
 
   it('should not render when closed', () => {
@@ -110,7 +110,7 @@ describe('CartSidebar', () => {
     render(<CartSidebar />)
 
     // The close button has aria-label="Close cart"
-    const closeButton = screen.getByLabelText(/close cart/i)
+    const closeButton = screen.getByLabelText('cart.close')
     await user.click(closeButton)
 
     expect(mockCloseCart).toHaveBeenCalled()
@@ -121,14 +121,14 @@ describe('CartSidebar', () => {
 
     // totalItems (2) appears in the header "Your Cart (2)"
     // and in the guest details "2 Adults"
-    expect(screen.getByText(/Your Cart/)).toBeInTheDocument()
-    expect(screen.getByText(/2 Adults/)).toBeInTheDocument()
+    expect(screen.getByText(/cart\.title/)).toBeInTheDocument()
+    expect(screen.getByText(/2 booking\.adults/)).toBeInTheDocument()
   })
 
   it('should have checkout button', () => {
     render(<CartSidebar />)
 
-    expect(screen.getByRole('button', { name: /proceed to checkout/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /cart\.checkout/ })).toBeInTheDocument()
   })
 
   it('should show empty cart message when no items', () => {
@@ -142,14 +142,14 @@ describe('CartSidebar', () => {
 
     render(<CartSidebar />)
 
-    expect(screen.getByText(/your cart is empty/i)).toBeInTheDocument()
+    expect(screen.getByText('cart.empty')).toBeInTheDocument()
   })
 
   it('should have remove button for each item', () => {
     render(<CartSidebar />)
 
     // The remove button has aria-label="Remove Pyramids Tour from cart"
-    const removeButton = screen.getByLabelText(/remove pyramids tour from cart/i)
+    const removeButton = screen.getByLabelText('cart.remove')
     expect(removeButton).toBeInTheDocument()
   })
 
