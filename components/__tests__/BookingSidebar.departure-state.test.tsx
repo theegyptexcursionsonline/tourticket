@@ -24,8 +24,8 @@ const emptyMessage = 'No departures are available for this date. Please choose a
 it('shows an honest next action for a date whose departures have all elapsed, without a selection prompt', () => {
   render(<TourOptionCard {...props} />);
   expect(screen.getByText(emptyMessage)).toBeInTheDocument();
-  expect(screen.getByRole('heading', { name: 'Available departure times' })).toBeInTheDocument();
-  expect(screen.queryByText('Select one to continue')).not.toBeInTheDocument();
+  expect(screen.getByRole('heading', { name: 'booking.availableDepartureTimes' })).toBeInTheDocument();
+  expect(screen.queryByText('booking.selectOneToContinue')).not.toBeInTheDocument();
   expect(screen.queryByText('Available Times Today')).not.toBeInTheDocument();
   expect(props.onSelect).not.toHaveBeenCalled();
 });
@@ -33,9 +33,9 @@ it('keeps a future date departure selectable and uses a date-neutral heading', (
   const slot = { id: 'slot-owned', optionId: option.id, time: '08:00', available: 3, price: 10 };
   const onSelect = jest.fn();
   render(<TourOptionCard {...props} option={{ ...option, timeSlots: [slot] }} onSelect={onSelect} />);
-  expect(screen.getByRole('heading', { name: 'Available departure times' })).toBeInTheDocument();
+  expect(screen.getByRole('heading', { name: 'booking.availableDepartureTimes' })).toBeInTheDocument();
   expect(screen.queryByText(emptyMessage)).not.toBeInTheDocument();
-  expect(screen.getByText('Select one to continue')).toBeInTheDocument();
+  expect(screen.getByText('booking.selectOneToContinue')).toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: /08:00/ }));
   expect(onSelect).toHaveBeenCalledWith(slot);
 });
@@ -43,7 +43,7 @@ it('preserves the known stop-sale reason instead of replacing it with a guessed 
   render(<TourOptionCard {...props} option={{ ...option, isStopSaleBlocked: true, stopSaleReason: 'Operator closed this date' }} />);
   expect(screen.getByText('Operator closed this date')).toBeInTheDocument();
   expect(screen.queryByText(emptyMessage)).not.toBeInTheDocument();
-  expect(screen.queryByText('Select one to continue')).not.toBeInTheDocument();
+  expect(screen.queryByText('booking.selectOneToContinue')).not.toBeInTheDocument();
 });
 
 describe('opening an option reveals its departure section', () => {
@@ -64,7 +64,7 @@ describe('opening an option reveals its departure section', () => {
     region.scrollTo = scrollTo;
     region.scrollTop = 100;
     jest.spyOn(region, 'getBoundingClientRect').mockReturnValue({ top: 120 } as DOMRect);
-    const departureSection = screen.getByRole('heading', { name: 'Available departure times', hidden: true }).parentElement!.parentElement!;
+    const departureSection = screen.getByRole('heading', { name: 'booking.availableDepartureTimes', hidden: true }).parentElement!.parentElement!;
     jest.spyOn(departureSection, 'getBoundingClientRect').mockReturnValue({ top: 420 } as DOMRect);
     expect(frame).toBeUndefined();
     fireEvent.keyDown(screen.getByRole('button', { name: /Shared tour/ }), { key: reduced ? ' ' : 'Enter' });
