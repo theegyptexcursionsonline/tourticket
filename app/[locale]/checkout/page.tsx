@@ -36,6 +36,7 @@ import { useCart } from '@/hooks/useCart';
 import { useAuth } from '@/contexts/AuthContext';
 import { CartItem } from '@/types';
 import toast from 'react-hot-toast';
+import { useTranslations } from 'next-intl';
 import { parseLocalDate } from '@/utils/date';
 import { completeCheckoutAttempt } from '@/lib/checkout/checkoutAttempt';
 import type { PaymentExperience } from '@/lib/checkout/paymentExperience';
@@ -93,9 +94,10 @@ const CustomerTypeSelector = ({
   onLoginClick: () => void;
   onSignupClick: () => void;
 }) => {
+  const t = useTranslations();
   return (
     <div className="bg-white p-4 sm:p-6 shadow-xl space-y-3 sm:space-y-4 border-t border-b border-r border-slate-200">
-      <h2 className="text-lg sm:text-xl font-bold text-slate-900 mb-3 sm:mb-4">How would you like to checkout?</h2>
+      <h2 className="text-lg sm:text-xl font-bold text-slate-900 mb-3 sm:mb-4">{t('checkout.howCheckout')}</h2>
       
       <div className="space-y-3">
         {/* Continue as Guest */}
@@ -122,8 +124,8 @@ const CustomerTypeSelector = ({
                 )}
               </div>
               <div className="flex-1 min-w-0">
-                <div className="font-semibold text-sm sm:text-base text-slate-800">Continue as Guest</div>
-                <div className="text-xs sm:text-sm text-slate-600">Quick checkout without creating an account</div>
+                <div className="font-semibold text-sm sm:text-base text-slate-800">{t('checkout.guestTitle')}</div>
+                <div className="text-xs sm:text-sm text-slate-600">{t('checkout.guestHint')}</div>
               </div>
             </div>
             <User size={20} className={`${customerType === 'guest' ? 'text-red-500' : 'text-slate-400'} flex-shrink-0 hidden sm:block`} />
@@ -142,8 +144,8 @@ const CustomerTypeSelector = ({
             <div className="flex items-center space-x-2 sm:space-x-3 flex-1 min-w-0">
               <LogIn size={20} className="text-blue-500 flex-shrink-0" />
               <div className="min-w-0">
-                <div className="font-semibold text-sm sm:text-base text-slate-800">Sign In</div>
-                <div className="text-xs sm:text-sm text-slate-600 truncate sm:whitespace-normal">Access your account for faster checkout</div>
+                <div className="font-semibold text-sm sm:text-base text-slate-800">{t('checkout.signInTitle')}</div>
+                <div className="text-xs sm:text-sm text-slate-600 truncate sm:whitespace-normal">{t('checkout.signInHint')}</div>
               </div>
             </div>
             <div className="text-blue-500 text-xs sm:text-sm font-medium flex-shrink-0 hidden xs:block">Sign In →</div>
@@ -162,8 +164,8 @@ const CustomerTypeSelector = ({
             <div className="flex items-center space-x-2 sm:space-x-3 flex-1 min-w-0">
               <UserPlus size={20} className="text-green-500 flex-shrink-0" />
               <div className="min-w-0">
-                <div className="font-semibold text-sm sm:text-base text-slate-800">Create Account</div>
-                <div className="text-xs sm:text-sm text-slate-600 truncate sm:whitespace-normal">Save your details for future bookings</div>
+                <div className="font-semibold text-sm sm:text-base text-slate-800">{t('checkout.createTitle')}</div>
+                <div className="text-xs sm:text-sm text-slate-600 truncate sm:whitespace-normal">{t('checkout.createHint')}</div>
               </div>
             </div>
             <div className="text-green-500 text-xs sm:text-sm font-medium flex-shrink-0 hidden xs:block">Sign Up →</div>
@@ -173,13 +175,14 @@ const CustomerTypeSelector = ({
 
       <div className="flex items-center gap-2 text-xs text-slate-500 bg-slate-50 p-3 rounded-lg">
         <Shield size={14} className="text-green-500" />
-        <span>Your personal information is always secure and protected</span>
+        <span>{t('checkout.privacyNote')}</span>
       </div>
     </div>
   );
 };
 
 const SummaryItem: React.FC<{ item: CartItem }> = ({ item }) => {
+  const t = useTranslations();
   const { formatPrice } = useSettings();
   const { removeFromCart } = useCart();
 
@@ -211,11 +214,11 @@ const SummaryItem: React.FC<{ item: CartItem }> = ({ item }) => {
         
         {/* Show participant counts */}
         <div className="text-sm text-slate-500">
-          {item.quantity > 0 && `${item.quantity} Adult${item.quantity > 1 ? 's' : ''}`}
+          {item.quantity > 0 && `${item.quantity} ${item.quantity > 1 ? t('booking.adults') : t('booking.adult')}`}
           {item.childQuantity > 0 && item.quantity > 0 && ', '}
-          {item.childQuantity > 0 && `${item.childQuantity} Child${item.childQuantity > 1 ? 'ren' : ''}`}
+          {item.childQuantity > 0 && `${item.childQuantity} ${item.childQuantity > 1 ? t('booking.children') : t('booking.child')}`}
           {item.infantQuantity > 0 && (item.quantity > 0 || item.childQuantity > 0) && ', '}
-          {item.infantQuantity > 0 && `${item.infantQuantity} Infant${item.infantQuantity > 1 ? 's' : ''}`}
+          {item.infantQuantity > 0 && `${item.infantQuantity} ${item.infantQuantity > 1 ? t('booking.infants') : t('booking.infant')}`}
         </div>
         
         {/* Show selected add-ons */}
@@ -246,7 +249,7 @@ const SummaryItem: React.FC<{ item: CartItem }> = ({ item }) => {
         <button
           onClick={() => removeFromCart(item.uniqueId!)}
           className="text-slate-400 hover:text-red-500 transition-colors mt-2"
-          aria-label="Remove item"
+          aria-label={t('checkout.removeItem')}
         >
           <Trash2 size={14} className="sm:w-4 sm:h-4" />
         </button>
@@ -267,6 +270,7 @@ interface BookingSummaryProps {
 }
 
 const BookingSummary = ({ pricing, promoCode, setPromoCode, applyPromoCode, isProcessing, isApplyingCoupon, couponMessage, showPaymentLauncher }: BookingSummaryProps) => {
+  const t = useTranslations();
   const { formatPrice } = useSettings();
   const { cart } = useCart();
 
@@ -274,7 +278,7 @@ const BookingSummary = ({ pricing, promoCode, setPromoCode, applyPromoCode, isPr
 
   return (
     <aside className="bg-white border-t border-b border-l border-slate-200 p-4 sm:p-6 shadow-xl lg:sticky lg:top-28">
-      <h3 className="text-xl sm:text-2xl font-bold text-slate-900 mb-4">Your Booking Summary</h3>
+      <h3 className="text-xl sm:text-2xl font-bold text-slate-900 mb-4">{t('checkout.summaryTitle')}</h3>
       <div className="divide-y divide-slate-200">
         {cart.map((item, index) => (
           <SummaryItem key={`${item._id ?? item.uniqueId}-${index}`} item={item} />
@@ -282,27 +286,27 @@ const BookingSummary = ({ pricing, promoCode, setPromoCode, applyPromoCode, isPr
       </div>
 
       <div className="mt-4 p-3 sm:p-4 bg-slate-50 border-t border-b border-slate-200">
-        <div className="flex justify-between text-xs sm:text-sm text-slate-600"><span>Subtotal</span><span>{formatPrice(pricing.subtotal)}</span></div>
-        <div className="flex justify-between text-xs sm:text-sm text-slate-600 mt-1.5 sm:mt-2"><span>Service fee</span><span>{formatPrice(pricing.serviceFee)}</span></div>
-        <div className="flex justify-between text-xs sm:text-sm text-slate-600 mt-1.5 sm:mt-2"><span>Taxes & fees</span><span>{formatPrice(pricing.tax)}</span></div>
+        <div className="flex justify-between text-xs sm:text-sm text-slate-600"><span>{t('checkout.subtotal')}</span><span>{formatPrice(pricing.subtotal)}</span></div>
+        <div className="flex justify-between text-xs sm:text-sm text-slate-600 mt-1.5 sm:mt-2"><span>{t('checkout.serviceFee')}</span><span>{formatPrice(pricing.serviceFee)}</span></div>
+        <div className="flex justify-between text-xs sm:text-sm text-slate-600 mt-1.5 sm:mt-2"><span>{t('checkout.taxes')}</span><span>{formatPrice(pricing.tax)}</span></div>
         {pricing.discount > 0 && (
           <div className="flex justify-between text-xs sm:text-sm text-emerald-700 font-medium mt-1.5 sm:mt-2">
-            <span>Discount Applied</span>
+            <span>{t('checkout.discountApplied')}</span>
             <span>-{formatPrice(pricing.discount)}</span>
           </div>
         )}
         <div className="border-t pt-2 sm:pt-3 mt-2 sm:mt-3 flex justify-between items-center">
-          <p className="text-xs sm:text-sm text-slate-600">Total</p>
+          <p className="text-xs sm:text-sm text-slate-600">{t('checkout.total')}</p>
           <p className="text-base sm:text-lg font-bold text-rose-600">{formatPrice(pricing.total)}</p>
         </div>
       </div>
 
       <div className="mt-4">
-        <label className="block text-sm font-medium text-slate-700 mb-2 sm:hidden">Promo Code</label>
+        <label className="block text-sm font-medium text-slate-700 mb-2 sm:hidden">{t('checkout.promoCode')}</label>
         <div className="flex flex-col sm:flex-row gap-2">
           <input
             type="text"
-            placeholder="Promotional code"
+            placeholder={t('checkout.promoPlaceholder')}
             value={promoCode}
             onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
             disabled={isApplyingCoupon || pricing.discount > 0}
@@ -314,7 +318,7 @@ const BookingSummary = ({ pricing, promoCode, setPromoCode, applyPromoCode, isPr
             disabled={isApplyingCoupon || pricing.discount > 0}
             className="px-4 py-3 sm:py-2 bg-slate-900 text-white font-semibold rounded-lg sm:rounded hover:bg-slate-800 transition disabled:bg-slate-400 flex items-center justify-center w-full sm:w-24"
           >
-            {isApplyingCoupon ? <Loader2 className="animate-spin" size={20} /> : 'Apply'}
+            {isApplyingCoupon ? <Loader2 className="animate-spin" size={20} /> : t('checkout.apply')}
           </button>
         </div>
         {couponMessage && (
@@ -332,11 +336,11 @@ const BookingSummary = ({ pricing, promoCode, setPromoCode, applyPromoCode, isPr
             disabled={isProcessing}
             className="w-full py-4 bg-red-600 text-white font-extrabold text-lg hover:bg-red-700 active:translate-y-[1px] transform-gpu shadow-md transition disabled:bg-red-400 disabled:cursor-not-allowed flex items-center justify-center"
           >
-            {isProcessing ? <Loader2 className="animate-spin" size={24} /> : <span className="inline-flex items-center justify-center gap-2"><Lock size={18} /> Continue to secure payment</span>}
+            {isProcessing ? <Loader2 className="animate-spin" size={24} /> : <span className="inline-flex items-center justify-center gap-2"><Lock size={18} /> {t('checkout.continueToPayment')}</span>}
           </button>
         )}
         <p className="text-xs text-slate-500 text-center mt-3">
-          By completing this booking you agree to our <Link className="underline" href="/terms">Terms of Service</Link>.
+          {t('checkout.termsBefore')} <Link className="underline" href="/terms">{t('checkout.termsLink')}</Link>.
         </p>
       </div>
     </aside>
@@ -398,6 +402,7 @@ const CheckoutFormStep = ({
   setPaymentIntentId: (id: string) => void;
   onPaymentExperienceChange: (experience: PaymentExperience | null) => void;
 }) => {
+  const t = useTranslations();
   const { acceptAuthoritativePriceQuote } = useCart();
   const [isPaymentOpen, setIsPaymentOpen] = useState(false);
 
@@ -451,7 +456,7 @@ const CheckoutFormStep = ({
             <UserCheck size={24} className="text-green-600" />
             <div>
               <h3 className="font-semibold text-green-800">Welcome back, {user.firstName}!</h3>
-              <p className="text-sm text-green-600">Your account details have been pre-filled for faster checkout.</p>
+              <p className="text-sm text-green-600">{t('checkout.prefilled')}</p>
             </div>
           </div>
         </section>
@@ -461,53 +466,53 @@ const CheckoutFormStep = ({
       {(customerType === 'guest' || user) && (
         <section>
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-2">
-            <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900">Contact Information</h2>
+            <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900">{t('checkout.contactTitle')}</h2>
             <div className="flex items-center gap-2 text-xs sm:text-sm text-slate-500">
               <Shield size={14} className="text-emerald-500" /> 
-              <span>Secure &amp; encrypted</span>
+              <span>{t('checkout.secureEncrypted')}</span>
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FormInput 
-              label="First Name" 
+              label={t('checkout.firstName')} 
               name="firstName" 
-              placeholder="Enter your first name" 
+              placeholder={t('checkout.firstNamePlaceholder')} 
               value={formData.firstName} 
               onChange={handleInputChange} 
               disabled={isProcessing} 
             />
             <FormInput 
-              label="Last Name" 
+              label={t('checkout.lastName')} 
               name="lastName" 
-              placeholder="Enter your last name" 
+              placeholder={t('checkout.lastNamePlaceholder')} 
               value={formData.lastName} 
               onChange={handleInputChange} 
               disabled={isProcessing} 
             />
             <FormInput 
-              label="Email Address" 
+              label={t('checkout.email')} 
               name="email" 
               type="email" 
-              placeholder="Enter your email address" 
+              placeholder={t('checkout.emailPlaceholder')} 
               value={formData.email} 
               onChange={handleInputChange} 
               disabled={isProcessing || !!user} 
             />
             <FormInput 
-              label="Phone Number" 
+              label={t('checkout.phone')} 
               name="phone" 
               type="tel" 
-              placeholder="Enter your phone number" 
+              placeholder={t('checkout.phonePlaceholder')} 
               value={formData.phone} 
               onChange={handleInputChange} 
               disabled={isProcessing} 
             />
             <div className="md:col-span-2">
               <FormInput 
-                label="Emergency Contact (optional)" 
+                label={t('checkout.emergency')} 
                 name="emergencyContact" 
-                placeholder="Name and phone number" 
+                placeholder={t('checkout.emergencyPlaceholder')} 
                 required={false} 
                 value={formData.emergencyContact} 
                 onChange={handleInputChange} 
@@ -543,12 +548,12 @@ const CheckoutFormStep = ({
         <section>
           <div className="grid grid-cols-1 gap-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">Special Requests</label>
+              <label className="block text-sm font-medium text-slate-700 mb-2">{t('checkout.specialRequests')}</label>
               <textarea 
                 name="specialRequests" 
                 value={formData.specialRequests} 
                 onChange={handleInputChange} 
-                placeholder="Any special requirements, dietary restrictions, etc..." 
+                placeholder={t('checkout.specialRequestsPlaceholder')} 
                 rows={4} 
                 className="w-full px-4 py-3 border border-slate-300 focus-visible:ring-2 focus-visible:ring-red-500" 
                 disabled={isProcessing} 
@@ -561,7 +566,7 @@ const CheckoutFormStep = ({
       {/* Secure payment opens as a dedicated Stripe step. */}
       {(customerType === 'guest' || user) && (
         <section>
-          <h2 className="mb-4 text-xl font-extrabold text-slate-900 sm:text-2xl">Secure payment</h2>
+          <h2 className="mb-4 text-xl font-extrabold text-slate-900 sm:text-2xl">{t('checkout.securePayment')}</h2>
           <ConfiguredStripePaymentForm
             amount={pricing.total}
             currency={pricing.currency}
@@ -585,7 +590,7 @@ const CheckoutFormStep = ({
             onOpenChange={setIsPaymentOpen}
             onSuccess={(paymentIntent) => {
               setPaymentIntentId(paymentIntent);
-              toast.success('Payment completed successfully! Finalizing your booking...');
+              toast.success(t('checkout.paymentCompleted'));
               onPaymentProcessWithIntent(paymentIntent);
             }}
             onError={(error) => {
@@ -661,6 +666,7 @@ const ThankYouPage = ({
   lastOrderId?: string;
   receiptToken?: string;
 }) => {
+  const t = useTranslations();
   const { formatPrice } = useSettings();
   const router = useRouter();
   const [isDownloading, setIsDownloading] = useState(false);
@@ -716,7 +722,7 @@ const handleDownloadReceipt = async () => {
     if (!res.ok) {
       const text = await res.text().catch(() => '<no body>');
       console.error('Failed to get receipt:', res.status, text);
-      alert('Failed to generate receipt. Please try again later.');
+      alert(t('checkout.receiptFailed'));
       return;
     }
 
@@ -731,7 +737,7 @@ const handleDownloadReceipt = async () => {
     URL.revokeObjectURL(url);
   } catch (err) {
     console.error('Download receipt error:', err);
-    alert('An error occurred while downloading the receipt.');
+    alert(t('checkout.receiptError'));
   } finally {
     setIsDownloading(false);
   }
@@ -795,8 +801,8 @@ const handleDownloadReceipt = async () => {
           >
             <CheckCircle className="w-10 h-10 text-white" strokeWidth={2.5} />
           </motion.div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 mb-2">Booking Confirmed!</h1>
-          <p className="text-slate-500">Your adventure awaits. Check your email for details.</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 mb-2">{t('checkout.confirmedTitle')}</h1>
+          <p className="text-slate-500">{t('checkout.confirmedHint')}</p>
         </motion.div>
 
         {/* Premium Ticket Card */}
@@ -818,10 +824,10 @@ const handleDownloadReceipt = async () => {
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-2">
                     <span className="px-2.5 py-1 bg-emerald-100 text-emerald-700 text-[10px] font-bold uppercase tracking-wider rounded-full">
-                      Confirmed
+                      {t('checkout.confirmed')}
                     </span>
                     <span className="px-2.5 py-1 bg-slate-100 text-slate-600 text-[10px] font-medium uppercase tracking-wider rounded-full">
-                      E-Ticket
+                      {t('checkout.eTicket')}
                     </span>
                   </div>
                   <h2 className="text-lg sm:text-xl font-bold text-slate-900 leading-tight mb-1">
@@ -853,24 +859,24 @@ const handleDownloadReceipt = async () => {
               {/* Booking Info Grid */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
                 <div>
-                  <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Booking ID</p>
+                  <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1">{t('checkout.bookingId')}</p>
                   <p className="font-mono font-bold text-sm text-slate-900">{lastOrderId || '—'}</p>
                 </div>
                 <div>
-                  <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Time</p>
-                  <p className="font-bold text-sm text-slate-900">{bookingTime || 'Flexible'}</p>
+                  <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1">{t('checkout.time')}</p>
+                  <p className="font-bold text-sm text-slate-900">{bookingTime || t('checkout.flexible')}</p>
                 </div>
                 <div>
-                  <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Guests</p>
+                  <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1">{t('checkout.guests')}</p>
                   <p className="font-bold text-sm text-slate-900">
                     {orderedItems.reduce((sum, item) => sum + (item.quantity || 0) + (item.childQuantity || 0) + (item.infantQuantity || 0), 0)} Total
                   </p>
                 </div>
                 <div>
-                  <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Status</p>
+                  <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1">{t('checkout.status')}</p>
                   <p className="font-bold text-sm text-emerald-600 flex items-center gap-1">
                     <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
-                    Confirmed
+                    {t('checkout.confirmed')}
                   </p>
                 </div>
               </div>
@@ -878,26 +884,26 @@ const handleDownloadReceipt = async () => {
               {/* Countdown Timer */}
               {timeUntil && !timeUntil.isPast && (
                 <div className="bg-gradient-to-r from-slate-900 to-slate-800 rounded-2xl p-4 mb-6">
-                  <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-3 text-center">Your Adventure Begins In</p>
+                  <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-3 text-center">{t('checkout.countdown')}</p>
                   <div className="flex justify-center items-center gap-3 flex-wrap sm:flex-nowrap">
                     <div className="text-center min-w-[70px]">
                       <div className="text-3xl sm:text-4xl font-black text-white leading-none">{timeUntil.days}</div>
-                      <div className="text-[10px] text-slate-400 uppercase tracking-wider mt-1">Days</div>
+                      <div className="text-[10px] text-slate-400 uppercase tracking-wider mt-1">{t('checkout.days')}</div>
                     </div>
                     <div className="text-2xl font-light text-slate-600 hidden xs:block">:</div>
                     <div className="text-center min-w-[70px]">
                       <div className="text-3xl sm:text-4xl font-black text-white leading-none">{formatTimerUnit(timeUntil.hours)}</div>
-                      <div className="text-[10px] text-slate-400 uppercase tracking-wider mt-1">Hours</div>
+                      <div className="text-[10px] text-slate-400 uppercase tracking-wider mt-1">{t('checkout.hours')}</div>
                     </div>
                     <div className="text-2xl font-light text-slate-600 hidden xs:block">:</div>
                     <div className="text-center min-w-[70px]">
                       <div className="text-3xl sm:text-4xl font-black text-white leading-none">{formatTimerUnit(timeUntil.minutes)}</div>
-                      <div className="text-[10px] text-slate-400 uppercase tracking-wider mt-1">Mins</div>
+                      <div className="text-[10px] text-slate-400 uppercase tracking-wider mt-1">{t('checkout.mins')}</div>
                     </div>
                     <div className="text-2xl font-light text-slate-600 hidden xs:block">:</div>
                     <div className="text-center min-w-[70px]">
                       <div className="text-3xl sm:text-4xl font-black text-white leading-none">{formatTimerUnit(timeUntil.seconds)}</div>
-                      <div className="text-[10px] text-slate-400 uppercase tracking-wider mt-1">Secs</div>
+                      <div className="text-[10px] text-slate-400 uppercase tracking-wider mt-1">{t('checkout.secs')}</div>
                     </div>
                   </div>
                 </div>
@@ -906,14 +912,14 @@ const handleDownloadReceipt = async () => {
               {/* Guest Details */}
               {customer && (
                 <div className="bg-slate-50 rounded-xl p-4 mb-6">
-                  <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-3">Guest Information</p>
+                  <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-3">{t('checkout.guestInfo')}</p>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div className="flex items-center gap-3">
                       <div className="w-9 h-9 bg-white rounded-lg shadow-sm flex items-center justify-center">
                         <User size={16} className="text-slate-600" />
                       </div>
                       <div>
-                        <p className="text-xs text-slate-400">Name</p>
+                        <p className="text-xs text-slate-400">{t('checkout.name')}</p>
                         <p className="font-semibold text-sm text-slate-900">{customer.firstName} {customer.lastName}</p>
                       </div>
                     </div>
@@ -922,7 +928,7 @@ const handleDownloadReceipt = async () => {
                         <Mail size={16} className="text-slate-600" />
                       </div>
                       <div className="min-w-0">
-                        <p className="text-xs text-slate-400">Email</p>
+                        <p className="text-xs text-slate-400">{t('checkout.emailShort')}</p>
                         <p className="font-semibold text-sm text-slate-900 truncate">{customer.email}</p>
                       </div>
                     </div>
@@ -932,7 +938,7 @@ const handleDownloadReceipt = async () => {
                           <Phone size={16} className="text-slate-600" />
                         </div>
                         <div>
-                          <p className="text-xs text-slate-400">Phone</p>
+                          <p className="text-xs text-slate-400">{t('checkout.phoneShort')}</p>
                           <p className="font-semibold text-sm text-slate-900">{customer.phone}</p>
                         </div>
                       </div>
@@ -943,7 +949,7 @@ const handleDownloadReceipt = async () => {
                           <MapPin size={16} className="text-slate-600" />
                         </div>
                         <div className="min-w-0">
-                          <p className="text-xs text-slate-400">Pickup</p>
+                          <p className="text-xs text-slate-400">{t('checkout.pickup')}</p>
                           <p className="font-semibold text-sm text-slate-900 truncate">{customer.hotelPickupDetails}</p>
                         </div>
                       </div>
@@ -954,7 +960,7 @@ const handleDownloadReceipt = async () => {
 
               {/* Items Summary */}
               <div className="space-y-3 mb-4">
-                <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Order Summary</p>
+                <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">{t('checkout.orderSummary')}</p>
                 {orderedItems.map((item, index) => {
                   const itemTotal = checkoutItemSubtotal(item);
 
@@ -985,28 +991,28 @@ const handleDownloadReceipt = async () => {
               {/* Pricing Breakdown */}
               <div className="border-t border-dashed border-slate-200 pt-4 space-y-2">
                 <div className="flex justify-between text-sm text-slate-600">
-                  <span>Subtotal</span>
+                  <span>{t('checkout.subtotal')}</span>
                   <span>{formatPrice(pricing.subtotal)}</span>
                 </div>
                 <div className="flex justify-between text-sm text-slate-600">
-                  <span>Service fee</span>
+                  <span>{t('checkout.serviceFee')}</span>
                   <span>{formatPrice(pricing.serviceFee)}</span>
                 </div>
                 <div className="flex justify-between text-sm text-slate-600">
-                  <span>Taxes & fees</span>
+                  <span>{t('checkout.taxes')}</span>
                   <span>{formatPrice(pricing.tax)}</span>
                 </div>
                 {pricing.discount > 0 && (
                   <div className="flex justify-between text-sm text-emerald-600 font-medium">
                     <span className="flex items-center gap-1">
                       <Tag size={14} />
-                      Discount
+                      {t('checkout.discount')}
                     </span>
                     <span>-{formatPrice(pricing.discount)}</span>
                   </div>
                 )}
                 <div className="flex justify-between items-center pt-3 border-t border-slate-200">
-                  <span className="text-base font-bold text-slate-900">Total Paid</span>
+                  <span className="text-base font-bold text-slate-900">{t('checkout.totalPaid')}</span>
                   <span className="text-2xl font-black text-slate-900">{formatPrice(pricing.total)}</span>
                 </div>
               </div>
@@ -1032,12 +1038,12 @@ const handleDownloadReceipt = async () => {
             {isDownloading ? (
               <>
                 <Loader2 className="animate-spin" size={18} />
-                Downloading...
+                {t('checkout.downloading')}
               </>
             ) : (
               <>
                 <Download size={18} />
-                Download Receipt
+                {t('checkout.downloadReceipt')}
               </>
             )}
           </button>
@@ -1046,7 +1052,7 @@ const handleDownloadReceipt = async () => {
             className="flex-1 py-4 bg-white text-slate-700 font-bold rounded-xl border-2 border-slate-200 hover:bg-slate-50 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
           >
             <Printer size={18} />
-            Print Ticket
+            {t('checkout.printTicket')}
           </button>
         </motion.div>
 
@@ -1061,7 +1067,7 @@ const handleDownloadReceipt = async () => {
             onClick={() => router.push('/')}
             className="text-slate-500 hover:text-slate-700 font-medium text-sm inline-flex items-center gap-1 transition-colors"
           >
-            Continue exploring tours
+            {t('checkout.continueExploring')}
             <ChevronRight size={16} />
           </button>
         </motion.div>
@@ -1080,15 +1086,19 @@ const handleDownloadReceipt = async () => {
   );
 };
 
-const TrustIndicators = () => (
+const TrustIndicators = () => {
+  const t = useTranslations();
+  return (
   <div className="flex flex-col sm:flex-row justify-center items-center gap-4 sm:gap-6 md:gap-12 py-6 sm:py-8 mt-8 sm:mt-12 border-t border-slate-200">
-    <div className="flex items-center gap-2 text-sm sm:text-base text-slate-600"><Shield size={18} className="sm:w-5 sm:h-5 text-emerald-600" /><span>Easy and secure booking</span></div>
-    <div className="flex items-center gap-2 text-sm sm:text-base text-slate-600"><Smartphone size={18} className="sm:w-5 sm:h-5 text-red-600" /><span>Ticket available on smartphone</span></div>
-    <div className="flex items-center gap-2 text-sm sm:text-base text-slate-600"><Headphones size={18} className="sm:w-5 sm:h-5 text-slate-900" /><span>Excellent customer service</span></div>
+    <div className="flex items-center gap-2 text-sm sm:text-base text-slate-600"><Shield size={18} className="sm:w-5 sm:h-5 text-emerald-600" /><span>{t('checkout.trustSecure')}</span></div>
+    <div className="flex items-center gap-2 text-sm sm:text-base text-slate-600"><Smartphone size={18} className="sm:w-5 sm:h-5 text-red-600" /><span>{t('checkout.trustTicket')}</span></div>
+    <div className="flex items-center gap-2 text-sm sm:text-base text-slate-600"><Headphones size={18} className="sm:w-5 sm:h-5 text-slate-900" /><span>{t('checkout.trustService')}</span></div>
   </div>
 );
+};
 
 export default function CheckoutPage() {
+  const t = useTranslations();
   const { cart, clearCart, isCartReady } = useCart();
   const { formatPrice } = useSettings();
   const { user, token } = useAuth();
@@ -1162,7 +1172,7 @@ export default function CheckoutPage() {
 
   const handleApplyCoupon = async () => {
     if (!promoCode) {
-      setCouponMessage('Please enter a coupon code.');
+      setCouponMessage(t('checkout.couponEnter'));
       return;
     }
     setIsApplyingCoupon(true);
@@ -1189,12 +1199,12 @@ export default function CheckoutPage() {
         setCouponMessage(`Success! A discount of ${formatPrice(calculatedDiscount)} has been applied.`);
       } else {
         setDiscount(0);
-        setCouponMessage(data.error || 'Invalid or expired coupon code.');
+        setCouponMessage(data.error || t('checkout.couponInvalid'));
       }
     } catch (error) {
       console.error('Failed to apply coupon:', error);
       setDiscount(0);
-      setCouponMessage('An error occurred. Please try again.');
+      setCouponMessage(t('checkout.genericError'));
     } finally {
       setIsApplyingCoupon(false);
     }
@@ -1211,7 +1221,7 @@ export default function CheckoutPage() {
 
   const handleAuthSuccess = () => {
     setCustomerType('login'); // User is now authenticated
-    toast.success('Great! You can now complete your booking.');
+    toast.success(t('checkout.couponApplied'));
   };
 
   // Handler that accepts payment intent ID directly to avoid race conditions
@@ -1224,12 +1234,12 @@ export default function CheckoutPage() {
       // Validate required fields
       if (customerType === 'guest' || user) {
         if (!formData.firstName.trim() || !formData.lastName.trim() || !formData.email.trim() || !formData.phone.trim()) {
-          toast.error('Please fill in all required contact information');
+          toast.error(t('checkout.fillContact'));
           setIsProcessing(false);
           return;
         }
       } else {
-        toast.error('Please select a checkout option');
+        toast.error(t('checkout.selectOption'));
         setIsProcessing(false);
         return;
       }
@@ -1290,13 +1300,13 @@ export default function CheckoutPage() {
         clearCart();
         setIsConfirmed(true);
 
-        toast.success('Booking confirmed! Check your email for details.', { duration: 5000 });
+        toast.success(t('checkout.bookingConfirmedToast'), { duration: 5000 });
       } else {
-        toast.error(result.message || 'Booking failed. Please try again.');
+        toast.error(result.message || t('checkout.bookingFailed'));
       }
     } catch (error) {
       console.error('Payment process error:', error);
-      toast.error('Something went wrong. Please try again.');
+      toast.error(t('checkout.somethingWrong'));
     } finally {
       reconciliationFlightRef.current = false;
       setIsProcessing(false);
@@ -1306,7 +1316,7 @@ export default function CheckoutPage() {
   const handlePaymentProcess = async () => {
     // This is called when form is manually submitted
     if (!paymentIntentId) {
-      toast.error('Please complete the payment before submitting');
+      toast.error(t('checkout.completePayment'));
       return;
     }
 
@@ -1341,7 +1351,7 @@ export default function CheckoutPage() {
     return (
       <main className="min-h-screen bg-slate-50 pt-24 pb-16 flex items-center justify-center">
         <div className="text-center p-4">
-          <h1 className="text-3xl font-bold mb-4">Loading your booking...</h1>
+          <h1 className="text-3xl font-bold mb-4">{t('checkout.loading')}</h1>
         </div>
       </main>
     );
@@ -1424,7 +1434,7 @@ export default function CheckoutPage() {
             disabled={isProcessing} 
             className="w-full py-3.5 bg-red-600 text-white font-bold text-base hover:bg-red-700 active:translate-y-[1px] transform-gpu shadow-lg transition disabled:bg-red-400 disabled:cursor-not-allowed flex items-center justify-center rounded-full"
           >
-            {isProcessing ? <Loader2 className="animate-spin" size={20} /> : <span className="inline-flex items-center justify-center gap-2"><Lock size={16} /> Continue to secure payment</span>}
+            {isProcessing ? <Loader2 className="animate-spin" size={20} /> : <span className="inline-flex items-center justify-center gap-2"><Lock size={16} /> {t('checkout.continueToPayment')}</span>}
           </button>
         </div>
       )}

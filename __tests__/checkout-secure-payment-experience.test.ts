@@ -19,7 +19,8 @@ describe('checkout secure payment experience', () => {
     expect(checkout).toContain('onExperienceResolved={onPaymentExperienceChange}');
     expect(checkout).toContain("paymentExperience !== 'inline'");
     expect(checkout).toContain('showPaymentLauncher={showPaymentLauncher}');
-    expect(checkout).toContain('Continue to secure payment');
+    expect(checkout).toContain("t('checkout.continueToPayment')");
+    expect(JSON.parse(source('messages/en.json')).checkout.continueToPayment).toBe('Continue to secure payment');
     expect(checkout).not.toContain('PayPal integration is coming soon');
     expect(checkout).not.toContain('/payment/paypal2.png');
 

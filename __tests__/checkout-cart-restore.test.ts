@@ -18,7 +18,7 @@ describe('checkout waits for the restored cart', () => {
 
   it('shows the loading state, not an empty form, until the cart is restored', () => {
     expect(checkout).toContain('if (!cart || (!isCartReady && !isConfirmed)) {');
-    expect(checkout).toContain('Loading your booking...');
+    expect(checkout).toContain("t('checkout.loading')");
   });
 
   it('keeps the thank-you page reachable after the cart is cleared on payment', () => {
