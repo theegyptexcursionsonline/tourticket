@@ -36,7 +36,7 @@ import { useCart } from '@/hooks/useCart';
 import { useAuth } from '@/contexts/AuthContext';
 import { CartItem } from '@/types';
 import toast from 'react-hot-toast';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { parseLocalDate } from '@/utils/date';
 import { completeCheckoutAttempt } from '@/lib/checkout/checkoutAttempt';
 import type { PaymentExperience } from '@/lib/checkout/paymentExperience';
@@ -183,6 +183,7 @@ const CustomerTypeSelector = ({
 
 const SummaryItem: React.FC<{ item: CartItem }> = ({ item }) => {
   const t = useTranslations();
+  const locale = useLocale();
   const { formatPrice } = useSettings();
   const { removeFromCart } = useCart();
 
@@ -208,7 +209,7 @@ const SummaryItem: React.FC<{ item: CartItem }> = ({ item }) => {
         {/* Show booking details */}
         {item.selectedDate && (
           <p className="text-xs text-slate-500">
-            {formatBookingDate(item.selectedDate)} at {item.selectedTime}
+            {formatBookingDate(item.selectedDate, locale)} {t('booking.atTime', { time: item.selectedTime })}
           </p>
         )}
         
@@ -606,11 +607,12 @@ const CheckoutFormStep = ({
 };
 
 // Format date consistently for display
-const formatBookingDate = (dateString: string | Date | undefined): string => {
+const formatBookingDate = (dateString: string | Date | undefined, locale: string): string => {
   const date = parseLocalDate(dateString);
   if (!date || isNaN(date.getTime())) return '';
 
-  return date.toLocaleDateString('en-US', {
+  // The visitor's language, with the Western digits the site uses everywhere.
+  return date.toLocaleDateString(`${locale}-u-nu-latn`, {
     weekday: 'long',
     year: 'numeric',
     month: 'long',
@@ -667,6 +669,7 @@ const ThankYouPage = ({
   receiptToken?: string;
 }) => {
   const t = useTranslations();
+  const locale = useLocale();
   const { formatPrice } = useSettings();
   const router = useRouter();
   const [isDownloading, setIsDownloading] = useState(false);
@@ -681,9 +684,9 @@ const ThankYouPage = ({
 
   // Parse date for ticket display
   const dateObj = parseLocalDate(firstItem?.selectedDate) || new Date();
-  const dayOfWeek = dateObj.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase();
+  const dayOfWeek = dateObj.toLocaleDateString(`${locale}-u-nu-latn`, { weekday: 'short' }).toUpperCase();
   const dayNum = dateObj.getDate();
-  const month = dateObj.toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
+  const month = dateObj.toLocaleDateString(`${locale}-u-nu-latn`, { month: 'short' }).toUpperCase();
 
   const formatTimerUnit = (value: number) => String(value).padStart(2, '0');
 
@@ -1425,7 +1428,7 @@ export default function CheckoutPage() {
       {showMobileStickyCTA && (
         <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-sm border-t border-slate-200 px-4 pt-4 pb-[calc(1rem+env(safe-area-inset-bottom))] z-50 shadow-[0_-6px_20px_rgba(15,23,42,0.15)]">
           <div className="flex justify-between items-center mb-3">
-            <span className="text-slate-600">Total price:</span>
+            <span className="text-slate-600">{t('booking.totalPrice')}:</span>
             <span className="font-bold text-xl text-rose-600">{formatPrice(pricing.total)}</span>
           </div>
           <button 

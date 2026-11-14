@@ -47,3 +47,12 @@ describe('checkout page words', () => {
     }
   });
 });
+
+describe('checkout dates and the phone total in the visitor language', () => {
+  it('formats booking dates for the visitor with Western digits, and the time with the site words', () => {
+    expect(page).not.toMatch(/toLocaleDateString\('en-US'/);
+    expect(page).toContain('toLocaleDateString(`${locale}-u-nu-latn`');
+    expect(page).toContain("{formatBookingDate(item.selectedDate, locale)} {t('booking.atTime', { time: item.selectedTime })}");
+    expect(page).not.toContain('>Total price:<');
+  });
+});
