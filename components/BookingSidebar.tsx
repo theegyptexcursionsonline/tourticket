@@ -18,6 +18,7 @@ import { useSettings } from '@/hooks/useSettings';
 import { futureDepartureSlots, isFutureDeparture } from '@/lib/revenue/departureSchedule';
 import { toDateOnlyString } from '@/utils/date';
 import { useLocale } from 'next-intl';
+import { formatDuration, formatLanguageList, formatLanguageName } from '@/lib/i18n/displayValues';
 import { isRTL } from '@/i18n/config';
 import type { CartItem } from '@/types';
 import { getErrorMessage } from './componentTypes';
@@ -627,6 +628,7 @@ export const TourOptionCard: React.FC<{
   onToggleExpanded?: () => void;
 }> = ({ option, onSelect, selectedTimeSlot, adults, childCount, infantCount, tour, collapsible = false, expanded = true, onToggleExpanded }) => {
   const t = useTranslations();
+  const locale = useLocale();
   const { formatPrice } = useSettings();
   const [descExpanded, setDescExpanded] = useState(false);
   const [descOverflows, setDescOverflows] = useState(false);
@@ -824,12 +826,12 @@ export const TourOptionCard: React.FC<{
         {option.duration ? (
           <div className="flex items-center gap-1.5">
             <Clock size={13} className="text-red-500" />
-            <span className="font-medium">{option.duration}</span>
+            <span className="font-medium">{formatDuration(option.duration, locale)}</span>
           </div>
         ) : null}
         <div className="flex items-center gap-1.5">
           <Languages size={13} className="text-green-500" />
-          <span className="font-medium">{option.languages.slice(0, 2).join(', ')}</span>
+          <span className="font-medium">{formatLanguageList(option.languages.slice(0, 2), locale)}</span>
           {option.languages.length > 2 && (
             <span className="text-[10px] bg-gray-200 px-1 py-0.5 rounded-full">
               +{option.languages.length - 2}
@@ -1444,7 +1446,7 @@ const BookingSummaryCard: React.FC<{
             </div>
             <div>
               <div className="font-semibold text-slate-800 text-sm sm:text-base">
-                {bookingData.selectedLanguage || 'English'}
+                {formatLanguageName(bookingData.selectedLanguage || 'English', locale)}
               </div>
               <div className="text-xs sm:text-sm text-slate-500">
                 {t('tour.languages')}
@@ -1483,9 +1485,9 @@ const BookingSummaryCard: React.FC<{
                       {selectedOption.title}
                     </div>
                     <div className="text-xs sm:text-sm text-slate-500 flex items-center gap-2">
-                      <span>{selectedOption.duration}</span>
+                      <span>{formatDuration(selectedOption.duration, locale)}</span>
                       <span>•</span>
-                      <span>{selectedOption.languages.slice(0, 2).join(', ')}</span>
+                      <span>{formatLanguageList(selectedOption.languages.slice(0, 2), locale)}</span>
                       {selectedOption.badge && (
                         <>
                           <span>•</span>
@@ -1526,7 +1528,7 @@ const BookingSummaryCard: React.FC<{
                 {tourDisplayData.title}
               </div>
               <div className="text-xs sm:text-sm text-slate-600 mt-1">
-                {tourDisplayData.duration}
+                {formatDuration(tourDisplayData.duration, locale)}
                 {tourDisplayData.ratingLabel ? ` • ${tourDisplayData.ratingLabel} ⭐` : ''}
               </div>
               {tourDisplayData.destination && (

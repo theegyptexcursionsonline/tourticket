@@ -51,7 +51,8 @@ import { meetingPointEmbedUrl, meetingPointMapUrl } from '@/lib/tours/meetingPoi
 import { effectiveTourPrice } from '@/lib/pricing/effectivePrice';
 import { provableRating, ratingLabel, reviewCountLabel } from '@/lib/tours/ratingDisplay';
 import { askHostedAISearch } from '@/lib/hostedAISearch';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
+import { formatDuration } from '@/lib/i18n/displayValues';
 
 // Enhanced interfaces for additional tour data
 interface ItineraryItem {
@@ -1133,6 +1134,7 @@ export default function TourPageClient({ tour, relatedTours, initialReviews = []
   });
   const router = useRouter();
   const t = useTranslations();
+  const locale = useLocale();
   const { formatPrice } = useSettings();
   const tourBasePricing = effectiveTourPrice(tour);
   const { addToCart } = useCart();
@@ -1457,7 +1459,7 @@ export default function TourPageClient({ tour, relatedTours, initialReviews = []
                       )}
                       <div className="flex items-center gap-1">
                         <Clock size={16} />
-                        <span>{tour.duration}</span>
+                        <span>{formatDuration(tour.duration, locale)}</span>
                       </div>
                       <div className="flex items-center gap-1">
                         <MapPin size={16} />
@@ -1609,7 +1611,7 @@ export default function TourPageClient({ tour, relatedTours, initialReviews = []
                   <div className="space-y-4 mb-6">
                     <div className="flex items-center gap-3 text-slate-600">
                       <Clock size={20} className="text-red-500" />
-                      <span>Duration: {tour.duration}</span>
+                      <span>{t('booking.durationLabel', { duration: formatDuration(tour.duration, locale) })}</span>
                     </div>
                     {ratingLabel(tour.rating, reviews) && (
                       <div className="flex items-center gap-3 text-slate-600">

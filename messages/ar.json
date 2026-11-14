@@ -176,7 +176,8 @@
     "selectYourDate": "اختر التاريخ",
     "howManyParticipants": "كم عدد المشاركين؟",
     "atTime": "الساعة {time}",
-    "nextAvailableDate": "أقرب تاريخ متاح: {date}"
+    "nextAvailableDate": "أقرب تاريخ متاح: {date}",
+    "durationLabel": "المدة: {duration}"
   },
   "offers": {
     "save": "وفّر حتى 20% على العروض المجمعة وبطاقات المدن!"

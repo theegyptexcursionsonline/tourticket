@@ -176,7 +176,8 @@
     "selectYourDate": "Datum wählen",
     "howManyParticipants": "Wie viele Teilnehmer?",
     "atTime": "um {time}",
-    "nextAvailableDate": "Nächster freier Termin: {date}"
+    "nextAvailableDate": "Nächster freier Termin: {date}",
+    "durationLabel": "Dauer: {duration}"
   },
   "offers": {
     "save": "Sparen Sie bis zu 20% bei Kombi-Deals und City-Passen!"

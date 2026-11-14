@@ -176,7 +176,8 @@
     "selectYourDate": "Elige tu fecha",
     "howManyParticipants": "¿Cuántos participantes?",
     "atTime": "a las {time}",
-    "nextAvailableDate": "Próxima fecha disponible: {date}"
+    "nextAvailableDate": "Próxima fecha disponible: {date}",
+    "durationLabel": "Duración: {duration}"
   },
   "offers": {
     "save": "Ahorra hasta un 20% en paquetes combinados y pases de ciudad!"
