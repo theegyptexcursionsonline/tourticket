@@ -1089,7 +1089,7 @@ const TrustIndicators = () => (
 );
 
 export default function CheckoutPage() {
-  const { cart, clearCart } = useCart();
+  const { cart, clearCart, isCartReady } = useCart();
   const { formatPrice } = useSettings();
   const { user, token } = useAuth();
   const router = useRouter();
@@ -1313,11 +1313,15 @@ export default function CheckoutPage() {
     await handlePaymentProcessWithIntent(paymentIntentId);
   };
 
+  // The cart is restored after the first render (from this browser, or from
+  // the account once the session is known). Deciding "empty" before that
+  // sends a customer who opens or refreshes checkout back to the home page
+  // with a full cart.
   useEffect(() => {
-    if (cart && cart.length === 0 && !isConfirmed) {
+    if (isCartReady && cart && cart.length === 0 && !isConfirmed) {
       router.push('/');
     }
-  }, [cart, isConfirmed, router]);
+  }, [cart, isCartReady, isConfirmed, router]);
 
   // Scroll to top when thank you page is shown
   useEffect(() => {
@@ -1333,7 +1337,7 @@ export default function CheckoutPage() {
     && (customerType === 'guest' || user)
     && showPaymentLauncher;
 
-  if (!cart) {
+  if (!cart || (!isCartReady && !isConfirmed)) {
     return (
       <main className="min-h-screen bg-slate-50 pt-24 pb-16 flex items-center justify-center">
         <div className="text-center p-4">

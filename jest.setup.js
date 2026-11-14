@@ -193,6 +193,7 @@ jest.mock('@/contexts/CartContext', () => {
     closeCart: jest.fn(),
     totalItems: 0,
     isLoading: false,
+    isCartReady: true,
   }
   const CartContext = React.createContext(mockValue)
   return {
@@ -213,6 +214,7 @@ jest.mock('@/hooks/useCart', () => ({
     closeCart: jest.fn(),
     totalItems: 0,
     isLoading: false,
+    isCartReady: true,
   }),
 }))
 

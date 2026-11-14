@@ -22,6 +22,12 @@ interface CartContextType {
     closeCart: () => void;
     totalItems: number;
     isLoading: boolean;
+    /**
+     * True once the cart has been restored for the current visitor: from this
+     * browser for a guest, or from the account for a signed-in customer. Until
+     * then an empty `cart` means "not loaded yet", not "nothing in the cart".
+     */
+    isCartReady: boolean;
     acceptAuthoritativePriceQuote: (quote: AuthoritativePriceQuote) => Promise<boolean>;
 }
 
@@ -122,7 +128,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     const [hasLoadedGuestCart, setHasLoadedGuestCart] = useState(false);
     const cartRef = useRef<CartItem[]>([]);
 
-    const { token, isAuthenticated } = useAuth();
+    const { token, isAuthenticated, isLoading: isAuthLoading } = useAuth();
 
     useEffect(() => {
         cartRef.current = cart;
@@ -405,6 +411,8 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
         }
     }, [isAuthenticated, token]);
 
+    const isCartReady = !isAuthLoading && (isAuthenticated ? hasSyncedFromServer : hasLoadedGuestCart);
+
     const totalItems = cart.reduce((sum, item) => sum + (item.quantity || 0) + (item.childQuantity || 0) + (item.infantQuantity || 0), 0);
 
     return (
@@ -418,6 +426,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
             openCart,
             closeCart,
             isLoading,
+            isCartReady,
             acceptAuthoritativePriceQuote,
         }}>
             {children}
