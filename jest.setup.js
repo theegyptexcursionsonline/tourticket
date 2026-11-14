@@ -1,5 +1,9 @@
 // Learn more: https://github.com/testing-library/jest-dom
 import '@testing-library/jest-dom'
+
+// No test may reach a real mail, message, payment or model provider.
+const { installProviderGuard, guardFetch } = require('./test-support/providerGuard')
+installProviderGuard()
 import { TextDecoder, TextEncoder } from 'node:util'
 
 if (!globalThis.TextEncoder) globalThis.TextEncoder = TextEncoder
@@ -299,3 +303,6 @@ global.IntersectionObserver = class IntersectionObserver {
   }
   unobserve() {}
 }
+
+// The real fetch (node test environment) cannot reach a provider either.
+guardFetch(globalThis)
