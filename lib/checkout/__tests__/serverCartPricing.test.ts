@@ -17,7 +17,7 @@ jest.mock('@/lib/revenue/pricingResolver', () => ({
   resolveEffectivePrice: jest.fn(),
 }));
 
-import { PriceChangedError, secureCartPricing } from '@/lib/checkout/serverCartPricing';
+import { BookingOptionRequiredError, PriceChangedError, secureCartPricing } from '@/lib/checkout/serverCartPricing';
 import { resolveEffectivePrice } from '@/lib/revenue/pricingResolver';
 import { authoritativeBasePrice } from '@/lib/pricing/authoritativePrice';
 
@@ -60,6 +60,7 @@ describe('secureCartPricing', () => {
   it('derives perGuest from the admin pricing method, falling back to the legacy Food rule', async () => {
     const [item] = await secureCartPricing([{
       id: '507f1f77bcf86cd799439011',
+      selectedBookingOption: { pricingKey: 'premium-key' },
       selectedAddOns: { 'addon-0': 1, 'addon-1': 1, 'addon-2': 1 },
     }]);
     // addon-0: legacy Food add-on without pricingMethod → per person
@@ -73,13 +74,23 @@ describe('secureCartPricing', () => {
   it('rejects add-ons that do not exist in the catalogue', async () => {
     await expect(secureCartPricing([{
       id: '507f1f77bcf86cd799439011',
+      selectedBookingOption: { pricingKey: 'premium-key' },
       selectedAddOns: { invented: 1 },
     }])).rejects.toThrow('Invalid add-on');
   });
 
   it('rejects an authored add-on when it is not assigned to the selected option', async () => {
+    const fixture = await lean();
+    lean.mockResolvedValueOnce({
+      ...fixture,
+      bookingOptions: [
+        ...fixture.bookingOptions,
+        { label: 'Basic', type: 'Per Person', price: 90, pricingKey: 'basic-key' },
+      ],
+    });
     await expect(secureCartPricing([{
       id: '507f1f77bcf86cd799439011',
+      selectedBookingOption: { pricingKey: 'basic-key' },
       selectedAddOns: { 'addon-3': 1 },
     }])).rejects.toThrow('Invalid add-on');
 
@@ -105,7 +116,7 @@ describe('secureCartPricing', () => {
   });
 
   it('returns only authored add-ons and never manufactures fallback products', async () => {
-    lean.mockResolvedValueOnce({
+    lean.mockResolvedValue({
       _id: { toString: () => '507f1f77bcf86cd799439011' },
       title: 'No add-ons tour',
       discountPrice: 80,
@@ -120,6 +131,34 @@ describe('secureCartPricing', () => {
       id: '507f1f77bcf86cd799439011',
       selectedAddOns: { 'photo-package-fallback': 1 },
     }])).rejects.toThrow('Invalid add-on');
+  });
+
+  it('refuses a line with no option on a tour that sells only through options', async () => {
+    // Quick add used to send the tour with no option: the server then charged
+    // the tour's base price (80) although its only option costs 120.
+    await expect(secureCartPricing([{
+      id: '507f1f77bcf86cd799439011',
+      quantity: 2,
+      selectedDate: '2026-11-14',
+      selectedTime: 'Anytime',
+    }])).rejects.toBeInstanceOf(BookingOptionRequiredError);
+    await expect(secureCartPricing([{
+      id: '507f1f77bcf86cd799439011',
+      selectedBookingOption: { id: 'standard-default', pricingKey: 'standard' },
+    }])).rejects.toMatchObject({ status: 400, code: 'BOOKING_OPTION_REQUIRED' });
+  });
+
+  it('still prices a no-option line on a tour that has no authored options', async () => {
+    lean.mockResolvedValueOnce({
+      _id: { toString: () => '507f1f77bcf86cd799439011' },
+      title: 'Single-price tour',
+      discountPrice: 80,
+      originalPrice: 100,
+      bookingOptions: [],
+      addOns: [],
+    });
+    const [item] = await secureCartPricing([{ id: '507f1f77bcf86cd799439011' }]);
+    expect(item.selectedBookingOption).toMatchObject({ id: 'standard-default', price: 80 });
   });
 
   it('rejects a stale quote version instead of silently repricing checkout', async () => {
@@ -247,13 +286,15 @@ describe('secureCartPricing applies the tour discount exactly like the sidebar q
   });
 
   it('discounts the standard no-option universal slot price', async () => {
+    const singlePriceTour = { ...discountedTour, bookingOptions: [] };
+    lean.mockResolvedValueOnce(singlePriceTour);
     const [item] = await secureCartPricing([{
       id: '507f1f77bcf86cd799439011',
       selectedTime: '09:00',
     }]);
     expect(item.selectedBookingOption.price).toBe(60);
     expect(item.selectedBookingOption.originalPrice).toBe(75);
-    expect(item.selectedBookingOption.price).toBe(authoritativeBasePrice(discountedTour, {
+    expect(item.selectedBookingOption.price).toBe(authoritativeBasePrice(singlePriceTour, {
       selectedBookingOption: null,
       selectedTime: '09:00',
     }));

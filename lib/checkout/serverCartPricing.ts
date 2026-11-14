@@ -1,6 +1,7 @@
 import { resolveBookingCutoff } from '@/lib/bookings/bookingCutoff';
 import mongoose from 'mongoose';
 import Tour from '@/lib/models/Tour';
+import { PublicInputError } from '@/lib/security/publicInput';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 import { resolveEffectivePrice, STANDARD_OPTION_KEY } from '@/lib/revenue/pricingResolver';
 import {
@@ -130,6 +131,20 @@ export interface SecureCartItem extends Record<string, unknown> {
   addOnQuantityVersion: typeof ADD_ON_QUANTITY_VERSION;
 }
 
+/** A cart line names no option for a tour that only sells through options. */
+export class BookingOptionRequiredError extends PublicInputError {
+  code = 'BOOKING_OPTION_REQUIRED';
+
+  constructor() {
+    super('Choose an option and a departure time for this tour, then add it to your cart again.', 400);
+    this.name = 'BookingOptionRequiredError';
+  }
+}
+
+function hasAuthoredBookingOptions(tour: { bookingOptions?: unknown[] | null }): boolean {
+  return Array.isArray(tour.bookingOptions) && tour.bookingOptions.some(Boolean);
+}
+
 export class PriceChangedError extends Error {
   code = 'PRICE_CHANGED';
   quote: EffectivePriceQuote;
@@ -240,6 +255,14 @@ export async function secureCartPricing(
         applyDiscount: Boolean(dbOption.applyTourDiscount),
       });
     } else {
+      // The no-option ("standard") booking exists only for a tour with no
+      // authored options; the storefront offers it in no other case. When the
+      // tour has options, its base price is not a price anyone can book at:
+      // charging it would sell an option-priced trip at a different figure,
+      // with no option or departure the operator can fulfil.
+      if (hasAuthoredBookingOptions(tour)) {
+        throw new BookingOptionRequiredError();
+      }
       if (!Number.isFinite(Number(tour.discountPrice)) || Number(tour.discountPrice) < 0) {
         throw new Error('Invalid catalogue price');
       }

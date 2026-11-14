@@ -1284,6 +1284,13 @@ export default function TourPageClient({ tour, relatedTours, initialReviews = []
 
   const handleQuickAdd = async () => {
     if (isAdding) return;
+    // A tour sold through options has no price or departure until one is
+    // chosen, so "quick add" opens the booking panel instead of adding a line
+    // checkout cannot honour.
+    if (Array.isArray(tour.bookingOptions) && tour.bookingOptions.length > 0) {
+      setBookingSidebarOpen(true);
+      return;
+    }
     setIsAdding(true);
     setLiveMessage('Adding tour to cart');
 
