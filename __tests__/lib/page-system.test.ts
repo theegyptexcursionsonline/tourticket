@@ -74,7 +74,8 @@ describe('page-system helpers', () => {
     expect(source).toContain("import ContentBreadcrumbs from '@/components/navigation/ContentBreadcrumbs';");
     expect(source).toContain("import { buildContentBreadcrumbs } from '@/lib/content/breadcrumbs';");
     expect(source).toContain('parentPage: tour.parentPage');
-    expect(source).toContain("rootLabel: 'Tours'");
+    expect(source).toContain("rootLabel: t('tourPage.rootLabel')");
+    expect(source).toContain("homeLabel: t('tourPage.home')");
     expect(source).toContain("rootHref: '/search'");
     expect(source).toContain('<ContentBreadcrumbs items={breadcrumbs} />');
     expect(source).not.toContain('<nav className="flex items-center gap-1.5 text-xs">');
