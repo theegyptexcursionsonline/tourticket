@@ -1,3 +1,4 @@
+import { useTranslations } from 'next-intl';
 import { effectiveTourPrice, percentageOff, type PricedTour } from '@/lib/pricing/effectivePrice';
 
 interface TourPriceDisplayProps {
@@ -24,6 +25,7 @@ export default function TourPriceDisplay({
   originalClassName = 'text-slate-500 line-through text-lg',
   showPerPerson = true,
 }: TourPriceDisplayProps) {
+  const t = useTranslations();
   const pricing = effectiveTourPrice(tour);
   const discount = percentageOff(pricing.originalPrice, pricing.price);
 
@@ -34,13 +36,13 @@ export default function TourPriceDisplay({
           <span className={originalClassName}>{formatPrice(pricing.originalPrice)}</span>
           {discount > 0 && (
             <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-bold text-red-700">
-              {discount}% OFF
+              {t('tourPage.percentOff', { discount })}
             </span>
           )}
         </div>
       )}
       <span className={priceClassName}>{formatPrice(pricing.price)}</span>
-      {showPerPerson && <span className="text-sm text-slate-500">per person</span>}
+      {showPerPerson && <span className="text-sm text-slate-500">{t('tourPage.perPerson')}</span>}
     </div>
   );
 }

@@ -247,6 +247,17 @@ interface BookingData {
   };
 }
 
+// The four built-in extra categories are interface words; any other category is
+// the business's own text and is shown as written.
+const ADD_ON_CATEGORY_KEYS: Record<string, string> = {
+  Transport: 'booking.addOnCategoryTransport',
+  Photography: 'booking.addOnCategoryPhotography',
+  Food: 'booking.addOnCategoryFood',
+  Experience: 'booking.addOnCategoryExperience',
+};
+export const addOnCategoryLabel = (category: string | undefined, t: (key: string) => string) =>
+  category ? (ADD_ON_CATEGORY_KEYS[category] ? t(ADD_ON_CATEGORY_KEYS[category]) : category) : '';
+
 const getAddOnIcon = (category: string) => {
   switch (category) {
     case 'Photography': return Camera;
@@ -1213,7 +1224,7 @@ const AddOnCard: React.FC<{
       {/* Category Badge */}
       <div className="absolute -top-2 left-4">
         <span className={`bg-gradient-to-r ${getCategoryColor(addOn.category || '')} text-white px-3 py-1 rounded-full text-xs font-semibold`}>
-          {addOn.category}
+          {addOnCategoryLabel(addOn.category, t)}
         </span>
       </div>
 
@@ -1945,13 +1956,16 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
         // Transform pre-fetched addOns to the expected format
         addOnsToUse = tour.addOns.map((addon, index) => ({
           id: addon.id || addon._id || `addon-${index}`,
-          title: addon.name || addon.title || 'Tour Enhancement',
-          description: addon.description || 'Enhance your tour experience',
-          price: addon.price || 15,
+          title: addon.name || addon.title || t('booking.extraFallbackTitle'),
+          // Only the extra's own description; no filler text.
+          description: addon.description || '',
+          // Checkout charges the catalogue price (0 included), so show exactly that.
+          price: Number.isFinite(Number(addon.price)) ? Number(addon.price) : 0,
           originalPrice: addon.originalPrice,
           required: addon.required || false,
           maxQuantity: addon.maxQuantity || 1,
-          popular: addon.popular ?? index === 0,
+          // Only extras the business marked as popular carry the badge.
+          popular: addon.popular === true,
           category: (addon.category || 'Experience') as 'Transport' | 'Photography' | 'Food' | 'Experience',
           icon: getAddOnIcon(addon.category || 'Experience'),
           savings: addon.savings,
@@ -1987,7 +2001,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
     } finally {
       setIsLoading(false);
     }
-  }, [generateTimeSlotsFromAvailability, stopSaleDates, tour, tourDisplayData]);
+  }, [generateTimeSlotsFromAvailability, stopSaleDates, tour, tourDisplayData, t]);
 
   // Enhanced price calculations with savings
   const { subtotal, addOnsTotal, total, totalSavings, tourPriceLabel } = useMemo(() => {
@@ -2195,7 +2209,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
       // Scroll to top after step change
       setTimeout(scrollToTop, 100);
     }
-  }, [currentStep, bookingData.selectedTimeSlot, bookingData.selectedDate, scrollToTop, tour.bookingCutoffMinutes]);
+  }, [currentStep, bookingData.selectedTimeSlot, bookingData.selectedDate, scrollToTop, tour.bookingCutoffMinutes, t]);
 
   const handleBack = useCallback(() => {
     if (currentStep > 1) {
@@ -2252,7 +2266,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
 
     setError('');
     fetchAvailability(bookingData.selectedDate);
-  }, [bookingData, tourDisplayData?.maxGroupSize, fetchAvailability, fetchStopSaleDates, stopSaleDates]);
+  }, [bookingData, tourDisplayData?.maxGroupSize, fetchAvailability, fetchStopSaleDates, stopSaleDates, t]);
 
   // Enhanced date selection
   const handleDateSelect = useCallback((date: Date) => {
@@ -2283,7 +2297,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
         icon: '📅'
       });
     }
-  }, [calendarAvailability, hasLoadedStopSales, stopSaleLoadFailed]);
+  }, [calendarAvailability, hasLoadedStopSales, stopSaleLoadFailed, t]);
 
   const handleTimeSlotSelect = useCallback(async (timeSlot: TimeSlot) => {
     if (!bookingData.selectedDate || !isFutureDeparture(toDateOnlyString(bookingData.selectedDate), timeSlot.time, new Date(), tour.bookingCutoffMinutes)) {
@@ -2351,7 +2365,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
         lastToastTimeSlotRef.current = null;
       }, 2100);
     }
-  }, [availability, bookingData.selectedDate, tour]);
+  }, [availability, bookingData.selectedDate, tour, t]);
 
   // Enhanced participant controls
   const handleParticipantChange = useCallback((type: 'adults' | 'children' | 'infants', increment: boolean) => {
@@ -2566,7 +2580,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
         const imageParam = tourDisplayData.image ? `&image=${encodeURIComponent(tourDisplayData.image)}` : '';
         router.push(`/redirecting?to=/checkout&tour=${tourTitle}${imageParam}`);
       } else {
-        toast.success('🎉 Added to Cart! Ready for more adventures?', {
+        toast.success(t('booking.addedToCartMore'), {
           duration: 6000,
           position: 'bottom-center',
           style: { background: '#059669', color: 'white' }
@@ -2574,7 +2588,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
       }
     } catch {
       toast.dismiss(loadingToast);
-      toast.error('Something went wrong. Please try again.');
+      toast.error(t('booking.somethingWentWrong'));
     } finally {
       setIsProcessing(false);
     }
@@ -3020,7 +3034,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
                         </div>
                         <div className="flex-1">
                           <div className="font-semibold text-gray-800 text-sm">{addOn.title}</div>
-                          <div className="text-xs text-gray-500">{addOn.category}{addOn.perGuest && ` · ${addOnUnits} × ${formatPrice(addOn.price)}`}</div>
+                          <div className="text-xs text-gray-500">{addOnCategoryLabel(addOn.category, t)}{addOn.perGuest && ` · ${addOnUnits} × ${formatPrice(addOn.price)}`}</div>
                         </div>
                         <div className="text-right">
                           <div className="font-bold text-purple-600">{formatPrice(totalPrice)}</div>

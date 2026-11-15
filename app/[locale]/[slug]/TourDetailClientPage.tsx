@@ -9,7 +9,7 @@ import {
   Star, Clock, Users, MapPin, Calendar, Heart, Share2, ArrowLeft,
   Check, X, Camera, Shield, ChevronDown, ChevronUp, MessageCircle,
   Phone, Mail, ShoppingCart, Info, CheckCircle,
-  Umbrella, Bus, Utensils, Mountain, Languages,
+  Umbrella, Bus, Utensils, Mountain,
   CreditCard, Navigation, Backpack,
   Sun, Snowflake, Eye, Accessibility,
   Smartphone, Headphones, ChevronLeft,
@@ -210,6 +210,7 @@ const getDisplayTags = (tags?: string[]) => {
 
 // Enhanced Lightbox Component
 const Lightbox = ({ images, selectedIndex, onClose }: { images: string[], selectedIndex: number, onClose: () => void }) => {
+  const t = useTranslations();
   const [currentIndex, setCurrentIndex] = useState(selectedIndex);
 
   const nextImage = useCallback((e?: React.MouseEvent) => {
@@ -244,7 +245,7 @@ const Lightbox = ({ images, selectedIndex, onClose }: { images: string[], select
       <button
         onClick={onClose}
         className="absolute top-4 right-4 text-white hover:text-red-500 transition-colors z-50"
-        aria-label="Close lightbox"
+        aria-label={t('tourPage.closeLightbox')}
       >
         <X size={32} />
       </button>
@@ -268,7 +269,7 @@ const Lightbox = ({ images, selectedIndex, onClose }: { images: string[], select
       <button
         onClick={prevImage}
         className="absolute left-4 top-1/2 -translate-y-1/2 p-2 bg-white/20 rounded-full text-white hover:bg-white/40 transition-colors"
-        aria-label="Previous image"
+        aria-label={t('tourPage.previousImage')}
       >
         <ChevronLeft size={28} />
       </button>
@@ -276,7 +277,7 @@ const Lightbox = ({ images, selectedIndex, onClose }: { images: string[], select
       <button
         onClick={nextImage}
         className="absolute right-4 top-1/2 -translate-y-1/2 p-2 bg-white/20 rounded-full text-white hover:bg-white/40 transition-colors"
-        aria-label="Next image"
+        aria-label={t('tourPage.nextImage')}
       >
         <ChevronRight size={28} />
       </button>
@@ -310,6 +311,7 @@ function useScrollDirection() {
 }
 
 const TabNavigation = ({ activeTab, tabs, scrollToSection, isHeaderVisible }: TabNavigationProps) => {
+  const t = useTranslations();
   const stickyTop = isHeaderVisible ? 'top-16 md:top-20' : 'top-0';
   const navRef = useRef<HTMLDivElement | null>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
@@ -383,7 +385,7 @@ const TabNavigation = ({ activeTab, tabs, scrollToSection, isHeaderVisible }: Ta
         <div className="relative">
           <button
             aria-hidden={!canScrollLeft}
-            aria-label="Scroll tabs left"
+            aria-label={t('tourPage.scrollTabsLeft')}
             onClick={() => scrollBy(-160)}
             className={`absolute left-0 top-1/2 -translate-y-1/2 z-20 p-1 rounded-full bg-white shadow-sm transition-opacity ${canScrollLeft ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
             type="button"
@@ -395,7 +397,7 @@ const TabNavigation = ({ activeTab, tabs, scrollToSection, isHeaderVisible }: Ta
             ref={navRef}
             className="flex gap-2 overflow-x-auto scrollbar-hide px-8 py-2 scroll-smooth"
             role="tablist"
-            aria-label="Tour sections"
+            aria-label={t('tourPage.tourSections')}
           >
             {tabs.map((tab) => (
               <a
@@ -422,7 +424,7 @@ const TabNavigation = ({ activeTab, tabs, scrollToSection, isHeaderVisible }: Ta
 
           <button
             aria-hidden={!canScrollRight}
-            aria-label="Scroll tabs right"
+            aria-label={t('tourPage.scrollTabsRight')}
             onClick={() => scrollBy(160)}
             className={`absolute right-0 top-1/2 -translate-y-1/2 z-20 p-1 rounded-full bg-white shadow-sm transition-opacity ${canScrollRight ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
             type="button"
@@ -455,6 +457,7 @@ const ItineraryIcon = ({ iconType, className = "w-5 h-5" }: { iconType?: string,
 };
 
 const ItinerarySection = ({ itinerary, tourLocation, tourTitle, sectionRef }: { itinerary: ItineraryItem[], tourLocation?: string, tourTitle?: string, sectionRef: React.RefObject<HTMLDivElement | null> }) => {
+  const t = useTranslations();
   // Authored coordinates remain exact. Tours without pins receive a reviewed,
   // destination-scoped approximate route without a per-view geocoder call.
   // Recomputed only when the itinerary changes, not on every scroll tick.
@@ -477,7 +480,7 @@ const ItinerarySection = ({ itinerary, tourLocation, tourTitle, sectionRef }: { 
     <div ref={sectionRef} id="itinerary" className="space-y-6 scroll-mt-40">
       <h3 className="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">
         <Clock size={24} className="text-red-600" />
-        Detailed Itinerary
+        {t('tourPage.detailedItinerary')}
       </h3>
 
       {/* Split Layout: Itinerary Items + authored or approximate auto-map */}
@@ -599,6 +602,7 @@ const ItinerarySection = ({ itinerary, tourLocation, tourTitle, sectionRef }: { 
 };
 
 const PracticalInfoSection = ({ enhancement, sectionRef }: { enhancement: TourEnhancement, sectionRef: React.RefObject<HTMLDivElement | null> }) => {
+  const t = useTranslations();
   const hasBring = (enhancement.whatToBring?.length ?? 0) > 0;
   const hasWear = (enhancement.whatToWear?.length ?? 0) > 0;
   const hasContent = hasBring || hasWear || Boolean(enhancement.physicalRequirements)
@@ -611,7 +615,7 @@ const PracticalInfoSection = ({ enhancement, sectionRef }: { enhancement: TourEn
   <div ref={sectionRef} id="practical" className="space-y-8 scroll-mt-40">
     <h3 className="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">
       <Backpack size={24} className="text-blue-600" />
-      Practical Information
+      {t('tourPage.practicalInformation')}
     </h3>
     {(hasBring || hasWear) && (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:items-start">
@@ -619,7 +623,7 @@ const PracticalInfoSection = ({ enhancement, sectionRef }: { enhancement: TourEn
       <div className="bg-slate-50 p-6 rounded-xl">
         <h4 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
           <Backpack size={20} className="text-blue-600" />
-          What to Bring
+          {t('tourPage.whatToBring')}
         </h4>
         <ul className="space-y-2">
           {enhancement.whatToBring?.map((item, index) => (
@@ -636,7 +640,7 @@ const PracticalInfoSection = ({ enhancement, sectionRef }: { enhancement: TourEn
       <div className="bg-slate-50 p-6 rounded-xl">
         <h4 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
           <Sun size={20} className="text-yellow-600" />
-          What to Wear
+          {t('tourPage.whatToWear')}
         </h4>
         <ul className="space-y-2">
           {enhancement.whatToWear?.map((item, index) => (
@@ -655,7 +659,7 @@ const PracticalInfoSection = ({ enhancement, sectionRef }: { enhancement: TourEn
       <div className="bg-blue-50 p-6 rounded-xl border border-blue-200">
         <h4 className="font-bold text-blue-900 mb-3 flex items-center gap-2">
           <Mountain size={20} />
-          Physical Requirements
+          {t('tourPage.physicalRequirements')}
         </h4>
         <p className="text-blue-800 text-sm leading-relaxed">{enhancement.physicalRequirements}</p>
       </div>
@@ -665,7 +669,7 @@ const PracticalInfoSection = ({ enhancement, sectionRef }: { enhancement: TourEn
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:items-start">
         {enhancement.notSuitableFor && enhancement.notSuitableFor.length > 0 && (
           <div className="bg-rose-50 p-6 rounded-xl border border-rose-200">
-            <h4 className="font-bold text-rose-900 mb-4">Not suitable for</h4>
+            <h4 className="font-bold text-rose-900 mb-4">{t('tourPage.notSuitableFor')}</h4>
             <ul className="space-y-2">
               {enhancement.notSuitableFor.map((item, index) => (
                 <li key={index} className="flex items-start gap-2 text-sm text-rose-800">
@@ -678,7 +682,7 @@ const PracticalInfoSection = ({ enhancement, sectionRef }: { enhancement: TourEn
         )}
         {enhancement.needToKnow && enhancement.needToKnow.length > 0 && (
           <div className="bg-amber-50 p-6 rounded-xl border border-amber-200">
-            <h4 className="font-bold text-amber-900 mb-4">Need to know</h4>
+            <h4 className="font-bold text-amber-900 mb-4">{t('tourPage.needToKnow')}</h4>
             <ul className="space-y-2">
               {enhancement.needToKnow.map((item, index) => (
                 <li key={index} className="flex items-start gap-2 text-sm text-amber-900">
@@ -693,23 +697,13 @@ const PracticalInfoSection = ({ enhancement, sectionRef }: { enhancement: TourEn
     ) : null}
 
     {enhancement.groupSize && (
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 gap-4">
         <div className="text-center p-4 bg-white border border-slate-200 rounded-lg">
           <Users size={24} className="text-slate-600 mx-auto mb-2" />
           <div className="font-bold text-lg text-slate-800">
             {enhancement.groupSize.min}-{enhancement.groupSize.max}
           </div>
-          <div className="text-sm text-slate-500">Participants</div>
-        </div>
-        <div className="text-center p-4 bg-white border border-slate-200 rounded-lg">
-          <Languages size={24} className="text-slate-600 mx-auto mb-2" />
-          <div className="font-bold text-lg text-slate-800">Multi</div>
-          <div className="text-sm text-slate-500">Languages</div>
-        </div>
-        <div className="text-center p-4 bg-white border border-slate-200 rounded-lg">
-          <Shield size={24} className="text-slate-600 mx-auto mb-2" />
-          <div className="font-bold text-lg text-slate-800">Safe</div>
-          <div className="text-sm text-slate-500">& Secure</div>
+          <div className="text-sm text-slate-500">{t('tourPage.participants')}</div>
         </div>
       </div>
     )}
@@ -718,6 +712,7 @@ const PracticalInfoSection = ({ enhancement, sectionRef }: { enhancement: TourEn
 };
 
 const AccessibilitySection = ({ enhancement, sectionRef }: { enhancement: TourEnhancement, sectionRef: React.RefObject<HTMLDivElement | null> }) => {
+  const t = useTranslations();
   const hasAccess = (enhancement.accessibilityInfo?.length ?? 0) > 0;
   const hasSafety = (enhancement.healthSafety?.length ?? 0) > 0;
   if (!hasAccess && !hasSafety && !enhancement.transportationDetails) return null;
@@ -726,14 +721,14 @@ const AccessibilitySection = ({ enhancement, sectionRef }: { enhancement: TourEn
   <div ref={sectionRef} id="accessibility" className="space-y-6 scroll-mt-40">
     <h3 className="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">
       <Accessibility size={24} className="text-purple-600" />
-      Accessibility & Special Requirements
+      {t('tourPage.accessibilityTitle')}
     </h3>
 
     {(hasAccess || hasSafety) && (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:items-start">
       {hasAccess && (
       <div className="bg-purple-50 p-6 rounded-xl">
-        <h4 className="font-bold text-purple-900 mb-4">Accessibility Information</h4>
+        <h4 className="font-bold text-purple-900 mb-4">{t('tourPage.accessibilityInformation')}</h4>
         <ul className="space-y-3">
           {enhancement.accessibilityInfo?.map((item, index) => (
             <li key={index} className="flex items-start gap-3 text-sm text-purple-800">
@@ -747,7 +742,7 @@ const AccessibilitySection = ({ enhancement, sectionRef }: { enhancement: TourEn
 
       {hasSafety && (
       <div className="bg-green-50 p-6 rounded-xl">
-        <h4 className="font-bold text-green-900 mb-4">Health & Safety Measures</h4>
+        <h4 className="font-bold text-green-900 mb-4">{t('tourPage.healthSafety')}</h4>
         <ul className="space-y-3">
           {enhancement.healthSafety?.map((item, index) => (
             <li key={index} className="flex items-start gap-3 text-sm text-green-800">
@@ -765,7 +760,7 @@ const AccessibilitySection = ({ enhancement, sectionRef }: { enhancement: TourEn
       <div className="bg-slate-50 p-6 rounded-xl">
         <h4 className="font-bold text-slate-800 mb-3 flex items-center gap-2">
           <Bus size={20} className="text-blue-600" />
-          Transportation Details
+          {t('tourPage.transportationDetails')}
         </h4>
         <p className="text-slate-700 text-sm leading-relaxed">{enhancement.transportationDetails}</p>
       </div>
@@ -775,14 +770,15 @@ const AccessibilitySection = ({ enhancement, sectionRef }: { enhancement: TourEn
 };
 
 const PoliciesSection = ({ enhancement, sectionRef }: { enhancement: TourEnhancement, sectionRef: React.RefObject<HTMLDivElement | null> }) => {
+  const t = useTranslations();
   const policies = [
-    { key: 'weather', value: enhancement.weatherPolicy, title: 'Weather Policy', icon: Umbrella,
+    { key: 'weather', value: enhancement.weatherPolicy, title: t('tourPage.weatherPolicy'), icon: Umbrella,
       wrap: 'bg-sky-50', head: 'text-sky-900', tint: 'text-sky-600', body: 'text-sky-800' },
-    { key: 'photo', value: enhancement.photoPolicy, title: 'Photography Policy', icon: Camera,
+    { key: 'photo', value: enhancement.photoPolicy, title: t('tourPage.photoPolicy'), icon: Camera,
       wrap: 'bg-pink-50', head: 'text-pink-900', tint: 'text-pink-600', body: 'text-pink-800' },
-    { key: 'tip', value: enhancement.tipPolicy, title: 'Gratuity Policy', icon: CreditCard,
+    { key: 'tip', value: enhancement.tipPolicy, title: t('tourPage.tipPolicy'), icon: CreditCard,
       wrap: 'bg-yellow-50', head: 'text-yellow-900', tint: 'text-yellow-600', body: 'text-yellow-800' },
-    { key: 'meal', value: enhancement.mealInfo, title: 'Meal Information', icon: Utensils,
+    { key: 'meal', value: enhancement.mealInfo, title: t('tourPage.mealInfo'), icon: Utensils,
       wrap: 'bg-orange-50', head: 'text-orange-900', tint: 'text-orange-600', body: 'text-orange-800' },
   ].filter((policy) => Boolean(policy.value));
 
@@ -792,7 +788,7 @@ const PoliciesSection = ({ enhancement, sectionRef }: { enhancement: TourEnhance
   <div ref={sectionRef} id="policies" className="space-y-6 scroll-mt-40">
     <h3 className="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">
       <Shield size={24} className="text-red-600" />
-      Policies
+      {t('tourPage.policies')}
     </h3>
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:items-start">
       {policies.map(({ key, value, title, icon: Icon, wrap, head, tint, body }) => (
@@ -810,6 +806,7 @@ const PoliciesSection = ({ enhancement, sectionRef }: { enhancement: TourEnhance
 };
 
 const CulturalSection = ({ enhancement, sectionRef }: { enhancement: TourEnhancement, sectionRef: React.RefObject<HTMLDivElement | null> }) => {
+  const t = useTranslations();
   const hasHighlights = (enhancement.culturalInfo?.length ?? 0) > 0;
   const hasCustoms = (enhancement.localCustoms?.length ?? 0) > 0;
   if (!hasHighlights && !hasCustoms && !enhancement.seasonalVariations) return null;
@@ -818,7 +815,7 @@ const CulturalSection = ({ enhancement, sectionRef }: { enhancement: TourEnhance
   <div ref={sectionRef} id="cultural" className="space-y-6 scroll-mt-40">
     <h3 className="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">
       <Heart size={24} className="text-teal-600" />
-      Cultural Information
+      {t('tourPage.culturalInformation')}
     </h3>
     {(hasHighlights || hasCustoms) && (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:items-start">
@@ -826,7 +823,7 @@ const CulturalSection = ({ enhancement, sectionRef }: { enhancement: TourEnhance
       <div className="bg-indigo-50 p-6 rounded-xl">
         <h4 className="font-bold text-indigo-900 mb-4 flex items-center gap-2">
           <Eye size={20} className="text-indigo-600" />
-          Cultural Highlights
+          {t('tourPage.culturalHighlights')}
         </h4>
         <ul className="space-y-2">
           {enhancement.culturalInfo?.map((item, index) => (
@@ -843,7 +840,7 @@ const CulturalSection = ({ enhancement, sectionRef }: { enhancement: TourEnhance
       <div className="bg-teal-50 p-6 rounded-xl">
         <h4 className="font-bold text-teal-900 mb-4 flex items-center gap-2">
           <Heart size={20} className="text-teal-600" />
-          Local Customs & Etiquette
+          {t('tourPage.localCustoms')}
         </h4>
         <ul className="space-y-2">
           {enhancement.localCustoms?.map((item, index) => (
@@ -862,7 +859,7 @@ const CulturalSection = ({ enhancement, sectionRef }: { enhancement: TourEnhance
       <div className="bg-slate-50 p-6 rounded-xl">
         <h4 className="font-bold text-slate-800 mb-3 flex items-center gap-2">
           <Snowflake size={20} className="text-slate-600" />
-          Seasonal Variations
+          {t('tourPage.seasonalVariations')}
         </h4>
         <p className="text-slate-700 text-sm leading-relaxed">{enhancement.seasonalVariations}</p>
       </div>
@@ -872,6 +869,7 @@ const CulturalSection = ({ enhancement, sectionRef }: { enhancement: TourEnhance
 };
 
 const EnhancedFAQ = ({ faqs, sectionRef }: { faqs: FAQ[], sectionRef: React.RefObject<HTMLDivElement | null> }) => {
+  const t = useTranslations();
   const [openFaq, setOpenFaq] = useState<number | null>(null);
 
   const faqsToShow = (faqs || []).filter((faq) => faq?.question?.trim() && faq?.answer?.trim());
@@ -884,7 +882,7 @@ const EnhancedFAQ = ({ faqs, sectionRef }: { faqs: FAQ[], sectionRef: React.RefO
     <div ref={sectionRef} id="faq" className="space-y-4 scroll-mt-40">
       <h3 className="text-xl font-bold text-slate-800 mb-6 flex items-center gap-2">
         <MessageCircle size={24} className="text-orange-600" />
-        Frequently Asked Questions
+        {t('tourPage.faqTitle')}
       </h3>
       {faqsToShow.map((faq, index) => (
         <div key={index} className="border border-slate-200 rounded-lg">
@@ -917,6 +915,7 @@ const ReviewsSection = ({ tour, reviews, onReviewSubmitted, sectionRef, onBookNo
   sectionRef: React.RefObject<HTMLDivElement | null>,
   onBookNow: () => void,
 }) => {
+  const t = useTranslations();
   const [currentReviews, setCurrentReviews] = useState<Review[]>(reviews);
 
   const handleReviewUpdated = (updatedReview: Review) => {
@@ -948,7 +947,7 @@ const ReviewsSection = ({ tour, reviews, onReviewSubmitted, sectionRef, onBookNo
   return (
     <div ref={sectionRef} id="reviews" className="space-y-6 scroll-mt-40">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-slate-800">Reviews</h2>
+        <h2 className="text-2xl font-bold text-slate-800">{t('tourPage.reviews')}</h2>
         {averageRating && (
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-1">
@@ -984,6 +983,7 @@ const ReviewsSection = ({ tour, reviews, onReviewSubmitted, sectionRef, onBookNo
 };
 
 const ExperienceDescription = ({ html }: { html: string }) => {
+  const t = useTranslations();
   const [isExpanded, setIsExpanded] = useState(false);
 
   return (
@@ -1003,7 +1003,7 @@ const ExperienceDescription = ({ html }: { html: string }) => {
         className="mt-3 inline-flex min-h-11 items-center rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-800 transition-colors hover:border-slate-400 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
         aria-expanded={isExpanded}
       >
-        {isExpanded ? 'Show less' : 'Read full description'}
+        {isExpanded ? t('tourPage.showLess') : t('tourPage.readFullDescription')}
       </button>
     </div>
   );
@@ -1031,12 +1031,14 @@ const mergeContentLists = (...lists: Array<string[] | undefined>): string[] => {
   return merged;
 };
 
-const OverviewSection = ({ tour, sectionRef }: { tour: ITour, sectionRef: React.RefObject<HTMLDivElement | null> }) => (
+const OverviewSection = ({ tour, sectionRef }: { tour: ITour, sectionRef: React.RefObject<HTMLDivElement | null> }) => {
+  const t = useTranslations();
+  return (
   <div ref={sectionRef} id="overview" className="space-y-8 scroll-mt-40">
     <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm md:p-8">
       <div className="mb-6">
-        <p className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-red-600">The experience</p>
-        <h2 className="text-2xl font-bold tracking-tight text-slate-900 md:text-3xl">About this experience</h2>
+        <p className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-red-600">{t('tourPage.theExperience')}</p>
+        <h2 className="text-2xl font-bold tracking-tight text-slate-900 md:text-3xl">{t('tourPage.aboutThisExperience')}</h2>
       </div>
       <ExperienceDescription html={formatExperienceDescription(sanitizeRichHtml(tour.longDescription || tour.description))} />
       <div className="grid grid-cols-1 gap-4 border-t border-slate-200 pt-7 md:grid-cols-2 md:gap-5">
@@ -1076,7 +1078,7 @@ const OverviewSection = ({ tour, sectionRef }: { tour: ITour, sectionRef: React.
           <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-5">
             <h3 className="mb-4 flex items-center gap-2.5 text-lg font-semibold text-slate-900">
               <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-50"><Star size={18} className="fill-current text-amber-500" /></span>
-              Highlights
+              {t('tourPage.highlights')}
             </h3>
             <ul className="space-y-3">
               {tour.highlights.map((highlight, index) => (
@@ -1090,25 +1092,21 @@ const OverviewSection = ({ tour, sectionRef }: { tour: ITour, sectionRef: React.
         )}
       </div>
     </div>
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       <div className="bg-slate-50 p-5 rounded-lg text-center border border-slate-100">
         <Calendar className="w-8 h-8 text-red-600 mx-auto mb-2" />
-        <h3 className="font-semibold text-slate-900">Cancellation & refunds</h3>
+        <h3 className="font-semibold text-slate-900">{t('tourPage.cancellationRefunds')}</h3>
         <p className="text-sm text-slate-600">{CANCELLATION_POLICY_SUMMARY}</p>
       </div>
       <div className="bg-slate-50 p-5 rounded-lg text-center border border-slate-100">
-        <Users className="w-8 h-8 text-red-600 mx-auto mb-2" />
-        <h3 className="font-semibold text-slate-900">Group Friendly</h3>
-        <p className="text-sm text-slate-600">Perfect for all group sizes</p>
-      </div>
-      <div className="bg-slate-50 p-5 rounded-lg text-center border border-slate-100">
         <Smartphone className="w-8 h-8 text-red-600 mx-auto mb-2" />
-        <h3 className="font-semibold text-slate-900">Mobile Ticket</h3>
-        <p className="text-sm text-slate-600">Show on your smartphone</p>
+        <h3 className="font-semibold text-slate-900">{t('tourPage.mobileTicket')}</h3>
+        <p className="text-sm text-slate-600">{t('tourPage.mobileTicketHint')}</p>
       </div>
     </div>
   </div>
-);
+  );
+};
 
 // Main interface
 interface TourPageClientProps {
@@ -1125,15 +1123,16 @@ interface TourPageClientProps {
 
 // Main TourPageClient component
 export default function TourPageClient({ tour, relatedTours, initialReviews = [], initialStopSaleDates }: TourPageClientProps) {
+  const t = useTranslations();
   const breadcrumbs = buildContentBreadcrumbs({
     currentTitle: tour.title,
     breadcrumbLabel: tour.breadcrumbLabel,
     parentPage: tour.parentPage,
-    rootLabel: 'Tours',
+    rootLabel: t('tourPage.rootLabel'),
+    homeLabel: t('tourPage.home'),
     rootHref: '/search',
   });
   const router = useRouter();
-  const t = useTranslations();
   const locale = useLocale();
   const { formatPrice } = useSettings();
   const tourBasePricing = effectiveTourPrice(tour);
@@ -1148,17 +1147,17 @@ export default function TourPageClient({ tour, relatedTours, initialReviews = []
 
   const handleReviewSubmitted = (newReview: Review) => {
     setReviews(prevReviews => [newReview, ...prevReviews]);
-    toast.success('Review submitted successfully!');
+    toast.success(t('tourPage.reviewSubmitted'));
   };
 
   const handleWishlistToggle = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (tourIsWishlisted) {
       removeFromWishlist(String(tour._id));
-      toast.success('Removed from wishlist');
+      toast.success(t('tourPage.removedFromWishlist'));
     } else {
       addToWishlist(tour as unknown as WishlistTour);
-      toast.success('Added to wishlist!');
+      toast.success(t('tourPage.addedToWishlist'));
     }
   };
 
@@ -1179,9 +1178,9 @@ export default function TourPageClient({ tour, relatedTours, initialReviews = []
     } else {
       try {
         await navigator.clipboard.writeText(window.location.href);
-        toast.success('Tour link copied to clipboard!');
+        toast.success(t('tourPage.linkCopied'));
       } catch {
-        toast.error('Could not copy link.');
+        toast.error(t('tourPage.linkCopyFailed'));
       }
     }
   };
@@ -1270,19 +1269,19 @@ export default function TourPageClient({ tour, relatedTours, initialReviews = []
     values.some((value) => Array.isArray(value) ? value.length > 0 : Boolean(value));
 
   const tabs = [
-    { id: 'overview', label: 'Overview', icon: Eye, show: true },
-    { id: 'itinerary', label: 'Itinerary', icon: Clock, show: (enhancement.itinerary?.length ?? 0) > 0 },
-    { id: 'practical', label: 'What to Know', icon: Backpack,
+    { id: 'overview', label: t('tourPage.tab.overview'), icon: Eye, show: true },
+    { id: 'itinerary', label: t('tourPage.tab.itinerary'), icon: Clock, show: (enhancement.itinerary?.length ?? 0) > 0 },
+    { id: 'practical', label: t('tourPage.tab.practical'), icon: Backpack,
       show: hasAny(enhancement.whatToBring, enhancement.whatToWear, enhancement.physicalRequirements,
         enhancement.notSuitableFor, enhancement.needToKnow, enhancement.groupSize) },
-    { id: 'accessibility', label: 'Accessibility', icon: Accessibility,
+    { id: 'accessibility', label: t('tourPage.tab.accessibility'), icon: Accessibility,
       show: hasAny(enhancement.accessibilityInfo, enhancement.healthSafety, enhancement.transportationDetails) },
-    { id: 'policies', label: 'Policies', icon: Shield,
+    { id: 'policies', label: t('tourPage.tab.policies'), icon: Shield,
       show: hasAny(enhancement.weatherPolicy, enhancement.photoPolicy, enhancement.tipPolicy, enhancement.mealInfo) },
-    { id: 'cultural', label: 'Cultural Info', icon: Heart,
+    { id: 'cultural', label: t('tourPage.tab.cultural'), icon: Heart,
       show: hasAny(enhancement.culturalInfo, enhancement.localCustoms, enhancement.seasonalVariations) },
-    { id: 'reviews', label: 'Reviews', icon: Star, show: true },
-    { id: 'faq', label: 'FAQ', icon: MessageCircle,
+    { id: 'reviews', label: t('tourPage.tab.reviews'), icon: Star, show: true },
+    { id: 'faq', label: t('tourPage.tab.faq'), icon: MessageCircle,
       show: (tour.faq || []).some((faq) => faq?.question?.trim() && faq?.answer?.trim()) }
   ].filter((tab) => tab.show);
 
@@ -1296,7 +1295,7 @@ export default function TourPageClient({ tour, relatedTours, initialReviews = []
       return;
     }
     setIsAdding(true);
-    setLiveMessage('Adding tour to cart');
+    setLiveMessage(t('tourPage.addingToCart'));
 
     try {
       const quickAddCartItem: CartItem = {
@@ -1312,14 +1311,14 @@ export default function TourPageClient({ tour, relatedTours, initialReviews = []
       };
       addToCart(quickAddCartItem);
       setAdded(true);
-      setLiveMessage('Added to cart');
+      setLiveMessage(t('tourPage.addedToCart'));
 
       setTimeout(() => {
         setAdded(false);
       }, 2500);
     } catch (err: unknown) {
       console.error('Add to cart failed:', err);
-      setLiveMessage('Failed to add to cart. Please try again.');
+      setLiveMessage(t('tourPage.addToCartFailed'));
       setTimeout(() => {
         setLiveMessage('');
       }, 2500);
@@ -1361,8 +1360,8 @@ export default function TourPageClient({ tour, relatedTours, initialReviews = []
                 className="inline-flex items-center gap-1.5 text-red-600 font-semibold text-sm hover:underline transition-colors whitespace-nowrap"
               >
                 <ArrowLeft size={16} />
-                <span className="hidden sm:inline">Back to all tours</span>
-                <span className="sm:hidden">Back</span>
+                <span className="hidden sm:inline">{t('tourPage.backToAllTours')}</span>
+                <span className="sm:hidden">{t('tourPage.back')}</span>
               </Link>
             </div>
           </div>
@@ -1399,14 +1398,14 @@ export default function TourPageClient({ tour, relatedTours, initialReviews = []
                           : 'bg-white/80 text-slate-600 hover:bg-white hover:text-red-600'
                       }`}
                       aria-pressed={tourIsWishlisted}
-                      aria-label={tourIsWishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
+                      aria-label={tourIsWishlisted ? t('tourPage.removeFromWishlist') : t('tourPage.addToWishlist')}
                     >
                       <Heart size={20} fill={tourIsWishlisted ? 'currentColor' : 'none'} />
                     </button>
                     <button
                       onClick={handleShare}
                       className="p-3 bg-white/80 backdrop-blur-sm rounded-full text-slate-600 hover:bg-white hover:text-slate-800 transition-colors shadow-sm"
-                      aria-label="Share"
+                      aria-label={t('tourPage.share')}
                     >
                       <Share2 size={20} />
                     </button>
@@ -1463,7 +1462,7 @@ export default function TourPageClient({ tour, relatedTours, initialReviews = []
                       </div>
                       <div className="flex items-center gap-1">
                         <MapPin size={16} />
-                        <span>{typeof tour.destination === 'string' ? tour.destination : (tour.destination as unknown as { name?: string })?.name || 'Destination'}</span>
+                        <span>{typeof tour.destination === 'string' ? tour.destination : (tour.destination as unknown as { name?: string })?.name || t('tourPage.destination')}</span>
                       </div>
                     </div>
                   </div>
@@ -1507,7 +1506,7 @@ export default function TourPageClient({ tour, relatedTours, initialReviews = []
 
               {tour.meetingPoint && meetingMapHref && meetingMapEmbed && (
                 <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-                  <h2 className="text-2xl font-bold text-slate-800 mb-4">Meeting point</h2>
+                  <h2 className="text-2xl font-bold text-slate-800 mb-4">{t('tourPage.meetingPoint')}</h2>
                   <div className="space-y-4">
                     <div className="flex items-start gap-4">
                       <MapPin className="text-red-600 mt-1 flex-shrink-0" size={20} />
@@ -1521,7 +1520,7 @@ export default function TourPageClient({ tour, relatedTours, initialReviews = []
                           className="text-red-600 hover:underline text-sm font-medium mt-2 inline-flex items-center gap-1"
                         >
                           <Navigation size={14} />
-                          Open in Google Maps
+                          {t('tourPage.openInMaps')}
                         </a>
                       </div>
                     </div>
@@ -1545,7 +1544,7 @@ export default function TourPageClient({ tour, relatedTours, initialReviews = []
 
               {relatedTours.length > 0 && (
                 <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-                  <h2 className="text-2xl font-bold text-slate-800 mb-6">You might also like</h2>
+                  <h2 className="text-2xl font-bold text-slate-800 mb-6">{t('tourPage.youMightAlsoLike')}</h2>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     {relatedTours.map((relatedTour) => (
                       <Link key={String(relatedTour._id)} href={contentPath('tour', relatedTour.slug, relatedTour.urlType, (relatedTour.destination as { slug?: string } | undefined)?.slug)} className="group">
@@ -1616,17 +1615,13 @@ export default function TourPageClient({ tour, relatedTours, initialReviews = []
                     {ratingLabel(tour.rating, reviews) && (
                       <div className="flex items-center gap-3 text-slate-600">
                         <Star size={20} className="text-yellow-500" />
-                        <span>Rating: {ratingLabel(tour.rating, reviews)}</span>
+                        <span>{t('tourPage.ratingLabel', { rating: ratingLabel(tour.rating, reviews) ?? '' })}</span>
                       </div>
                     )}
-                    <div className="flex items-center gap-3 text-slate-600">
-                      <Users size={20} className="text-blue-500" />
-                      <span>Available daily</span>
-                    </div>
                     {enhancement.groupSize && (
                       <div className="flex items-center gap-3 text-slate-600">
                         <Users size={20} className="text-green-500" />
-                        <span>Group size: {enhancement.groupSize.min}-{enhancement.groupSize.max} people</span>
+                        <span>{t('tourPage.groupSize', { min: enhancement.groupSize.min, max: enhancement.groupSize.max })}</span>
                       </div>
                     )}
                   </div>
@@ -1688,19 +1683,15 @@ export default function TourPageClient({ tour, relatedTours, initialReviews = []
                     <div className="grid grid-cols-2 gap-4 text-sm text-slate-500">
                       <div className="flex items-center gap-2">
                         <CheckCircle size={16} className="text-green-600" />
-                        <span>Tiered refunds</span>
+                        <span>{t('tour.tieredRefunds')}</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <Smartphone size={16} className="text-blue-600" />
-                        <span>Mobile ticket</span>
+                        <span>{t('tourPage.mobileTicket')}</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <Shield size={16} className="text-purple-600" />
-                        <span>Safe & secure</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Languages size={16} className="text-orange-600" />
-                        <span>Multi-language</span>
+                        <span>{t('tourPage.securePayment')}</span>
                       </div>
                     </div>
                   </div>
@@ -1709,7 +1700,7 @@ export default function TourPageClient({ tour, relatedTours, initialReviews = []
                 <div className="bg-slate-50 rounded-xl p-6">
                   <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
                     <Headphones size={20} className="text-blue-600" />
-                    Need help?
+                    {t('tourPage.needHelp')}
                   </h3>
                   <div className="space-y-3">
                     <button 
@@ -1719,7 +1710,7 @@ export default function TourPageClient({ tour, relatedTours, initialReviews = []
                         // (EEOSearchConcierge shows panels a visitor asked for).
                         askHostedAISearch(
                           {
-                            query: `Tell me more about ${tour.title}`,
+                            query: t('tourPage.askAboutTourQuery', { title: tour.title }),
                             locale: document.documentElement.lang.split('-')[0],
                           },
                           (href) => router.push(href),
@@ -1728,7 +1719,7 @@ export default function TourPageClient({ tour, relatedTours, initialReviews = []
                       className="flex items-center gap-3 text-slate-600 hover:text-red-600 transition-colors w-full text-left"
                     >
                       <MessageCircle size={18} />
-                      <span>Ask AI about this tour</span>
+                      <span>{t('tourPage.askAboutTour')}</span>
                     </button>
                     <a href="tel:+201142255624" className="flex items-center gap-3 text-slate-600 hover:text-red-600 transition-colors">
                       <Phone size={18} />
@@ -1736,11 +1727,8 @@ export default function TourPageClient({ tour, relatedTours, initialReviews = []
                     </a>
                     <a href="mailto:booking@egypt-excursionsonline.com" className="flex items-center gap-3 text-slate-600 hover:text-red-600 transition-colors">
                       <Mail size={18} />
-                      <span>Email support</span>
+                      <span>{t('tourPage.emailSupport')}</span>
                     </a>
-                  </div>
-                  <div className="mt-4 text-xs text-slate-500">
-                    <p>Available 24/7 • Average response time: 5 minutes</p>
                   </div>
                 </div>
               </div>
