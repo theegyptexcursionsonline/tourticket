@@ -7,6 +7,13 @@ import Destination from '@/lib/models/Destination';
 import Review from '@/lib/models/Review';
 import User from '@/lib/models/user';
 import { escapeRegex } from '@/lib/utils/escapeRegex';
+import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
+import { PUBLIC_CONTENT_FILTER } from '@/lib/content/publicContentFilter';
+
+// The flagship shares its database with the network sites. Every read here is
+// limited to the flagship's own published records; the tenant filter is its own
+// $and clause because Mongo keeps only one top-level $or.
+const FLAGSHIP_PUBLIC = { ...PUBLIC_CONTENT_FILTER, $and: [DEFAULT_TENANT_FILTER] };
 
 interface InterestTour {
   _id: { toString(): string };
@@ -46,17 +53,17 @@ export async function GET(
       .map(word => word.charAt(0).toUpperCase() + word.slice(1))
       .join(' ');
 
-    console.log('Looking for interest:', interestName, 'with slug:', slug);
-
     // Find the category by name or slug
     const category = await Category.findOne({
-      $or: [
-        { slug: slug },
-        { name: { $regex: new RegExp(`^${escapeRegex(interestName)}$`, 'i') } }
-      ]
+      ...PUBLIC_CONTENT_FILTER,
+      $and: [
+        DEFAULT_TENANT_FILTER,
+        { $or: [
+          { slug: slug },
+          { name: { $regex: new RegExp(`^${escapeRegex(interestName)}$`, 'i') } }
+        ] },
+      ],
     }).lean() as unknown as InterestCategory | null;
-
-    console.log('Found category:', category);
 
     let tours: InterestTour[] = [];
     let totalTours = 0;
@@ -64,25 +71,27 @@ export async function GET(
     if (category) {
       // Find tours in this category
       tours = await Tour.find({
+        ...FLAGSHIP_PUBLIC,
         category: { $in: [category._id] },
-        isPublished: true
       })
       .populate({
         path: 'destination',
         model: Destination,
-        select: 'name slug country image description'
+        select: 'name slug country image description',
+        match: DEFAULT_TENANT_FILTER,
       })
       .populate({
         path: 'category',
         model: Category,
-        select: 'name slug'
+        select: 'name slug',
+        match: DEFAULT_TENANT_FILTER,
       })
       .sort({ isFeatured: -1, rating: -1, bookings: -1 })
       .lean() as unknown as InterestTour[];
 
       totalTours = await Tour.countDocuments({
+        ...FLAGSHIP_PUBLIC,
         category: { $in: [category._id] },
-        isPublished: true
       });
     } else {
       // If no exact category match, search by keywords in tours
@@ -106,18 +115,20 @@ export async function GET(
         });
 
         tours = await Tour.find({
-          isPublished: true,
-          $or: searchQueries
+          ...PUBLIC_CONTENT_FILTER,
+          $and: [DEFAULT_TENANT_FILTER, { $or: searchQueries }],
         })
         .populate({
           path: 'destination',
           model: Destination,
-          select: 'name slug country image description'
+          select: 'name slug country image description',
+          match: DEFAULT_TENANT_FILTER,
         })
         .populate({
           path: 'category',
           model: Category,
-          select: 'name slug'
+          select: 'name slug',
+          match: DEFAULT_TENANT_FILTER,
         })
         .sort({ isFeatured: -1, rating: -1, bookings: -1 })
         .limit(50)
@@ -126,8 +137,6 @@ export async function GET(
         totalTours = tours.length;
       }
     }
-
-    console.log('Found tours:', tours.length);
 
     // Fetch reviews for these tours (optimized with limit)
     const tourIds = tours.slice(0, 20).map(tour => tour._id); // Limit to first 20 tours for reviews
@@ -174,14 +183,16 @@ export async function GET(
     tours = tours.map(tour => ({
       ...tour,
       reviewCount: reviewStatsMap[tour._id.toString()]?.count || 0,
-      rating: reviewStatsMap[tour._id.toString()]?.avgRating || tour.rating || 4.5
+      // Only a rating the reviews or the tour record actually carry; never a made-up score.
+      rating: reviewStatsMap[tour._id.toString()]?.avgRating || tour.rating || undefined
     }));
 
     // Get related categories (fetch in parallel if possible, but skip during build)
     let relatedCategories: unknown[] = [];
     if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
       relatedCategories = await Category.find({
-        _id: { $ne: category?._id }
+        ...FLAGSHIP_PUBLIC,
+        _id: { $ne: category?._id },
       }).limit(6).lean();
     }
 
