@@ -13,7 +13,7 @@ import { useSettings } from '@/hooks/useSettings';
 import type { LinkedPageCardData } from '@/components/AttractionLandingPage';
 import { buildContentBreadcrumbs } from '@/lib/content/breadcrumbs';
 import ContentBreadcrumbs from '@/components/navigation/ContentBreadcrumbs';
-import { normalizePageTemplate } from '@/lib/content/pageTemplate';
+import { normalizePageTemplate, type PageTemplate } from '@/lib/content/pageTemplate';
 import { tourContentPath } from '@/lib/content/contentUrl';
 import { imageMetadataFor } from '@/lib/content/imageMetadata';
 import LinkedPageCardsSection from '@/components/content/LinkedPageCardsSection';
@@ -436,6 +436,18 @@ const ReviewsSection = ({ reviews }: { reviews: Review[] }) => {
   );
 };
 
+// Phones and tablets: the hero is sized by its content (title, intro and
+// breadcrumb under the transparent header). The fixed screen-height picture,
+// with the immersive copy pinned to its bottom edge, is a large-screen
+// treatment only; on a phone it left a band of empty picture above the copy
+// and pushed the page's trips a screen further down.
+const CATALOGUE_HERO_HEIGHT: Record<PageTemplate, string> = {
+  immersive: 'lg:h-[84vh]',
+  editorial: 'lg:h-[58vh] lg:min-h-[520px]',
+  classic: 'lg:h-[70vh]',
+};
+const CATALOGUE_HERO_CONTENT_SPACING = 'pt-24 pb-10 sm:pt-28 sm:pb-12 lg:py-0';
+
 export default function AttractionPageTemplate({ page, linkedPages = [] }: AttractionPageTemplateProps) {
   const pageTemplate = normalizePageTemplate(page.pageTemplate);
   const [searchQuery, setSearchQuery] = useState('');
@@ -504,7 +516,7 @@ export default function AttractionPageTemplate({ page, linkedPages = [] }: Attra
     <>
       <main data-page-template={pageTemplate} className={`min-h-screen ${pageTemplate === 'editorial' ? 'bg-[#f7f4ee]' : pageTemplate === 'immersive' ? 'bg-slate-950' : 'bg-gradient-to-br from-slate-50 via-white to-red-50'}`}>
         {/* Enhanced Hero Section */}
-        <section className={`relative overflow-hidden ${pageTemplate === 'immersive' ? 'h-[84vh]' : pageTemplate === 'editorial' ? 'h-[58vh] min-h-[520px]' : 'h-[70vh]'}`}>
+        <section data-catalogue-hero className={`relative overflow-hidden ${CATALOGUE_HERO_HEIGHT[pageTemplate]}`}>
           <div className="absolute inset-0">
             <Image
               src={page.heroImage}
@@ -517,17 +529,17 @@ export default function AttractionPageTemplate({ page, linkedPages = [] }: Attra
             <div className={`absolute inset-0 ${pageTemplate === 'editorial' ? 'bg-gradient-to-r from-black/85 via-black/55 to-black/10' : pageTemplate === 'immersive' ? 'bg-gradient-to-t from-black/90 via-black/20 to-black/10' : 'bg-gradient-to-t from-black/70 via-black/30 to-transparent'}`} />
           </div>
           
-          <div className={`relative z-10 h-full flex ${pageTemplate === 'immersive' ? 'items-end' : 'items-center'} ${pageTemplate === 'editorial' ? 'justify-start' : 'justify-center'}`}>
-            <div className={`${pageTemplate === 'editorial' ? 'text-left max-w-3xl ml-[max(1.5rem,calc((100vw-1280px)/2))]' : 'text-center max-w-5xl mx-auto'} text-white px-6 ${pageTemplate === 'immersive' ? 'pb-16' : ''}`}>
+          <div className={`relative z-10 h-full flex ${CATALOGUE_HERO_CONTENT_SPACING} ${pageTemplate === 'immersive' ? 'items-center lg:items-end' : 'items-center'} ${pageTemplate === 'editorial' ? 'justify-start' : 'justify-center'}`}>
+            <div className={`${pageTemplate === 'editorial' ? 'text-left max-w-3xl ml-[max(1.5rem,calc((100vw-1280px)/2))]' : 'text-center max-w-5xl mx-auto'} min-w-0 text-white px-6 ${pageTemplate === 'immersive' ? 'lg:pb-16' : ''}`}>
               <motion.div
                 initial={{ opacity: 0, y: 50 }}
                 animate={{ opacity: 1, y: 0 }}
                 className="space-y-6"
               >
-                <h1 className={`${pageTemplate === 'immersive' ? 'text-5xl md:text-8xl' : 'text-5xl md:text-7xl'} font-extrabold leading-[1.02] tracking-tight`}>
+                <h1 className={`${pageTemplate === 'immersive' ? 'text-4xl sm:text-5xl md:text-8xl' : 'text-4xl sm:text-5xl md:text-7xl'} font-extrabold leading-[1.02] tracking-tight [overflow-wrap:anywhere]`}>
                   {page.title}
                 </h1>
-                <p className="text-xl md:text-2xl font-medium max-w-3xl mx-auto leading-relaxed">
+                <p className="text-lg sm:text-xl md:text-2xl font-medium max-w-3xl mx-auto leading-relaxed">
                   {page.description}
                 </p>
                 

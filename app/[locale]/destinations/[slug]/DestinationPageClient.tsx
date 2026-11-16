@@ -225,6 +225,24 @@ type DestinationPageCopy = {
   interestsTitle: (destination: string) => string;
   interestsSubtitle: string;
   whyVisitTitle: (destination: string) => string;
+  galleryEyebrow: string;
+  galleryTitle: (destination: string) => string;
+  practicalEyebrow: string;
+  practicalTitle: string;
+  practicalRegion: string;
+  practicalClimate: string;
+  practicalAverageTemperature: string;
+  practicalSummer: string;
+  practicalWinter: string;
+  practicalLanguages: string;
+  practicalGettingThere: string;
+  practicalGettingAround: string;
+  practicalVisa: string;
+  practicalEmergency: string;
+  practicalLocation: string;
+  practicalThingsToDo: string;
+  practicalLocalCustoms: string;
+  practicalWeatherNotes: string;
 };
 
 const destinationPageCopy: Record<'en' | 'ar', DestinationPageCopy> = {
@@ -345,6 +363,24 @@ const destinationPageCopy: Record<'en' | 'ar', DestinationPageCopy> = {
     interestsTitle: (destination: string) => `Discover ${destination} by Interest`,
     interestsSubtitle: `Find the perfect experience for you, whether you're interested in culture, adventure, or food.`,
     whyVisitTitle: (destination: string) => `Why Visit ${destination}?`,
+    galleryEyebrow: 'Destination gallery',
+    galleryTitle: (destination: string) => `See ${destination}`,
+    practicalEyebrow: 'Plan with confidence',
+    practicalTitle: 'Practical information',
+    practicalRegion: 'Region',
+    practicalClimate: 'Climate',
+    practicalAverageTemperature: 'Average temperature',
+    practicalSummer: 'Summer',
+    practicalWinter: 'Winter',
+    practicalLanguages: 'Languages',
+    practicalGettingThere: 'Getting there',
+    practicalGettingAround: 'Getting around',
+    practicalVisa: 'Visa requirements',
+    practicalEmergency: 'Emergency number',
+    practicalLocation: 'Location',
+    practicalThingsToDo: 'Things to do',
+    practicalLocalCustoms: 'Local customs',
+    practicalWeatherNotes: 'Weather notes',
   },
   ar: {
     featured: 'مميز',
@@ -463,6 +499,24 @@ const destinationPageCopy: Record<'en' | 'ar', DestinationPageCopy> = {
     interestsTitle: (destination: string) => `اكتشف ${destination} حسب الاهتمام`,
     interestsSubtitle: 'اعثر على التجربة المناسبة لك، سواء كنت مهتمًا بالثقافة أو المغامرة أو الطعام.',
     whyVisitTitle: (destination: string) => `لماذا تزور ${destination}؟`,
+    galleryEyebrow: 'معرض صور الوجهة',
+    galleryTitle: (destination: string) => `شاهد ${destination}`,
+    practicalEyebrow: 'خطّط رحلتك بثقة',
+    practicalTitle: 'معلومات عملية',
+    practicalRegion: 'المنطقة',
+    practicalClimate: 'المناخ',
+    practicalAverageTemperature: 'متوسط درجات الحرارة',
+    practicalSummer: 'الصيف',
+    practicalWinter: 'الشتاء',
+    practicalLanguages: 'اللغات',
+    practicalGettingThere: 'الوصول إليها',
+    practicalGettingAround: 'التنقل داخلها',
+    practicalVisa: 'متطلبات التأشيرة',
+    practicalEmergency: 'رقم الطوارئ',
+    practicalLocation: 'الموقع',
+    practicalThingsToDo: 'أنشطة يمكنك القيام بها',
+    practicalLocalCustoms: 'العادات المحلية',
+    practicalWeatherNotes: 'ملاحظات عن الطقس',
   },
 };
 
@@ -1742,6 +1796,7 @@ const DestinationHeroSection = ({ destination, tourCount, rtl }: { destination: 
 };
 
 const DestinationGallerySection = ({ destination }: { destination: Destination }) => {
+  const copy = useDestinationPageCopy();
   const images = Array.from(new Set([destination.image, ...(destination.images || [])].filter(Boolean)));
   if (images.length <= 1) return null;
 
@@ -1749,8 +1804,8 @@ const DestinationGallerySection = ({ destination }: { destination: Destination }
     <section className="bg-white py-12 sm:py-16">
       <div className="container mx-auto px-4 max-w-6xl">
         <div className="mb-6 sm:mb-8">
-          <p className="text-xs font-bold uppercase tracking-[0.2em] text-red-600">Destination gallery</p>
-          <h2 className="mt-2 text-2xl sm:text-4xl font-extrabold text-slate-900">See {destination.name}</h2>
+          <p className="text-xs font-bold uppercase tracking-[0.2em] text-red-600">{copy.galleryEyebrow}</p>
+          <h2 className="mt-2 text-2xl sm:text-4xl font-extrabold text-slate-900">{copy.galleryTitle(destination.name)}</h2>
         </div>
         <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
           {images.map((src, index) => {
@@ -1778,21 +1833,22 @@ const DestinationGallerySection = ({ destination }: { destination: Destination }
 };
 
 const DestinationPracticalSection = ({ destination }: { destination: Destination }) => {
+  const copy = useDestinationPageCopy();
   const detailCards = [
-    destination.region && { title: 'Region', value: destination.region, icon: <MapPin className="h-5 w-5" /> },
-    destination.climate && { title: 'Climate', value: destination.climate, icon: <Sun className="h-5 w-5" /> },
+    destination.region && { title: copy.practicalRegion, value: destination.region, icon: <MapPin className="h-5 w-5" /> },
+    destination.climate && { title: copy.practicalClimate, value: destination.climate, icon: <Sun className="h-5 w-5" /> },
     (destination.averageTemperature?.summer || destination.averageTemperature?.winter) && {
-      title: 'Average temperature',
-      value: [destination.averageTemperature?.summer && `Summer: ${destination.averageTemperature.summer}`, destination.averageTemperature?.winter && `Winter: ${destination.averageTemperature.winter}`].filter(Boolean).join(' · '),
+      title: copy.practicalAverageTemperature,
+      value: [destination.averageTemperature?.summer && `${copy.practicalSummer}: ${destination.averageTemperature.summer}`, destination.averageTemperature?.winter && `${copy.practicalWinter}: ${destination.averageTemperature.winter}`].filter(Boolean).join(' · '),
       icon: <Sun className="h-5 w-5" />,
     },
-    destination.languagesSpoken?.length && { title: 'Languages', value: destination.languagesSpoken.join(', '), icon: <Languages className="h-5 w-5" /> },
-    destination.gettingThere && { title: 'Getting there', value: destination.gettingThere, icon: <Compass className="h-5 w-5" /> },
-    destination.gettingAround && { title: 'Getting around', value: destination.gettingAround, icon: <MapPin className="h-5 w-5" /> },
-    destination.visaRequirements && { title: 'Visa requirements', value: destination.visaRequirements, icon: <Shield className="h-5 w-5" /> },
-    destination.emergencyNumber && { title: 'Emergency number', value: destination.emergencyNumber, icon: <Phone className="h-5 w-5" /> },
+    destination.languagesSpoken?.length && { title: copy.practicalLanguages, value: destination.languagesSpoken.join(', '), icon: <Languages className="h-5 w-5" /> },
+    destination.gettingThere && { title: copy.practicalGettingThere, value: destination.gettingThere, icon: <Compass className="h-5 w-5" /> },
+    destination.gettingAround && { title: copy.practicalGettingAround, value: destination.gettingAround, icon: <MapPin className="h-5 w-5" /> },
+    destination.visaRequirements && { title: copy.practicalVisa, value: destination.visaRequirements, icon: <Shield className="h-5 w-5" /> },
+    destination.emergencyNumber && { title: copy.practicalEmergency, value: destination.emergencyNumber, icon: <Phone className="h-5 w-5" /> },
     destination.coordinates && {
-      title: 'Location',
+      title: copy.practicalLocation,
       value: `${destination.coordinates.lat}, ${destination.coordinates.lng}`,
       icon: <MapPin className="h-5 w-5" />,
       href: `https://www.google.com/maps?q=${destination.coordinates.lat},${destination.coordinates.lng}`,
@@ -1800,9 +1856,9 @@ const DestinationPracticalSection = ({ destination }: { destination: Destination
   ].filter(Boolean) as Array<{ title: string; value: string; icon: React.ReactNode; href?: string }>;
 
   const contentGroups = [
-    destination.thingsToDo?.length && { title: 'Things to do', items: destination.thingsToDo },
-    destination.localCustoms?.length && { title: 'Local customs', items: destination.localCustoms },
-    destination.weatherWarnings?.length && { title: 'Weather notes', items: destination.weatherWarnings },
+    destination.thingsToDo?.length && { title: copy.practicalThingsToDo, items: destination.thingsToDo },
+    destination.localCustoms?.length && { title: copy.practicalLocalCustoms, items: destination.localCustoms },
+    destination.weatherWarnings?.length && { title: copy.practicalWeatherNotes, items: destination.weatherWarnings },
   ].filter(Boolean) as Array<{ title: string; items: string[] }>;
 
   if (detailCards.length === 0 && contentGroups.length === 0) return null;
@@ -1811,8 +1867,8 @@ const DestinationPracticalSection = ({ destination }: { destination: Destination
     <section className="bg-slate-50 py-12 sm:py-20">
       <div className="container mx-auto px-4 max-w-6xl">
         <div className="mb-8">
-          <p className="text-xs font-bold uppercase tracking-[0.2em] text-red-600">Plan with confidence</p>
-          <h2 className="mt-2 text-2xl sm:text-4xl font-extrabold text-slate-900">Practical information</h2>
+          <p className="text-xs font-bold uppercase tracking-[0.2em] text-red-600">{copy.practicalEyebrow}</p>
+          <h2 className="mt-2 text-2xl sm:text-4xl font-extrabold text-slate-900">{copy.practicalTitle}</h2>
         </div>
         {detailCards.length > 0 && (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -1860,14 +1916,14 @@ const Top10Card = ({ tour, index, onAddToCartClick }: { tour: Tour, index: numbe
   };
 
   return (
-    <Link href={tourContentPath(tour)} className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-6 p-3 sm:p-4 bg-white hover:bg-slate-50 transition-colors duration-200 group rounded-lg border border-transparent hover:border-slate-200 hover:shadow-lg">
+    <Link href={tourContentPath(tour)} className="min-w-0 flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-6 p-3 sm:p-4 bg-white hover:bg-slate-50 transition-colors duration-200 group rounded-lg border border-transparent hover:border-slate-200 hover:shadow-lg">
       <span className="hidden sm:block text-3xl md:text-4xl font-extrabold text-slate-200 group-hover:text-red-500 transition-colors duration-200">{index + 1}.</span>
       <div className="relative w-full sm:w-20 md:w-24 h-32 sm:h-20 md:h-24 flex-shrink-0 rounded-md overflow-hidden">
         <Image src={tour.image} alt={tour.title} fill className="object-cover" />
         <span className="sm:hidden absolute top-2 left-2 bg-red-500 text-white font-bold text-lg px-3 py-1 rounded-full">{index + 1}</span>
       </div>
-      <div className="flex-1 w-full">
-        <h3 className="text-base sm:text-lg font-semibold text-slate-800 group-hover:text-red-600 transition-colors duration-200 line-clamp-2">{tour.title}</h3>
+      <div className="flex-1 w-full min-w-0">
+        <h3 className="text-base sm:text-lg font-semibold text-slate-800 group-hover:text-red-600 transition-colors duration-200 line-clamp-2 [overflow-wrap:anywhere]">{tour.title}</h3>
         <div className="flex items-center gap-2 mt-1 text-xs sm:text-sm text-slate-500">
           <Clock size={14} />
           <span>{tour.duration}</span>
@@ -1879,7 +1935,7 @@ const Top10Card = ({ tour, index, onAddToCartClick }: { tour: Tour, index: numbe
           <span className="text-red-600 font-bold text-lg sm:text-xl">{formatPrice(displayedPrice)}</span>
         </div>
       </div>
-      <div className="flex sm:flex-col items-center gap-2 ml-auto sm:ml-0">
+      <div className="flex sm:flex-col flex-shrink-0 items-center gap-2 ms-auto sm:ms-0">
         <button
           onClick={handleAddToCart}
           aria-label={copy.bookNow}
@@ -2352,6 +2408,18 @@ const NewsletterSection = ({ destinationName }: { destinationName: string }) => 
   );
 };
 
+// Below lg the page main is a flex column: the hero and then the first trip list
+// (Best deals, or the Top 10 when a destination has no deals) carry this class,
+// so on a phone the trips follow the hero instead of the stats strip and the
+// gallery. Equal order keeps the hero ahead of the trips (source order breaks
+// the tie). Large screens keep the authored section order.
+const PHONE_FIRST = 'order-first lg:order-none';
+
+// Top 10 rows are a horizontal card (rank, photo, text, cart button). Two
+// columns only from lg: at 768 a half-width track left the text no room and the
+// cart buttons stuck out past the edge (the page scrolled sideways 10-26 px).
+const TOP_TOURS_GRID = 'grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-8 max-w-6xl mx-auto';
+
 // --- MAIN COMPONENT ---
 export default function DestinationPageClient({
   destination,
@@ -2402,9 +2470,11 @@ export default function DestinationPageClient({
   return (
     <>
       <Header />
-      <main className="min-h-screen bg-white" dir={rtl ? 'rtl' : 'ltr'}>
-        
-        <DestinationHeroSection destination={destination} tourCount={destinationTours.length} rtl={rtl} />
+      {/* Phones: the first trip list follows the hero (flex order); large screens keep the authored section order. */}
+      <main className="flex min-h-screen flex-col lg:block bg-white" dir={rtl ? 'rtl' : 'ltr'}>
+        <div className={PHONE_FIRST}>
+          <DestinationHeroSection destination={destination} tourCount={destinationTours.length} rtl={rtl} />
+        </div>
 
         <StatsSection destinationTours={destinationTours} />
         
@@ -2434,7 +2504,7 @@ export default function DestinationPageClient({
         <DestinationGallerySection destination={destination} />
         
         {featuredTours.length > 0 && (
-          <section className="py-12 sm:py-20 bg-white overflow-hidden">
+          <section data-destination-best-deals className={`py-12 sm:py-20 bg-white overflow-hidden ${PHONE_FIRST}`}>
             <div className="container mx-auto">
                 <div className="px-4 mb-6 sm:mb-10">
                     <h2 className="text-2xl sm:text-4xl font-extrabold text-slate-900">{copy.featuredSectionTitle(destination.name)}</h2>
@@ -2464,7 +2534,7 @@ export default function DestinationPageClient({
         )}
         
         {top10Tours.length > 0 && (
-          <section className="py-12 sm:py-20 bg-slate-50">
+          <section data-destination-top-tours className={`py-12 sm:py-20 bg-slate-50 ${featuredTours.length === 0 ? PHONE_FIRST : ''}`}>
             <div className="container mx-auto px-4">
               <h2 className="text-2xl sm:text-4xl font-extrabold text-slate-900 text-center mb-3 sm:mb-4">
                 {copy.topToursTitle(destination.name)}
@@ -2472,7 +2542,7 @@ export default function DestinationPageClient({
               <p className="text-center text-base sm:text-lg text-slate-600 mb-8 sm:mb-12">
                 {copy.topToursSubtitle}
               </p>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-8 max-w-6xl mx-auto">
+              <div data-top-tours-grid className={TOP_TOURS_GRID}>
                 {top10Tours.map((tour, index) => (
                   <Top10Card key={tour._id} tour={tour} index={index} onAddToCartClick={handleAddToCartClick} />
                 ))}

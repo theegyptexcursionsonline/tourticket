@@ -72,6 +72,8 @@ type CategoryPageCopy = {
   learnMore: string;
   topPicks: string;
   handpickedTours: string;
+  experienceGallery: string;
+  travelTips: string;
 };
 
 const CATEGORY_PAGE_COPY: Record<'en' | 'ar', CategoryPageCopy> = {
@@ -126,6 +128,8 @@ const CATEGORY_PAGE_COPY: Record<'en' | 'ar', CategoryPageCopy> = {
     learnMore: 'Learn More',
     topPicks: 'Top Picks In This Category',
     handpickedTours: 'Handpicked tours worth shortlisting first',
+    experienceGallery: 'Experience gallery',
+    travelTips: 'Travel tips',
   },
   ar: {
     searchToursPlaceholder: 'ابحث عن الجولات...',
@@ -177,6 +181,8 @@ const CATEGORY_PAGE_COPY: Record<'en' | 'ar', CategoryPageCopy> = {
     learnMore: 'اعرف المزيد',
     topPicks: 'أفضل الاختيارات في هذه الفئة',
     handpickedTours: 'جولات مختارة تستحق أن تبدأ بها',
+    experienceGallery: 'معرض صور التجربة',
+    travelTips: 'نصائح السفر',
   },
 };
 
@@ -626,14 +632,14 @@ const TopPicksSection = ({
   );
 };
 
-const CategoryGallerySection = ({ category }: { category: Category }) => {
+const CategoryGallerySection = ({ category, copy }: { category: Category; copy: CategoryPageCopy }) => {
   if (!category.images || category.images.length === 0) return null;
 
   return (
     <section className="py-12 bg-white">
       <div className="container mx-auto px-4">
         <div className="max-w-7xl mx-auto">
-          <h2 className="text-3xl font-bold text-slate-900 mb-6">Experience gallery</h2>
+          <h2 className="text-3xl font-bold text-slate-900 mb-6">{copy.experienceGallery}</h2>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             {category.images.map((image, index) => {
               const seo = imageMetadataFor(image, category.imageMetadata, `${category.name} experience ${index + 1}`);
@@ -650,14 +656,14 @@ const CategoryGallerySection = ({ category }: { category: Category }) => {
   );
 };
 
-const CategoryTravelTipsSection = ({ category }: { category: Category }) => {
+const CategoryTravelTipsSection = ({ category, copy }: { category: Category; copy: CategoryPageCopy }) => {
   if (!category.travelTips || category.travelTips.length === 0) return null;
 
   return (
     <section className="py-12 bg-slate-50">
       <div className="container mx-auto px-4">
         <div className="max-w-5xl mx-auto">
-          <h2 className="text-3xl font-bold text-slate-900 mb-6">Travel tips</h2>
+          <h2 className="text-3xl font-bold text-slate-900 mb-6">{copy.travelTips}</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {category.travelTips.map((tip, index) => (
               <article key={`${tip.title}-${index}`} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -1051,12 +1057,12 @@ export default function CategoryPageClient({
                 {/* About Section */}
                 <AboutSection category={category} copy={copy} insights={categoryInsights} />
 
-                <CategoryGallerySection category={category} />
+                <CategoryGallerySection category={category} copy={copy} />
 
                 <TopPicksSection tours={topPicks} copy={copy} className={PHONE_TRIPS_FIRST} />
 
 
-                <CategoryTravelTipsSection category={category} />
+                <CategoryTravelTipsSection category={category} copy={copy} />
 
                 <div className={topPicks.length === 0 ? PHONE_TRIPS_FIRST : undefined}>
                 <section

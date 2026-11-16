@@ -355,6 +355,21 @@ const ReviewsSection = ({ reviews }: { reviews: Review[] }) => {
   );
 };
 
+// Phones and tablets: the hero is sized by its content (breadcrumb, badge,
+// title and quick facts). The tall picture with the immersive copy pinned to
+// its bottom edge is a large-screen treatment only; on a phone it left a band
+// of empty picture above the copy and pushed the trips further down.
+const ATTRACTION_HERO_HEIGHT: Record<PageTemplate, string> = {
+  immersive: 'lg:min-h-[76vh]',
+  editorial: 'lg:min-h-[560px]',
+  classic: '',
+};
+const ATTRACTION_HERO_CONTENT: Record<PageTemplate, string> = {
+  immersive: 'items-center py-10 sm:py-12 lg:min-h-[76vh] lg:items-end lg:py-24',
+  editorial: 'items-center py-10 sm:py-12 lg:min-h-[560px] lg:py-20',
+  classic: 'py-10 sm:py-12 md:py-24',
+};
+
 const AttractionLandingPage: React.FC<AttractionLandingPageProps> = ({ attraction, linkedPages }) => {
   const pageTemplate = normalizePageTemplate(attraction.pageTemplate);
   const [searchQuery, setSearchQuery] = useState('');
@@ -412,7 +427,7 @@ const AttractionLandingPage: React.FC<AttractionLandingPageProps> = ({ attractio
   return (
     <main data-page-template={pageTemplate} className={`min-h-screen ${pageTemplate === 'editorial' ? 'bg-[#f7f4ee]' : pageTemplate === 'immersive' ? 'bg-slate-950' : 'bg-white'}`}>
       {/* Clean Hero Section */}
-      <section className={`relative overflow-hidden bg-slate-900 ${pageTemplate === 'immersive' ? 'min-h-[76vh]' : pageTemplate === 'editorial' ? 'min-h-[560px]' : ''}`}>
+      <section data-attraction-hero className={`relative overflow-hidden bg-slate-900 ${ATTRACTION_HERO_HEIGHT[pageTemplate]}`}>
         <div className="absolute inset-0">
           <Image
             src={attraction.heroImage}
@@ -425,11 +440,11 @@ const AttractionLandingPage: React.FC<AttractionLandingPageProps> = ({ attractio
           />
         </div>
         
-        <div className={`relative z-10 container mx-auto flex px-6 ${pageTemplate === 'immersive' ? 'min-h-[76vh] items-end py-16 md:py-24' : pageTemplate === 'editorial' ? 'min-h-[560px] items-center py-20' : 'py-16 md:py-24'}`}>
+        <div className={`relative z-10 container mx-auto flex px-6 ${ATTRACTION_HERO_CONTENT[pageTemplate]}`}>
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
-            className={`${pageTemplate === 'editorial' ? 'max-w-2xl rounded-[2rem] border border-white/15 bg-slate-950/80 p-7 shadow-2xl backdrop-blur-md sm:p-10' : pageTemplate === 'immersive' ? 'max-w-5xl pb-6' : 'max-w-4xl'}`}
+            className={`min-w-0 ${pageTemplate === 'editorial' ? 'max-w-2xl rounded-[2rem] border border-white/15 bg-slate-950/80 p-7 shadow-2xl backdrop-blur-md sm:p-10' : pageTemplate === 'immersive' ? 'max-w-5xl lg:pb-6' : 'max-w-4xl'}`}
           >
             <div className="mb-5"><ContentBreadcrumbs items={breadcrumbs} tone="dark" /></div>
             <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-full px-4 py-1.5 text-sm font-medium text-white mb-6">
@@ -437,7 +452,7 @@ const AttractionLandingPage: React.FC<AttractionLandingPageProps> = ({ attractio
               <span>Popular attraction</span>
             </div>
             
-            <h1 className={`${pageTemplate === 'immersive' ? 'text-5xl md:text-7xl lg:text-8xl' : 'text-4xl md:text-5xl lg:text-6xl'} font-bold text-white mb-6 leading-[1.02] tracking-tight`}>
+            <h1 className={`${pageTemplate === 'immersive' ? 'text-4xl sm:text-5xl md:text-7xl lg:text-8xl' : 'text-4xl md:text-5xl lg:text-6xl'} font-bold text-white mb-6 leading-[1.02] tracking-tight [overflow-wrap:anywhere]`}>
               {attraction.title}
             </h1>
             

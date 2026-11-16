@@ -271,7 +271,7 @@ const RelatedInterests: React.FC<RelatedInterestsProps> = ({
         <div className="container mx-auto px-6 max-w-[1400px]">
           <div className="text-center mb-12">
             <div className="h-10 w-64 bg-slate-200 rounded-lg mx-auto mb-4 animate-pulse"></div>
-            <div className="h-6 w-96 bg-slate-200 rounded-lg mx-auto animate-pulse"></div>
+            <div className="h-6 w-full max-w-96 bg-slate-200 rounded-lg mx-auto animate-pulse"></div>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
             {[...Array(limit)].map((_, i) => (
