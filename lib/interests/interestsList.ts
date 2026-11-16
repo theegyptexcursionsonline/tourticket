@@ -9,20 +9,32 @@ import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 import { DEFAULT_TENANT_ID } from '@/lib/tenant/tenantScope';
 import { unstable_cache } from 'next/cache';
 import { CATEGORY_PAGES_TAG } from '@/lib/storefront/revalidateTourStorefront';
+import { localizeEntityFields } from '@/lib/i18n/contentLocalization';
+import { defaultLocale, locales } from '@/i18n/config';
 
 // The list counts tours per category and per attraction page (one regex count
 // per page), which took ~11 s on every call; attraction pages call it twice
 // and showed loading bars that whole time. The result only feeds discovery
 // cards (names, pictures, counts; no prices or availability), so it is kept
 // for five minutes like the category pages, and a tour save clears it through
-// the same tag.
+// the same tag. Names come in the visitor's language (Arabic pages showed
+// "Aswan Tours" on cards whose category has an Arabic name); counts still
+// match on the English title, as before.
 export const INTERESTS_REVALIDATE_SECONDS = 300;
 export const INTERESTS_CACHE_KEY = ['interests-api', DEFAULT_TENANT_ID];
 
-const CATEGORY_FIELDS = 'name slug heroImage featured urlType parentPage';
-const ATTRACTION_FIELDS = 'title slug keywords heroImage featured urlType parentPage';
+const CATEGORY_FIELDS = 'name slug heroImage featured urlType parentPage translations';
+const ATTRACTION_FIELDS = 'title slug keywords heroImage featured urlType parentPage translations';
 
-export async function loadInterests() {
+/** A supported site language, or the default for anything else. */
+export function interestsLocale(value: string | null | undefined): string {
+  return value && (locales as readonly string[]).includes(value) ? value : defaultLocale;
+}
+
+const localizedName = (doc: object, field: 'name' | 'title', locale: string): string =>
+  String(localizeEntityFields(doc as Record<string, unknown>, locale, [field])[field] ?? '');
+
+export async function loadInterests(locale: string = defaultLocale) {
     await dbConnect();
 
     const categories = await Category.find({ isPublished: true, archivedAt: null, ...DEFAULT_TENANT_FILTER })
@@ -46,7 +58,7 @@ export async function loadInterests() {
     const countByCategory = new Map(categoryCounts.map((row) => [String(row._id), row.tourCount]));
     const categoriesWithCounts = categories.map((category) => ({
       type: 'category' as const,
-      name: category.name,
+      name: localizedName(category, 'name', locale),
       slug: category.slug,
       products: countByCategory.get(String(category._id)) || 0,
       _id: category._id,
@@ -105,7 +117,7 @@ export async function loadInterests() {
 
           return {
             type: 'attraction' as const,
-            name: page.title,
+            name: localizedName(page, 'title', locale),
             slug: page.slug,
             products: tourCount,
             _id: page._id,
@@ -118,7 +130,7 @@ export async function loadInterests() {
           console.error(`Error counting tours for attraction ${page.title}:`, error);
           return {
             type: 'attraction' as const,
-            name: page.title,
+            name: localizedName(page, 'title', locale),
             slug: page.slug,
             products: 0,
             _id: page._id,
@@ -140,14 +152,16 @@ export async function loadInterests() {
       if (b.products !== a.products) {
         return b.products - a.products;
       }
-      return a.name.localeCompare(b.name);
+      return a.name.localeCompare(b.name, locale);
     });
 
     return allInterests;
 }
 
-export const getCachedInterests = unstable_cache(loadInterests, INTERESTS_CACHE_KEY, {
-  revalidate: INTERESTS_REVALIDATE_SECONDS,
-  tags: [CATEGORY_PAGES_TAG],
-});
-
+export function getCachedInterests(locale: string = defaultLocale) {
+  const language = interestsLocale(locale);
+  return unstable_cache(() => loadInterests(language), [...INTERESTS_CACHE_KEY, language], {
+    revalidate: INTERESTS_REVALIDATE_SECONDS,
+    tags: [CATEGORY_PAGES_TAG],
+  })();
+}

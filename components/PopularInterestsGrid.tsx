@@ -265,7 +265,7 @@ const PopularInterestsGrid: React.FC<PopularInterestsGridProps> = ({
     // Otherwise fetch from API (fallback for pages not using server component)
     const fetchInterests = async () => {
       try {
-        const response = await fetch('/api/interests');
+        const response = await fetch(`/api/interests?locale=${encodeURIComponent(locale)}`);
 
         if (!response.ok) {
           throw new Error('Failed to fetch interests');
@@ -297,7 +297,7 @@ const PopularInterestsGrid: React.FC<PopularInterestsGridProps> = ({
     };
 
     fetchInterests();
-  }, [initialInterests, limit, showFeaturedOnly]);
+  }, [initialInterests, limit, showFeaturedOnly, locale]);
 
   const gridColsClass = {
     2: 'grid-cols-1 sm:grid-cols-2',

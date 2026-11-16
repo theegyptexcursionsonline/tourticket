@@ -240,7 +240,7 @@ const RelatedInterests: React.FC<RelatedInterestsProps> = ({
     // Otherwise fetch from API (fallback for pages not using server component)
     const fetchRelatedInterests = async () => {
       try {
-        const response = await fetch('/api/interests');
+        const response = await fetch(`/api/interests?locale=${encodeURIComponent(locale)}`);
 
         if (!response.ok) {
           throw new Error('Failed to fetch interests');
@@ -263,7 +263,7 @@ const RelatedInterests: React.FC<RelatedInterestsProps> = ({
     };
 
     fetchRelatedInterests();
-  }, [initialInterests, currentSlug, limit]);
+  }, [initialInterests, currentSlug, limit, locale]);
 
   if (loading) {
     return (

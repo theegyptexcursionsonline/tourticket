@@ -1,10 +1,11 @@
 // app/api/interests/route.ts
-import { NextResponse } from 'next/server';
-import { getCachedInterests } from '@/lib/interests/interestsList';
+import { NextRequest, NextResponse } from 'next/server';
+import { getCachedInterests, interestsLocale } from '@/lib/interests/interestsList';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const allInterests = await getCachedInterests();
+    const locale = interestsLocale(request.nextUrl.searchParams.get('locale'));
+    const allInterests = await getCachedInterests(locale);
     return NextResponse.json({ success: true, data: allInterests });
   } catch (error) {
     console.error('Failed to fetch interests:', error);
