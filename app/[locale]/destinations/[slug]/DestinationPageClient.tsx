@@ -25,7 +25,7 @@ import { DefaultChatTransport } from 'ai';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { safeMarkdownRehypePlugins, safeMarkdownUrlTransform } from '@/lib/markdown/safeMarkdown';
-import { useLocale } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { isRTL } from '@/i18n/config';
 import { imageMetadataFor } from '@/lib/content/imageMetadata';
 import { curateDestinationTours } from '@/lib/content/destinationTourCuration';
@@ -1686,26 +1686,31 @@ const DestinationHeroSection = ({ destination, tourCount, rtl }: { destination: 
   ];
 
   const currentSuggestion = useSlidingText(searchSuggestions, 3000);
+  const t = useTranslations();
   const breadcrumbs = buildContentBreadcrumbs({
     currentTitle: destination.name,
     breadcrumbLabel: destination.breadcrumbLabel,
     parentPage: destination.parentPage,
-    rootLabel: 'Destinations',
+    rootLabel: t('searchPage.destinations'),
     rootHref: '/destinations',
+    homeLabel: t('tourPage.home'),
   });
 
+  // Phones and tablets: the hero is sized by its content so the copy and the
+  // trip search sit under the header instead of floating in a fixed 70vh
+  // picture. The full-height hero is a large-screen treatment only.
   return (
-    <section className="relative w-full min-h-[500px] h-[70vh] sm:h-[75vh] md:h-[80vh] lg:h-screen max-h-[900px]">
+    <section data-destination-hero className="relative w-full lg:h-screen lg:max-h-[900px]">
       {/* Background */}
       <BackgroundSlideshow slides={slides} delay={6000} fadeMs={900} autoplay={true} />
 
       {/* Content */}
-      <div className="relative z-20 h-full flex items-center justify-center text-white px-4 sm:px-6 lg:px-8 pt-20 md:pt-0" dir={rtl ? 'rtl' : 'ltr'}>
-        <div className="w-full max-w-7xl mx-auto text-center md:text-start pt-20 md:pt-0">
+      <div className="relative z-20 h-full flex items-center justify-center text-white px-4 sm:px-6 lg:px-8 pt-24 pb-8 sm:pt-28 sm:pb-10 lg:py-0" dir={rtl ? 'rtl' : 'ltr'}>
+        <div className="w-full max-w-7xl mx-auto text-center md:text-start">
           <div className="mb-5 flex justify-center md:justify-start">
             <ContentBreadcrumbs items={breadcrumbs} tone="dark" />
           </div>
-          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-extrabold uppercase leading-tight tracking-wide mb-3 sm:mb-4">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-extrabold uppercase leading-tight tracking-wide mb-3 sm:mb-4 [overflow-wrap:anywhere]">
             {copy.discover}
             <br />
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-300">

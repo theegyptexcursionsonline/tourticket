@@ -33,7 +33,13 @@ jest.mock('@/components/content/LinkedPageCardsSection', () => ({ __esModule: tr
 jest.mock('@/hooks/useSettings', () => ({
   useSettings: () => ({ formatPrice: (value: number) => `$${value.toFixed(2)}` }),
 }));
-jest.mock('next-intl', () => ({ useLocale: () => 'en' }));
+jest.mock('next-intl', () => {
+  // The hero breadcrumb reads its labels from the real English messages.
+  const en = jest.requireActual('../../messages/en.json');
+  const lookup = (key: string) =>
+    key.split('.').reduce<unknown>((node, part) => (node as Record<string, unknown> | undefined)?.[part], en) ?? key;
+  return { useLocale: () => 'en', useTranslations: () => lookup };
+});
 jest.mock('next/image', () => ({
   __esModule: true,
   // eslint-disable-next-line @next/next/no-img-element

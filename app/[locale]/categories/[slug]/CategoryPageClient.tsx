@@ -10,7 +10,7 @@ import RelatedInterests from '@/components/RelatedInterests';
 import { Tour, Category } from '@/types';
 import { useSettings } from '@/hooks/useSettings';
 import BookingSidebar from '@/components/BookingSidebar';
-import { useLocale } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { isRTL } from '@/i18n/config';
 import { imageMetadataFor } from '@/lib/content/imageMetadata';
 import { buildContentBreadcrumbs } from '@/lib/content/breadcrumbs';
@@ -561,16 +561,18 @@ const CategoryFaqSection = ({
 const TopPicksSection = ({
   tours,
   copy,
+  className = '',
 }: {
   tours: Tour[];
   copy: CategoryPageCopy;
+  className?: string;
 }) => {
   if (tours.length === 0) {
     return null;
   }
 
   return (
-    <section className="py-12 bg-white border-y border-slate-100">
+    <section className={`py-12 bg-white border-y border-slate-100 ${className}`}>
       <div className="container mx-auto px-4">
         <div className="max-w-7xl mx-auto">
           <div className="mb-8">
@@ -672,6 +674,22 @@ const CategoryTravelTipsSection = ({ category }: { category: Category }) => {
 
 
 // --- Hero Section Component ---
+// Phones and tablets get a hero sized by its own content, so the title, intro
+// and tour count sit together under the header and the first trips follow in
+// the first screen. The full-height picture is a large-screen treatment only:
+// at phone height it pushed the copy to the bottom edge, under the floating
+// search bar, and left the rest of the screen as empty picture.
+const CATEGORY_HERO_HEIGHT: Record<PageTemplate, string> = {
+  immersive: 'lg:min-h-[760px] lg:h-screen lg:max-h-[980px]',
+  editorial: 'lg:min-h-[600px] lg:h-[72vh] lg:max-h-[760px]',
+  classic: 'lg:h-screen lg:max-h-[900px]',
+};
+const CATEGORY_HERO_CONTENT_SPACING = 'pt-24 pb-8 sm:pt-28 sm:pb-10 lg:py-0';
+// Below lg the page main is a flex column and the first trip list (Top picks,
+// or the full list when there are too few tours for Top picks) moves up to
+// follow the hero. Large screens keep the authored section order.
+const PHONE_TRIPS_FIRST = 'order-first lg:order-none';
+
 const CategoryHeroSection = ({
   category,
   tourCount,
@@ -687,16 +705,18 @@ const CategoryHeroSection = ({
 }) => {
   const heroImage = category.heroImage || 'https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=1200&q=80&fm=jpg';
   const heroSeo = imageMetadataFor(heroImage, category.imageMetadata, category.name);
+  const t = useTranslations();
   const breadcrumbs = buildContentBreadcrumbs({
     currentTitle: category.name,
     breadcrumbLabel: category.breadcrumbLabel,
     parentPage: category.parentPage,
-    rootLabel: 'Categories',
+    rootLabel: t('searchPage.categories'),
     rootHref: '/categories',
+    homeLabel: t('tourPage.home'),
   });
 
   return (
-    <section className={`relative w-full ${pageTemplate === 'immersive' ? 'min-h-[760px] h-screen max-h-[980px]' : pageTemplate === 'editorial' ? 'min-h-[600px] h-[72vh] max-h-[760px]' : 'h-[70vh] sm:h-[75vh] md:h-[80vh] lg:h-screen max-h-[900px]'}`}>
+    <section data-category-hero className={`relative w-full ${CATEGORY_HERO_HEIGHT[pageTemplate]}`}>
       {/* Background Image */}
       <div className="absolute inset-0 z-0">
         <Image
@@ -712,12 +732,12 @@ const CategoryHeroSection = ({
       </div>
 
       {/* Content */}
-      <div className="relative z-20 h-full flex items-center justify-center text-white px-4 sm:px-6 lg:px-8" dir={rtl ? 'rtl' : 'ltr'}>
-        <div className={`w-full max-w-7xl mx-auto text-center md:text-start pt-20 md:pt-0 ${pageTemplate === 'editorial' ? 'md:max-w-3xl md:mx-0 md:rounded-[2rem] md:border md:border-white/15 md:bg-slate-950/80 md:p-10 md:shadow-2xl md:backdrop-blur-md' : pageTemplate === 'immersive' ? 'self-end pb-10 md:pb-20' : ''}`}>
+      <div className={`relative z-20 h-full flex items-center justify-center text-white px-4 sm:px-6 lg:px-8 ${CATEGORY_HERO_CONTENT_SPACING}`} dir={rtl ? 'rtl' : 'ltr'}>
+        <div className={`w-full max-w-7xl mx-auto text-center md:text-start ${pageTemplate === 'editorial' ? 'md:max-w-3xl md:mx-0 md:rounded-[2rem] md:border md:border-white/15 md:bg-slate-950/80 md:p-10 md:shadow-2xl md:backdrop-blur-md' : pageTemplate === 'immersive' ? 'lg:self-end lg:pb-20' : ''}`}>
           <div className="mb-5 flex justify-center md:justify-start">
             <ContentBreadcrumbs items={breadcrumbs} tone="dark" />
           </div>
-          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-extrabold uppercase leading-tight tracking-wide mb-3 sm:mb-4">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-extrabold uppercase leading-tight tracking-wide mb-3 sm:mb-4 [overflow-wrap:anywhere]">
             {copy.discover}
             <br />
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-400 to-orange-300">
@@ -1023,7 +1043,8 @@ export default function CategoryPageClient({
             {/* Hero Section */}
             <CategoryHeroSection category={category} tourCount={categoryTours.length} copy={copy} rtl={rtl} pageTemplate={pageTemplate} />
 
-            <main data-page-template={pageTemplate} className={`min-h-screen ${pageTemplate === 'editorial' ? 'bg-[#f7f4ee]' : pageTemplate === 'immersive' ? 'bg-slate-950' : 'bg-slate-50'}`} dir={rtl ? 'rtl' : 'ltr'}>
+            {/* Phones: the first trips follow the hero (flex order); large screens keep the authored section order. */}
+            <main data-page-template={pageTemplate} className={`flex min-h-screen flex-col lg:block ${pageTemplate === 'editorial' ? 'bg-[#f7f4ee]' : pageTemplate === 'immersive' ? 'bg-slate-950' : 'bg-slate-50'}`} dir={rtl ? 'rtl' : 'ltr'}>
                 {/* Stats Section */}
                 <StatsSection tours={categoryTours} copy={copy} />
 
@@ -1032,11 +1053,12 @@ export default function CategoryPageClient({
 
                 <CategoryGallerySection category={category} />
 
-                <TopPicksSection tours={topPicks} copy={copy} />
+                <TopPicksSection tours={topPicks} copy={copy} className={PHONE_TRIPS_FIRST} />
 
 
                 <CategoryTravelTipsSection category={category} />
 
+                <div className={topPicks.length === 0 ? PHONE_TRIPS_FIRST : undefined}>
                 <section
                     aria-labelledby="available-tours-heading"
                     className="border-y border-slate-200 bg-white py-12 text-slate-900"
@@ -1101,6 +1123,7 @@ export default function CategoryPageClient({
                       </div>
                     </div>
                 </section>
+                </div>
 
                 <CategoryFaqSection copy={copy} faqItems={categoryInsights.faqItems} />
 
