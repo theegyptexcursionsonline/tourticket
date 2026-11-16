@@ -446,7 +446,7 @@ const ReviewsSection = ({ reviews }: { reviews: Review[] }) => {
 // breadcrumb under the transparent header). The fixed screen-height picture,
 // with the immersive copy pinned to its bottom edge, is a large-screen
 // treatment only; on a phone it left a band of empty picture above the copy
-// and pushed the page's trips a screen further down.
+// and pushed the trips on this page a screen further down.
 const CATALOGUE_HERO_HEIGHT: Record<PageTemplate, string> = {
   immersive: 'lg:h-[84vh]',
   editorial: 'lg:h-[58vh] lg:min-h-[520px]',
