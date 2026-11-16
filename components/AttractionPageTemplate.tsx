@@ -5,7 +5,7 @@ import { Link } from '@/i18n/routing';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  ArrowRight, Star, Users, Clock, MapPin, Search, Filter,
+  ArrowRight, Star, Users, Clock, MapPin, Search,
   Grid, List, MessageCircle, ChevronDown, ChevronUp
 } from 'lucide-react';
 import { CategoryPageData, Tour, Review } from '@/types';
@@ -14,6 +14,8 @@ import type { LinkedPageCardData } from '@/components/AttractionLandingPage';
 import { buildContentBreadcrumbs } from '@/lib/content/breadcrumbs';
 import ContentBreadcrumbs from '@/components/navigation/ContentBreadcrumbs';
 import { normalizePageTemplate, type PageTemplate } from '@/lib/content/pageTemplate';
+import { useTranslations } from 'next-intl';
+import { useAttractionTemplateCopy } from '@/lib/content/attractionTemplateCopy';
 import { tourContentPath } from '@/lib/content/contentUrl';
 import { imageMetadataFor } from '@/lib/content/imageMetadata';
 import LinkedPageCardsSection from '@/components/content/LinkedPageCardsSection';
@@ -25,6 +27,7 @@ interface AttractionPageTemplateProps {
 }
 
 const TourCard = ({ tour, index }: { tour: Tour; index: number }) => {
+  const copy = useAttractionTemplateCopy();
   const { formatPrice } = useSettings();
   const destination = typeof tour.destination === 'object' ? tour.destination : null;
   
@@ -53,8 +56,8 @@ const TourCard = ({ tour, index }: { tour: Tour; index: number }) => {
           {/* Featured Badge */}
           {tour.isFeatured && (
             <div className="absolute top-3 left-3 bg-gradient-to-r from-yellow-400 to-yellow-500 text-white px-3 py-1 text-xs font-bold rounded-full shadow-lg">
-              <Star className="w-3 h-3 inline mr-1" />
-              Featured
+              <Star className="w-3 h-3 inline me-1" />
+              {copy.featured}
             </div>
           )}
           
@@ -90,14 +93,17 @@ const TourCard = ({ tour, index }: { tour: Tour; index: number }) => {
               <Clock className="w-4 h-4" />
               <span>{tour.duration}</span>
             </div>
-            <div className="flex items-center gap-1">
-              <Users className="w-4 h-4" />
-              <span>Max {tour.maxGroupSize || 15}</span>
-            </div>
+            {/* Only a group size the trip actually sets (it used to show an invented 15). */}
+            {typeof tour.maxGroupSize === 'number' && tour.maxGroupSize > 0 && (
+              <div className="flex items-center gap-1">
+                <Users className="w-4 h-4" />
+                <span>{copy.maxGroup(tour.maxGroupSize)}</span>
+              </div>
+            )}
             {(tour.reviewCount ?? 0) > 0 && (
               <div className="flex items-center gap-1">
                 <MessageCircle className="w-4 h-4" />
-                <span>{tour.reviewCount} reviews</span>
+                <span>{copy.tourReviews(tour.reviewCount ?? 0)}</span>
               </div>
             )}
           </div>
@@ -129,7 +135,7 @@ const TourCard = ({ tour, index }: { tour: Tour; index: number }) => {
             </div>
             
             <div className="opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-x-2 group-hover:translate-x-0">
-              <ArrowRight className="w-5 h-5 text-red-600" />
+              <ArrowRight className="w-5 h-5 text-red-600 rtl:rotate-180" />
             </div>
           </div>
         </div>
@@ -139,6 +145,7 @@ const TourCard = ({ tour, index }: { tour: Tour; index: number }) => {
 };
 
 const TourListItem = ({ tour, index }: { tour: Tour; index: number }) => {
+  const copy = useAttractionTemplateCopy();
   const { formatPrice } = useSettings();
   const destination = typeof tour.destination === 'object' ? tour.destination : null;
 
@@ -159,14 +166,14 @@ const TourListItem = ({ tour, index }: { tour: Tour; index: number }) => {
               sizes="128px"
             />
             {tour.isFeatured && (
-              <div className="absolute top-1 left-1 bg-yellow-500 text-white text-xs px-1 py-0.5 rounded">
-                Featured
+              <div className="absolute top-1 start-1 bg-yellow-500 text-white text-xs px-1 py-0.5 rounded">
+                {copy.featured}
               </div>
             )}
           </div>
           
-          <div className="flex-1">
-            <h3 className="text-xl font-bold text-slate-900 group-hover:text-red-600 transition-colors mb-2">
+          <div className="flex-1 min-w-0">
+            <h3 className="text-xl font-bold text-slate-900 group-hover:text-red-600 transition-colors mb-2 [overflow-wrap:anywhere]">
               {tour.title}
             </h3>
             <p className="text-slate-600 text-sm mb-3 line-clamp-2">{tour.description}</p>
@@ -190,13 +197,13 @@ const TourListItem = ({ tour, index }: { tour: Tour; index: number }) => {
               {(tour.reviewCount ?? 0) > 0 && (
                 <span className="flex items-center gap-1">
                   <MessageCircle className="h-4 w-4" />
-                  {tour.reviewCount} reviews
+                  {copy.tourReviews(tour.reviewCount ?? 0)}
                 </span>
               )}
             </div>
           </div>
           
-          <div className="text-right flex-shrink-0">
+          <div className="text-end flex-shrink-0">
             <div className="text-2xl font-bold text-slate-900">
               {formatPrice(tour.discountPrice || tour.price || 0)}
             </div>
@@ -205,7 +212,7 @@ const TourListItem = ({ tour, index }: { tour: Tour; index: number }) => {
                 {formatPrice(tour.originalPrice)}
               </div>
             )}
-            <ArrowRight className="h-5 w-5 text-slate-400 group-hover:text-red-600 transition-colors mt-2 ml-auto" />
+            <ArrowRight className="h-5 w-5 text-slate-400 group-hover:text-red-600 transition-colors mt-2 ms-auto rtl:rotate-180" />
           </div>
         </div>
       </Link>
@@ -214,6 +221,7 @@ const TourListItem = ({ tour, index }: { tour: Tour; index: number }) => {
 };
 
 const QuickStats = ({ page }: { page: CategoryPageData }) => {
+  const copy = useAttractionTemplateCopy();
   // Only figures this page can actually back. The strip used to pin an
   // invented rating and a round-the-clock-support claim next to a real
   // 0-review count — the same invented-figures class the category tiles had.
@@ -229,9 +237,9 @@ const QuickStats = ({ page }: { page: CategoryPageData }) => {
       : null;
 
   const stats = [
-    { label: 'Tours Available', value: tours.length > 0 ? tours.length.toString() : null },
-    { label: 'Customer Reviews', value: reviews.length > 0 ? reviews.length.toString() : null },
-    { label: 'Average Rating', value: averageRating },
+    { label: copy.toursAvailable, value: tours.length > 0 ? tours.length.toString() : null },
+    { label: copy.customerReviews, value: reviews.length > 0 ? reviews.length.toString() : null },
+    { label: copy.averageRating, value: averageRating },
   ].filter((stat): stat is typeof stat & { value: string } => Boolean(stat.value));
 
   if (stats.length === 0) return null;
@@ -241,7 +249,7 @@ const QuickStats = ({ page }: { page: CategoryPageData }) => {
   return (
     <div className="mt-20">
       <h3 className="text-3xl font-bold text-center mb-12 text-slate-900">
-        Why Thousands Choose Us
+        {copy.whyThousandsChooseUs}
       </h3>
       <motion.div
         initial={{ opacity: 0, y: 30 }}
@@ -270,7 +278,6 @@ const SearchAndFilter = ({
   setViewMode,
   sortBy,
   setSortBy,
-  onFilterToggle 
 }: {
   searchQuery: string;
   setSearchQuery: (query: string) => void;
@@ -278,19 +285,21 @@ const SearchAndFilter = ({
   setViewMode: (mode: 'grid' | 'list') => void;
   sortBy: string;
   setSortBy: (sort: string) => void;
-  onFilterToggle: () => void;
-}) => (
+}) => {
+  const copy = useAttractionTemplateCopy();
+  return (
   <div className="bg-white rounded-2xl shadow-lg p-6 mb-8">
     <div className="flex flex-col md:flex-row items-center gap-4">
       {/* Search Bar */}
-      <div className="relative flex-1">
-        <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400" />
+      <div className="relative flex-1 w-full">
+        <Search className="absolute start-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400" />
         <input
           type="text"
-          placeholder="Search tours..."
+          placeholder={copy.searchTours}
+          aria-label={copy.searchTours}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full pl-12 pr-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all duration-200"
+          className="w-full ps-12 pe-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all duration-200"
         />
       </div>
 
@@ -300,18 +309,20 @@ const SearchAndFilter = ({
         onChange={(e) => setSortBy(e.target.value)}
         className="px-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
       >
-        <option value="featured">Featured First</option>
-        <option value="price_low">Price: Low to High</option>
-        <option value="price_high">Price: High to Low</option>
-        <option value="rating">Highest Rated</option>
-        <option value="duration">Duration</option>
-        <option value="newest">Newest First</option>
+        <option value="featured">{copy.sortFeaturedFirst}</option>
+        <option value="price_low">{copy.sortPriceLow}</option>
+        <option value="price_high">{copy.sortPriceHigh}</option>
+        <option value="rating">{copy.sortHighestRated}</option>
+        <option value="duration">{copy.sortDuration}</option>
+        <option value="newest">{copy.sortNewestFirst}</option>
       </select>
 
       {/* View Toggle */}
       <div className="flex gap-1 bg-slate-100 rounded-xl p-1">
         <button
           onClick={() => setViewMode('grid')}
+          aria-label={copy.gridView}
+          aria-pressed={viewMode === 'grid'}
           className={`p-3 rounded-lg transition-all duration-200 ${
             viewMode === 'grid' 
               ? 'bg-white text-red-600 shadow-sm' 
@@ -322,6 +333,8 @@ const SearchAndFilter = ({
         </button>
         <button
           onClick={() => setViewMode('list')}
+          aria-label={copy.listView}
+          aria-pressed={viewMode === 'list'}
           className={`p-3 rounded-lg transition-all duration-200 ${
             viewMode === 'list' 
               ? 'bg-white text-red-600 shadow-sm' 
@@ -331,20 +344,13 @@ const SearchAndFilter = ({
           <List className="w-5 h-5" />
         </button>
       </div>
-
-      {/* Filters Button */}
-      <button
-        onClick={onFilterToggle}
-        className="flex items-center gap-2 px-4 py-3 border border-slate-300 rounded-xl hover:bg-slate-50 transition-colors duration-200"
-      >
-        <Filter className="w-5 h-5" />
-        <span>Filters</span>
-      </button>
     </div>
   </div>
-);
+  );
+};
 
 const ReviewsSection = ({ reviews }: { reviews: Review[] }) => {
+  const copy = useAttractionTemplateCopy();
   const [showAllReviews, setShowAllReviews] = useState(false);
   const displayedReviews = showAllReviews ? reviews : reviews.slice(0, 6);
 
@@ -361,10 +367,10 @@ const ReviewsSection = ({ reviews }: { reviews: Review[] }) => {
           className="text-center mb-12"
         >
           <h2 className="text-4xl font-bold text-slate-900 mb-4">
-            What Our Customers Say
+            {copy.customersSay}
           </h2>
           <p className="text-xl text-slate-600">
-            Read reviews from travelers who have experienced these tours
+            {copy.customersSaySubtitle}
           </p>
         </motion.div>
 
@@ -381,8 +387,8 @@ const ReviewsSection = ({ reviews }: { reviews: Review[] }) => {
                 <div className="w-12 h-12 bg-gradient-to-r from-red-500 to-red-600 rounded-full flex items-center justify-center text-white font-bold text-sm">
                   {review.userName ? review.userName.charAt(0).toUpperCase() : 'A'}
                 </div>
-                <div className="ml-4">
-                  <h4 className="font-semibold text-slate-900">{review.userName || 'Anonymous'}</h4>
+                <div className="ms-4">
+                  <h4 className="font-semibold text-slate-900">{review.userName || copy.anonymous}</h4>
                   <div className="flex items-center">
                     {[...Array(5)].map((_, i) => (
                       <Star
@@ -405,7 +411,7 @@ const ReviewsSection = ({ reviews }: { reviews: Review[] }) => {
               </p>
               
               <div className="text-xs text-slate-500">
-                {new Date(review.createdAt || review.date || '').toLocaleDateString()}
+                {new Date(review.createdAt || review.date || '').toLocaleDateString(copy.dateLocale)}
               </div>
             </motion.div>
           ))}
@@ -419,12 +425,12 @@ const ReviewsSection = ({ reviews }: { reviews: Review[] }) => {
             >
               {showAllReviews ? (
                 <>
-                  Show Less
+                  {copy.showLessTitle}
                   <ChevronUp className="w-5 h-5" />
                 </>
               ) : (
                 <>
-                  View All {reviews.length} Reviews
+                  {copy.viewAllReviews(reviews.length)}
                   <ChevronDown className="w-5 h-5" />
                 </>
               )}
@@ -450,10 +456,11 @@ const CATALOGUE_HERO_CONTENT_SPACING = 'pt-24 pb-10 sm:pt-28 sm:pb-12 lg:py-0';
 
 export default function AttractionPageTemplate({ page, linkedPages = [] }: AttractionPageTemplateProps) {
   const pageTemplate = normalizePageTemplate(page.pageTemplate);
+  const copy = useAttractionTemplateCopy();
+  const t = useTranslations();
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [sortBy, setSortBy] = useState('featured');
-  const [showFilters, setShowFilters] = useState(false);
 
   // Filter and sort tours based on search and sort criteria
   const filteredAndSortedTours = React.useMemo(() => {
@@ -508,8 +515,9 @@ export default function AttractionPageTemplate({ page, linkedPages = [] }: Attra
     currentTitle: page.title,
     breadcrumbLabel: page.breadcrumbLabel,
     parentPage: page.parentPage,
-    rootLabel: 'Categories',
+    rootLabel: t('searchPage.categories'),
     rootHref: '/categories',
+    homeLabel: t('tourPage.home'),
   });
 
   return (
@@ -579,7 +587,7 @@ export default function AttractionPageTemplate({ page, linkedPages = [] }: Attra
                   animate={{ opacity: 1, y: 0 }}
                   className="text-4xl font-bold text-center mb-12 text-slate-900"
                 >
-                  Why Choose This Experience
+                  {copy.whyChooseThisExperience}
                 </motion.h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                   {page.highlights.map((highlight, index) => (
@@ -608,7 +616,7 @@ export default function AttractionPageTemplate({ page, linkedPages = [] }: Attra
                   animate={{ opacity: 1, y: 0 }}
                   className="text-4xl font-bold text-center mb-12 text-slate-900"
                 >
-                  What Makes This Special
+                  {copy.whatMakesThisSpecialTitle}
                 </motion.h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   {page.features.map((feature, index) => (
@@ -636,7 +644,7 @@ export default function AttractionPageTemplate({ page, linkedPages = [] }: Attra
         {page.images && page.images.length > 0 && (
           <section className={`py-12 ${pageTemplate === 'immersive' ? 'bg-slate-950' : pageTemplate === 'editorial' ? 'bg-[#f7f4ee]' : 'bg-slate-50'}`}>
             <div className="container mx-auto px-6">
-              <h2 className={`text-3xl font-bold mb-6 ${pageTemplate === 'immersive' ? 'text-white' : 'text-slate-900'}`}>Gallery</h2>
+              <h2 className={`text-3xl font-bold mb-6 ${pageTemplate === 'immersive' ? 'text-white' : 'text-slate-900'}`}>{copy.gallery}</h2>
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
                 {page.images.map((image, index) => {
                   const seo = imageMetadataFor(image, page.imageMetadata, `${page.title} ${index + 1}`);
@@ -694,14 +702,12 @@ export default function AttractionPageTemplate({ page, linkedPages = [] }: Attra
                 setViewMode={setViewMode}
                 sortBy={sortBy}
                 setSortBy={setSortBy}
-                onFilterToggle={() => setShowFilters(!showFilters)}
               />
 
               {/* Results Count */}
               <div className="text-center mb-8">
                 <p className="text-slate-600">
-                  Showing <span className="font-semibold text-slate-900">{filteredAndSortedTours.length}</span> of{' '}
-                  <span className="font-semibold text-slate-900">{page.tours.length}</span> tours
+                  {copy.showingOf(filteredAndSortedTours.length, page.tours.length)}
                 </p>
               </div>
 
@@ -744,15 +750,15 @@ export default function AttractionPageTemplate({ page, linkedPages = [] }: Attra
                   <div className="w-24 h-24 mx-auto mb-6 bg-slate-100 rounded-full flex items-center justify-center">
                     <Search className="w-10 h-10 text-slate-400" />
                   </div>
-                  <h3 className="text-xl font-semibold text-slate-700 mb-2">No tours found</h3>
+                  <h3 className="text-xl font-semibold text-slate-700 mb-2">{copy.noToursFound}</h3>
                   <p className="text-slate-500 mb-6">
-                    Try adjusting your search criteria or browse all tours.
+                    {copy.tryAdjustingCriteria}
                   </p>
                   <button
                     onClick={() => setSearchQuery('')}
                     className="bg-red-600 text-white px-6 py-3 rounded-xl font-semibold hover:bg-red-700 transition-colors"
                   >
-                    Clear Search
+                    {copy.clearSearchTitle}
                   </button>
                 </motion.div>
               )}
@@ -766,7 +772,7 @@ export default function AttractionPageTemplate({ page, linkedPages = [] }: Attra
         <LinkedPageCardsSection
           pages={linkedPages}
           title={page.linkedPagesTitle}
-          subtitle={page.linkedPagesSubtitle ?? 'Related guides and collections'}
+          subtitle={page.linkedPagesSubtitle ?? copy.relatedGuides}
         />
 
         {/* Reviews Section */}
@@ -790,25 +796,24 @@ export default function AttractionPageTemplate({ page, linkedPages = [] }: Attra
               className="max-w-4xl mx-auto"
             >
               <h2 className="text-4xl md:text-5xl font-bold mb-6">
-                Ready to Start Your Adventure?
+                {copy.readyToStart}
               </h2>
               <p className="text-xl mb-10 opacity-90 leading-relaxed">
-                Join thousands of travelers who have discovered amazing experiences with us. 
-                Your perfect adventure is just a click away.
+                {copy.readyToStartBody}
               </p>
               <div className="flex flex-col sm:flex-row gap-6 justify-center">
                 <Link
                   href="/tours"
                   className="inline-flex items-center gap-3 px-8 py-4 bg-white text-red-600 font-bold rounded-xl hover:bg-slate-100 transition-all duration-200 transform hover:scale-105 shadow-lg"
                 >
-                  Browse All Tours
-                  <ArrowRight className="w-5 h-5" />
+                  {copy.browseAllTours}
+                  <ArrowRight className="w-5 h-5 rtl:rotate-180" />
                 </Link>
                 <Link
                   href="/contact"
                   className="inline-flex items-center gap-3 px-8 py-4 border-2 border-white text-white font-bold rounded-xl hover:bg-white hover:text-red-600 transition-all duration-200 transform hover:scale-105"
                 >
-                  Get Expert Advice
+                  {copy.getExpertAdvice}
                   <Users className="w-5 h-5" />
                 </Link>
               </div>

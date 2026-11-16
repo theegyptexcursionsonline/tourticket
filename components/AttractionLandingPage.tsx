@@ -22,6 +22,8 @@ import { buildContentBreadcrumbs } from '@/lib/content/breadcrumbs';
 import ContentBreadcrumbs from '@/components/navigation/ContentBreadcrumbs';
 import LinkedPageCardsSection from '@/components/content/LinkedPageCardsSection';
 import { normalizePageTemplate, type PageTemplate } from '@/lib/content/pageTemplate';
+import { useTranslations } from 'next-intl';
+import { useAttractionTemplateCopy } from '@/lib/content/attractionTemplateCopy';
 
 interface AttractionData {
   _id: string;
@@ -69,6 +71,7 @@ interface AttractionLandingPageProps {
 const QuickInfo = ({ attraction }: { attraction: AttractionData }) => {
   // Only figures this page can back — the hero used to pin an invented
   // rating next to a real 0-review count plus a canned duration claim.
+  const copy = useAttractionTemplateCopy();
   const reviews = attraction.reviews || [];
   const totalReviews = reviews.length;
   const ratedReviews = reviews.filter(r => typeof r.rating === 'number');
@@ -94,7 +97,7 @@ const QuickInfo = ({ attraction }: { attraction: AttractionData }) => {
           </div>
           {totalReviews > 0 && (
             <span className="text-white/80">
-              ({totalReviews} {totalReviews === 1 ? 'review' : 'reviews'})
+              ({copy.reviewsCount(totalReviews)})
             </span>
           )}
         </div>
@@ -106,7 +109,7 @@ const QuickInfo = ({ attraction }: { attraction: AttractionData }) => {
         <div className="flex items-center gap-2">
           <Target className="w-5 h-5 text-white/90" />
           <span className="text-white font-medium">
-            {attraction.totalTours} {attraction.totalTours === 1 ? 'activity' : 'activities'}
+            {copy.activitiesCount(attraction.totalTours)}
           </span>
         </div>
       )}
@@ -115,6 +118,7 @@ const QuickInfo = ({ attraction }: { attraction: AttractionData }) => {
 };
 
 const ExpandableDescription = ({ attraction }: { attraction: AttractionData }) => {
+  const copy = useAttractionTemplateCopy();
   const [isExpanded, setIsExpanded] = useState(false);
   const shortDescription = attraction.description;
   const fullDescription = attraction.longDescription || attraction.description;
@@ -156,7 +160,7 @@ const ExpandableDescription = ({ attraction }: { attraction: AttractionData }) =
         <div className="bg-slate-50 rounded-xl p-6 mt-6">
           <h3 className="font-semibold text-slate-900 mb-4 flex items-center gap-2">
             <Info className="w-5 h-5 text-red-600" />
-            What to Expect
+            {copy.whatToExpect}
           </h3>
           <ul className="space-y-2">
             {attraction.highlights.slice(0, 5).map((highlight, index) => (
@@ -176,12 +180,12 @@ const ExpandableDescription = ({ attraction }: { attraction: AttractionData }) =
         >
           {isExpanded ? (
             <>
-              Show less
+              {copy.showLess}
               <ChevronUp className="w-5 h-5" />
             </>
           ) : (
             <>
-              Read more
+              {copy.readMore}
               <ChevronDown className="w-5 h-5" />
             </>
           )}
@@ -205,17 +209,20 @@ const SearchAndFilter = ({
   setViewMode: (mode: 'grid' | 'list') => void;
   sortBy: string;
   setSortBy: (sort: string) => void;
-}) => (
+}) => {
+  const copy = useAttractionTemplateCopy();
+  return (
   <div className="bg-white rounded-xl border border-slate-200 p-4 mb-6">
     <div className="flex flex-col md:flex-row items-center gap-3">
       <div className="relative flex-1 w-full">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400" />
+        <Search className="absolute start-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400" />
         <input
           type="text"
-          placeholder="Search activities..."
+          placeholder={copy.searchActivities}
+          aria-label={copy.searchActivities}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent text-sm"
+          className="w-full ps-10 pe-4 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent text-sm"
         />
       </div>
 
@@ -224,17 +231,19 @@ const SearchAndFilter = ({
         onChange={(e) => setSortBy(e.target.value)}
         className="px-4 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 bg-white text-sm min-w-[180px]"
       >
-        <option value="featured">Most popular</option>
-        <option value="price_low">Price: Low to High</option>
-        <option value="price_high">Price: High to Low</option>
-        <option value="rating">Top rated</option>
-        <option value="duration">Duration</option>
-        <option value="newest">Newest</option>
+        <option value="featured">{copy.sortMostPopular}</option>
+        <option value="price_low">{copy.sortPriceLow}</option>
+        <option value="price_high">{copy.sortPriceHigh}</option>
+        <option value="rating">{copy.sortTopRated}</option>
+        <option value="duration">{copy.sortDuration}</option>
+        <option value="newest">{copy.sortNewest}</option>
       </select>
 
       <div className="flex gap-1 bg-slate-100 rounded-lg p-1">
         <button
           onClick={() => setViewMode('grid')}
+          aria-label={copy.gridView}
+          aria-pressed={viewMode === 'grid'}
           className={`p-2 rounded transition-all ${
             viewMode === 'grid' 
               ? 'bg-white text-red-600 shadow-sm' 
@@ -245,6 +254,8 @@ const SearchAndFilter = ({
         </button>
         <button
           onClick={() => setViewMode('list')}
+          aria-label={copy.listView}
+          aria-pressed={viewMode === 'list'}
           className={`p-2 rounded transition-all ${
             viewMode === 'list' 
               ? 'bg-white text-red-600 shadow-sm' 
@@ -256,9 +267,11 @@ const SearchAndFilter = ({
       </div>
     </div>
   </div>
-);
+  );
+};
 
 const ReviewsSection = ({ reviews }: { reviews: Review[] }) => {
+  const copy = useAttractionTemplateCopy();
   const [showAllReviews, setShowAllReviews] = useState(false);
   const displayedReviews = showAllReviews ? reviews : reviews.slice(0, 6);
 
@@ -275,10 +288,10 @@ const ReviewsSection = ({ reviews }: { reviews: Review[] }) => {
           className="mb-10"
         >
           <h2 className="text-3xl font-bold text-slate-900 mb-2">
-            Reviews from travelers
+            {copy.reviewsTitle}
           </h2>
           <p className="text-slate-600">
-            See what others say about their experience
+            {copy.reviewsSubtitle}
           </p>
         </motion.div>
 
@@ -297,7 +310,7 @@ const ReviewsSection = ({ reviews }: { reviews: Review[] }) => {
                     {review.userName ? review.userName.charAt(0).toUpperCase() : 'A'}
                   </div>
                   <div>
-                    <h4 className="font-semibold text-slate-900 text-sm">{review.userName || 'Anonymous'}</h4>
+                    <h4 className="font-semibold text-slate-900 text-sm">{review.userName || copy.anonymous}</h4>
                     <div className="flex items-center gap-1">
                       {[...Array(5)].map((_, i) => (
                         <Star
@@ -321,7 +334,7 @@ const ReviewsSection = ({ reviews }: { reviews: Review[] }) => {
               </p>
               
               <div className="text-xs text-slate-500 mt-3">
-                {new Date(review.createdAt || review.date || '').toLocaleDateString('en-US', { 
+                {new Date(review.createdAt || review.date || '').toLocaleDateString(copy.dateLocale, { 
                   month: 'short', 
                   year: 'numeric' 
                 })}
@@ -338,12 +351,12 @@ const ReviewsSection = ({ reviews }: { reviews: Review[] }) => {
             >
               {showAllReviews ? (
                 <>
-                  Show less
+                  {copy.showLess}
                   <ChevronUp className="w-4 h-4" />
                 </>
               ) : (
                 <>
-                  Show all {reviews.length} reviews
+                  {copy.showAllReviews(reviews.length)}
                   <ChevronDown className="w-4 h-4" />
                 </>
               )}
@@ -372,6 +385,8 @@ const ATTRACTION_HERO_CONTENT: Record<PageTemplate, string> = {
 
 const AttractionLandingPage: React.FC<AttractionLandingPageProps> = ({ attraction, linkedPages }) => {
   const pageTemplate = normalizePageTemplate(attraction.pageTemplate);
+  const copy = useAttractionTemplateCopy();
+  const t = useTranslations();
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>(pageTemplate === 'editorial' ? 'list' : 'grid');
   const [sortBy, setSortBy] = useState('featured');
@@ -380,8 +395,9 @@ const AttractionLandingPage: React.FC<AttractionLandingPageProps> = ({ attractio
     currentTitle: attraction.title,
     breadcrumbLabel: attraction.breadcrumbLabel,
     parentPage: attraction.parentPage,
-    rootLabel: 'Attractions',
+    rootLabel: copy.attractionsRoot,
     rootHref: '/attractions',
+    homeLabel: t('tourPage.home'),
   });
   const gridColumns = attraction.itemsPerRow === 2
     ? 'md:grid-cols-2'
@@ -449,7 +465,7 @@ const AttractionLandingPage: React.FC<AttractionLandingPageProps> = ({ attractio
             <div className="mb-5"><ContentBreadcrumbs items={breadcrumbs} tone="dark" /></div>
             <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-full px-4 py-1.5 text-sm font-medium text-white mb-6">
               <Award className="w-4 h-4" />
-              <span>Popular attraction</span>
+              <span>{copy.popularAttraction}</span>
             </div>
             
             <h1 className={`${pageTemplate === 'immersive' ? 'text-4xl sm:text-5xl md:text-7xl lg:text-8xl' : 'text-4xl md:text-5xl lg:text-6xl'} font-bold text-white mb-6 leading-[1.02] tracking-tight [overflow-wrap:anywhere]`}>
@@ -464,7 +480,7 @@ const AttractionLandingPage: React.FC<AttractionLandingPageProps> = ({ attractio
       {attraction.images && attraction.images.length > 0 && (
         <section className={`py-12 ${pageTemplate === 'immersive' ? 'bg-slate-950' : pageTemplate === 'editorial' ? 'bg-[#f7f4ee]' : 'bg-slate-50'}`}>
           <div className="container mx-auto px-6">
-            <h2 className={`text-3xl font-bold mb-6 ${pageTemplate === 'immersive' ? 'text-white' : 'text-slate-900'}`}>Gallery</h2>
+            <h2 className={`text-3xl font-bold mb-6 ${pageTemplate === 'immersive' ? 'text-white' : 'text-slate-900'}`}>{copy.gallery}</h2>
             <div className={`grid grid-cols-2 gap-3 sm:gap-4 ${pageTemplate === 'editorial' ? 'lg:grid-cols-3' : 'lg:grid-cols-4'}`}>
               {attraction.images.map((image, index) => {
                 const seo = imageMetadataFor(image, attraction.imageMetadata, `${attraction.title} ${index + 1}`);
@@ -491,7 +507,7 @@ const AttractionLandingPage: React.FC<AttractionLandingPageProps> = ({ attractio
         <section className={`py-12 ${pageTemplate === 'immersive' ? 'bg-slate-900' : pageTemplate === 'editorial' ? 'bg-white' : 'bg-slate-50'}`}>
           <div className="container mx-auto px-6">
             <h2 className={`text-2xl font-bold mb-6 ${pageTemplate === 'immersive' ? 'text-white' : 'text-slate-900'}`}>
-              What makes this special
+              {copy.whatMakesThisSpecial}
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {attraction.features.slice(0, 6).map((feature, index) => (
@@ -516,7 +532,7 @@ const AttractionLandingPage: React.FC<AttractionLandingPageProps> = ({ attractio
           <div className="container mx-auto px-6">
             <div className="mb-8">
               <h2 className="text-3xl font-bold text-slate-900 mb-2">
-                {attraction.gridTitle || 'Available activities'}
+                {attraction.gridTitle || copy.availableActivities}
               </h2>
               {attraction.gridSubtitle && (
                 <p className="text-slate-600">{attraction.gridSubtitle}</p>
@@ -533,7 +549,7 @@ const AttractionLandingPage: React.FC<AttractionLandingPageProps> = ({ attractio
             />
 
             <div className="text-sm text-slate-600 mb-6">
-              {filteredAndSortedTours.length} {filteredAndSortedTours.length === 1 ? 'result' : 'results'}
+              {copy.resultsCount(filteredAndSortedTours.length)}
             </div>
 
             {filteredAndSortedTours.length > 0 ? (
@@ -549,16 +565,16 @@ const AttractionLandingPage: React.FC<AttractionLandingPageProps> = ({ attractio
                 className="text-center py-16 bg-slate-50 rounded-xl"
               >
                 <Search className="w-12 h-12 text-slate-400 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-slate-700 mb-2">No activities found</h3>
+                <h3 className="text-lg font-semibold text-slate-700 mb-2">{copy.noActivitiesFound}</h3>
                 <p className="text-slate-500 mb-4">
-                  {searchQuery ? 'Try adjusting your search' : 'Check back soon for new activities'}
+                  {searchQuery ? copy.tryAdjustingSearch : copy.checkBackSoon}
                 </p>
                 {searchQuery && (
                   <button
                     onClick={() => setSearchQuery('')}
                     className="text-red-600 font-semibold hover:text-red-700"
                   >
-                    Clear search
+                    {copy.clearSearch}
                   </button>
                 )}
               </motion.div>
@@ -570,7 +586,7 @@ const AttractionLandingPage: React.FC<AttractionLandingPageProps> = ({ attractio
       {attraction.travelTips && attraction.travelTips.length > 0 && (
         <section className="py-12 bg-white">
           <div className="container mx-auto px-6 max-w-5xl">
-            <h2 className="text-3xl font-bold text-slate-900 mb-6">Travel tips</h2>
+            <h2 className="text-3xl font-bold text-slate-900 mb-6">{copy.travelTips}</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {attraction.travelTips.map((tip, index) => (
                 <article key={`${tip.title}-${index}`} className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
@@ -586,7 +602,7 @@ const AttractionLandingPage: React.FC<AttractionLandingPageProps> = ({ attractio
       {attraction.faqs && attraction.faqs.length > 0 && (
         <section className="py-12 bg-slate-50">
           <div className="container mx-auto px-6 max-w-4xl">
-            <h2 className="text-3xl font-bold text-slate-900 mb-6">Frequently asked questions</h2>
+            <h2 className="text-3xl font-bold text-slate-900 mb-6">{copy.faqTitle}</h2>
             <div className="space-y-3">
               {attraction.faqs.map((faq, index) => (
                 <details key={`${faq.question}-${index}`} className="group rounded-2xl border border-slate-200 bg-white p-5">
@@ -618,8 +634,8 @@ const AttractionLandingPage: React.FC<AttractionLandingPageProps> = ({ attractio
         <RelatedInterests 
           currentSlug={attraction.slug}
           limit={6}
-          title="Similar attractions"
-          subtitle="Explore more places you might like"
+          title={copy.similarAttractions}
+          subtitle={copy.similarAttractionsSubtitle}
         />
       </div>
 
@@ -627,8 +643,8 @@ const AttractionLandingPage: React.FC<AttractionLandingPageProps> = ({ attractio
       <PopularInterestsGrid 
         limit={8}
         showFeaturedOnly={true}
-        title="Top experiences"
-        subtitle="Don't miss these popular activities"
+        title={copy.topExperiences}
+        subtitle={copy.topExperiencesSubtitle}
         columns={4}
       />
 
@@ -642,24 +658,24 @@ const AttractionLandingPage: React.FC<AttractionLandingPageProps> = ({ attractio
             className="max-w-3xl mx-auto"
           >
             <h2 className="text-3xl md:text-4xl font-bold mb-4">
-              Ready to explore {attraction.title}?
+              {copy.readyToExplore(attraction.title)}
             </h2>
             <p className="text-lg mb-8 opacity-90">
-              Book now and create unforgettable memories
+              {copy.bookNowMemories}
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link
                 href="#tours"
                 className="inline-flex items-center justify-center gap-2 px-8 py-3 bg-white text-red-600 font-semibold rounded-lg hover:bg-slate-100 transition-all"
               >
-                View all activities
-                <ArrowRight className="w-5 h-5" />
+                {copy.viewAllActivities}
+                <ArrowRight className="w-5 h-5 rtl:rotate-180" />
               </Link>
               <Link
                 href="/contact"
                 className="inline-flex items-center justify-center gap-2 px-8 py-3 border-2 border-white text-white font-semibold rounded-lg hover:bg-white/10 transition-all"
               >
-                Contact us
+                {copy.contactUs}
               </Link>
             </div>
           </motion.div>

@@ -104,7 +104,10 @@ describe('Category other page listings', () => {
     expect(attractionPage).toContain('title={attraction.linkedPagesTitle}');
     expect(attractionPage).toContain('subtitle={attraction.linkedPagesSubtitle}');
     expect(category2Page).toContain('title={page.linkedPagesTitle}');
-    expect(category2Page).toContain("subtitle={page.linkedPagesSubtitle ?? 'Related guides and collections'}");
+    // Editor subtitle first; the fallback is the template's own label in the visitor's language.
+    expect(category2Page).toContain('subtitle={page.linkedPagesSubtitle ?? copy.relatedGuides}');
+    const templateCopy = readFileSync(join(process.cwd(), 'lib/content/attractionTemplateCopy.ts'), 'utf8');
+    expect(templateCopy).toContain("relatedGuides: 'Related guides and collections'");
     expect(model).toContain('linkedPagesTitle: {');
     expect(model).toContain('linkedPagesSubtitle: {');
   });
