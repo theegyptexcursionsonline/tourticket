@@ -138,7 +138,26 @@ const getIconForInterest = (name: string) => {
   return { Icon: Globe, gradient: 'from-blue-500 to-cyan-600' };
 };
 
-const InterestCard = ({ interest }: { interest: Interest }) => {
+// Card and section labels in the page language (Arabic pages showed these in
+// English). Same wording as PopularInterestsGrid.
+type RelatedInterestsLabels = {
+  attraction: string; category: string; featured: string; badge: string; viewAll: string;
+  open: (name: string) => string; experiences: (count: number) => string;
+};
+const RELATED_INTERESTS_LABELS: Record<'en' | 'ar', RelatedInterestsLabels> = {
+  en: {
+    attraction: 'Attraction', category: 'Category', featured: 'Featured', badge: 'Related Interests', viewAll: 'View All Interests',
+    open: (name) => `Open ${name}`,
+    experiences: (count) => `${count} ${count === 1 ? 'experience' : 'experiences'}`,
+  },
+  ar: {
+    attraction: 'معلم', category: 'فئة', featured: 'مميز', badge: 'اهتمامات ذات صلة', viewAll: 'عرض جميع الاهتمامات',
+    open: (name) => `افتح ${name}`,
+    experiences: (count) => (count === 1 ? 'تجربة واحدة' : count === 2 ? 'تجربتان' : count <= 10 ? `${count} تجارب` : `${count} تجربة`),
+  },
+};
+
+const InterestCard = ({ interest, labels, rtl }: { interest: Interest; labels: RelatedInterestsLabels; rtl: boolean }) => {
   const linkUrl = interest.type === 'attraction'
     ? attractionPagePath(interest.slug, 'attraction', interest.urlType, undefined, interest.parentPage?.slug)
     : contentPath('category', interest.slug, interest.urlType, undefined, interest.parentPage?.slug);
@@ -148,7 +167,7 @@ const InterestCard = ({ interest }: { interest: Interest }) => {
   return (
     <Link
       href={linkUrl}
-      aria-label={`Open ${interest.name}`}
+      aria-label={labels.open(interest.name)}
       className="group relative block overflow-hidden rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1"
     >
       {/* Image Container */}
@@ -187,7 +206,7 @@ const InterestCard = ({ interest }: { interest: Interest }) => {
                   : 'bg-blue-100 text-blue-700'
               }`}
             >
-              {interest.type === 'attraction' ? 'Attraction' : 'Category'}
+              {interest.type === 'attraction' ? labels.attraction : labels.category}
             </span>
           </div>
 
@@ -195,16 +214,16 @@ const InterestCard = ({ interest }: { interest: Interest }) => {
             {interest.name}
           </h3>
           <p className="text-sm text-slate-700 font-medium">
-            {interest.products} {interest.products === 1 ? 'experience' : 'experiences'}
+            {labels.experiences(interest.products)}
           </p>
         </div>
       </div>
 
       {/* Featured Badge */}
       {interest.featured && (
-        <div className="absolute top-4 right-4 z-20 bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-3 py-1.5 rounded-full text-xs font-bold shadow-lg flex items-center gap-1">
+        <div className={`absolute top-4 ${rtl ? 'left-4' : 'right-4'} z-20 bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-3 py-1.5 rounded-full text-xs font-bold shadow-lg flex items-center gap-1`}>
           <TrendingUp className="w-3 h-3" />
-          Featured
+          {labels.featured}
         </div>
       )}
     </Link>
@@ -221,6 +240,7 @@ const RelatedInterests: React.FC<RelatedInterestsProps> = ({
   const locale = useLocale();
   const rtl = isRTL(locale);
   const CtaArrow = rtl ? ArrowLeft : ArrowRight;
+  const labels = rtl ? RELATED_INTERESTS_LABELS.ar : RELATED_INTERESTS_LABELS.en;
   const [interests, setInterests] = useState<Interest[]>([]);
   const [loading, setLoading] = useState(!initialInterests);
 
@@ -303,7 +323,7 @@ const RelatedInterests: React.FC<RelatedInterestsProps> = ({
         >
           <div className="inline-flex items-center gap-2 bg-blue-100 text-blue-700 px-4 py-2 rounded-full text-sm font-semibold mb-4">
             <Sparkles className="w-4 h-4" />
-            Related Interests
+            {labels.badge}
           </div>
           <h2 className="text-4xl md:text-5xl font-black text-slate-900 tracking-tight mb-4">
             {title}
@@ -321,7 +341,7 @@ const RelatedInterests: React.FC<RelatedInterestsProps> = ({
               viewport={{ once: true }}
               transition={{ delay: index * 0.1 }}
             >
-              <InterestCard interest={interest} />
+              <InterestCard interest={interest} labels={labels} rtl={rtl} />
             </motion.div>
           ))}
         </div>
@@ -337,7 +357,7 @@ const RelatedInterests: React.FC<RelatedInterestsProps> = ({
             href="/interests"
             className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl"
           >
-            View All Interests
+            {labels.viewAll}
             <CtaArrow className="w-5 h-5" />
           </Link>
         </motion.div>
