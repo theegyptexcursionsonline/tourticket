@@ -19,6 +19,7 @@ describe('pricing cache revalidation', () => {
   it('expires the cached tour lists after a price update', () => {
     expect(revalidatePricingPaths()).toBe(true);
     expect(revalidateTag).toHaveBeenCalledWith('destination-pages', 'max');
+    expect(revalidateTag).toHaveBeenCalledWith('category-pages', { expire: 0 });
     expect(revalidateTag).toHaveBeenCalledWith('tours-index', 'max');
   });
 });

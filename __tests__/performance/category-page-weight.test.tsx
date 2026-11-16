@@ -163,6 +163,9 @@ const makeQuery = (model: string, filter: Doc, docs: () => Doc[]) => {
   return query;
 };
 
+// The renderer stores its data with unstable_cache (category-page-store.test.tsx
+// covers that); outside Next there is no data cache, so read straight through.
+jest.mock('next/cache', () => ({ unstable_cache: (fn: () => unknown) => fn, revalidateTag: jest.fn(), revalidatePath: jest.fn() }));
 jest.mock('@/lib/dbConnect', () => ({ __esModule: true, default: jest.fn(() => Promise.resolve()) }));
 jest.mock('@/lib/models/Tour', () => ({
   __esModule: true,

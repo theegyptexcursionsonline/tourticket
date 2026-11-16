@@ -16,7 +16,10 @@ import {
   selectLocalizedTaxonomyEntries,
   selectLocalizedTours,
 } from '@/lib/i18n/localizedCollections';
+import { unstable_cache } from 'next/cache';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
+import { DEFAULT_TENANT_ID } from '@/lib/tenant/tenantScope';
+import { CATEGORY_PAGES_TAG } from '@/lib/storefront/revalidateTourStorefront';
 import { PUBLIC_CONTENT_FILTER } from '@/lib/content/publicContentFilter';
 import { contentPath, localizedContentPath, tourContentPath } from '@/lib/content/contentUrl';
 import { resolveLinkedPageCards } from '@/lib/attractionPages/pageContent';
@@ -29,7 +32,20 @@ import {
   withoutTranslations,
 } from '@/lib/content/storefrontTourPayload';
 
-export async function getCategoryMetadata(slug: string, locale: string, canonicalPath?: string): Promise<Metadata | null> {
+// Stored with the page data (same tags and lifetime) so the page's head and body
+// always come from the same version of the category.
+export function getCategoryMetadata(slug: string, locale: string, canonicalPath?: string): Promise<Metadata | null> {
+  return unstable_cache(
+    () => loadCategoryMetadata(slug, locale, canonicalPath),
+    ['category-page-metadata', DEFAULT_TENANT_ID, slug, locale, canonicalPath ?? ''],
+    {
+      revalidate: CATEGORY_PAGE_REVALIDATE_SECONDS,
+      tags: [CATEGORY_PAGES_TAG, `category-page:${slug}`],
+    },
+  )();
+}
+
+export async function loadCategoryMetadata(slug: string, locale: string, canonicalPath?: string): Promise<Metadata | null> {
   await dbConnect();
 
   const categoryMatches = await CategoryModel.find({ slug, ...DEFAULT_TENANT_FILTER, ...PUBLIC_CONTENT_FILTER })
@@ -286,8 +302,52 @@ async function getRelatedCategoryInterests(currentCategoryId: string, currentSlu
     .filter((category) => category.products > 0);
 }
 
-export async function renderCategoryDetail(slug: string, locale: string): Promise<React.ReactElement | null> {
+/**
+ * Every database read a category page visit needs, in one serializable bundle.
+ * Nothing here reads the visitor (currency, sign-in, cart and wishlist all stay
+ * in the browser), so the same bundle is correct for every anonymous visitor
+ * of this site, slug and language.
+ */
+export async function loadCategoryPageData(slug: string, locale: string) {
   const { category, categoryTours } = await getPageData(slug, locale);
+  if (!category) {
+    return { category: null, categoryTours: [], relatedInterests: [], linkedPages: [] };
+  }
+  const [relatedInterests, linkedPages] = await Promise.all([
+    getRelatedCategoryInterests(String(category._id), slug, locale),
+    resolveLinkedPageCards(category, locale),
+  ]);
+  return { category, categoryTours, relatedInterests, linkedPages };
+}
+
+/**
+ * Owner decision 16 Nov 2026: list pages may be up to five minutes old so they
+ * open within two seconds; the trip page, cart and checkout always read live
+ * prices. Every admin save that can change a category page expires the
+ * `category-pages` tag (revalidateCategoryPages in
+ * lib/storefront/revalidateTourStorefront.ts), so edits do not wait for the
+ * five minutes. The key names the site, slug and language
+ * so one site's or one language's page can never be served for another.
+ */
+export const CATEGORY_PAGE_REVALIDATE_SECONDS = 300;
+
+export function categoryPageCacheKey(slug: string, locale: string) {
+  return ['category-page-data', DEFAULT_TENANT_ID, slug, locale];
+}
+
+function getCachedCategoryPageData(slug: string, locale: string) {
+  return unstable_cache(
+    () => loadCategoryPageData(slug, locale),
+    categoryPageCacheKey(slug, locale),
+    {
+      revalidate: CATEGORY_PAGE_REVALIDATE_SECONDS,
+      tags: [CATEGORY_PAGES_TAG, `category-page:${slug}`],
+    },
+  )();
+}
+
+export async function renderCategoryDetail(slug: string, locale: string): Promise<React.ReactElement | null> {
+  const { category, categoryTours, relatedInterests, linkedPages } = await getCachedCategoryPageData(slug, locale);
 
   if (!category) return null;
 
@@ -329,10 +389,6 @@ export async function renderCategoryDetail(slug: string, locale: string): Promis
     }];
   });
 
-  const [relatedInterests, linkedPages] = await Promise.all([
-    getRelatedCategoryInterests(String(category._id), slug, locale),
-    resolveLinkedPageCards(category, locale),
-  ]);
   // The category is already localized; its every-language translations map is
   // never read by the client page.
   const clientCategory = withoutTranslations(category);

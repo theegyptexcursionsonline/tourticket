@@ -2,6 +2,7 @@
 import { withAdminAudit } from '@/lib/admin/adminAudit';
 import { NextRequest, NextResponse } from 'next/server';
 import { revalidatePath } from 'next/cache';
+import { revalidateCategoryPages } from '@/lib/storefront/revalidateTourStorefront';
 import dbConnect from '@/lib/dbConnect';
 import Availability from '@/lib/models/Availability';
 import Tour from '@/lib/models/Tour';
@@ -25,6 +26,7 @@ function revalidateTourAvailabilitySurfaces() {
     revalidatePath('/[locale]/tour/[slug]', 'page');   // legacy `/tour/:slug`
     revalidatePath('/[locale]/tours', 'page');         // tours listing
     revalidatePath('/[locale]/search', 'page');        // search results
+    revalidateCategoryPages();                          // stored category page data
   } catch (err) {
     // revalidatePath can throw in non-Route-Handler contexts; we're always
     // inside a handler here, but we never want a revalidation glitch to

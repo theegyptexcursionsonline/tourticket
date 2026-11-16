@@ -1,4 +1,5 @@
 import { revalidatePath, revalidateTag } from 'next/cache';
+import { revalidateCategoryPages } from '@/lib/storefront/revalidateTourStorefront';
 
 const PRICING_PATHS: Array<[string, 'page']> = [
   ['/[locale]', 'page'],
@@ -19,6 +20,7 @@ export function revalidatePricingPaths() {
   try {
     for (const [path, type] of PRICING_PATHS) revalidatePath(path, type);
     revalidateTag('destination-pages', 'max');
+    revalidateCategoryPages();
     revalidateTag('tours-index', 'max');
     return true;
   } catch (error) {

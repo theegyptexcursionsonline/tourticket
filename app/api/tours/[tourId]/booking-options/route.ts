@@ -2,6 +2,7 @@ import { withAdminAudit } from '@/lib/admin/adminAudit';
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
 import Tour from '@/lib/models/Tour';
+import { revalidateStorefrontContent } from '@/lib/storefront/revalidateTourStorefront';
 import { requireAdminAuth } from '@/lib/auth/adminAuth';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 import { hasOnlyConfiguredTimeSlots } from '@/lib/pricing/bookingOptionSlots';
@@ -64,6 +65,9 @@ async function PUTHandler(
     }
 
     await tour.save();
+    // Option prices appear on category and destination cards, which are stored
+    // for a few minutes; purge them so the saved price shows at once.
+    revalidateStorefrontContent();
 
     return NextResponse.json({ 
       success: true, 

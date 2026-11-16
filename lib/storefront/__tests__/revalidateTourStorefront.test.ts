@@ -13,6 +13,7 @@ describe('storefront cache revalidation', () => {
     expect(revalidatePath).toHaveBeenCalledWith('/', 'layout');
     expect(revalidatePath).toHaveBeenCalledWith('/[locale]', 'layout');
     expect(revalidateTag).toHaveBeenCalledWith('destination-pages', 'max');
+    expect(revalidateTag).toHaveBeenCalledWith('category-pages', { expire: 0 });
     expect(revalidateTag).toHaveBeenCalledWith('tours-index', 'max');
   });
 
