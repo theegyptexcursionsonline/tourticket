@@ -11,6 +11,7 @@ import Destination from '@/lib/models/Destination';
 import { escapeRegex } from '@/lib/utils/escapeRegex';
 import { attractionPagePath, contentPath } from '@/lib/content/contentUrl';
 import { localizeEntityFields } from '@/lib/i18n/contentLocalization';
+import { localizeTour } from '@/lib/i18n/localizeTour';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 import { PUBLIC_CONTENT_FILTER } from '@/lib/content/publicContentFilter';
 
@@ -34,6 +35,16 @@ const TOUR_CARD_POPULATE = [
   { path: 'destination', model: Destination, select: 'name slug country image description' },
   { path: 'category', model: Category, select: 'name slug' },
 ];
+
+/**
+ * Trip cards on attraction and catalogue pages in the visitor's language
+ * (title, description, duration... from each trip's own translations, English
+ * where a field has none). The category page already did this; these two
+ * templates printed every trip in English on Arabic pages.
+ */
+export function localizeAttractionTours<T extends LeanRecord>(tours: T[], locale: string): T[] {
+  return tours.map((tour) => localizeTour(tour as Parameters<typeof localizeTour>[0], locale) as unknown as T);
+}
 
 const TOUR_SORT = { isFeatured: -1 as const, rating: -1 as const, bookings: -1 as const };
 

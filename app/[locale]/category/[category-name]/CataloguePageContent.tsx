@@ -15,6 +15,7 @@ import { localizeEntityFields } from '@/lib/i18n/contentLocalization';
 import {
   ATTRACTION_PAGE_LOCALIZED_FIELDS,
   resolveAttractionPageTours,
+  localizeAttractionTours,
   resolveLinkedPageCards,
 } from '@/lib/attractionPages/pageContent';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
@@ -68,7 +69,7 @@ export async function getCataloguePage(slug: string, locale: string): Promise<Ca
 
     return {
       ...serializedPage,
-      tours: JSON.parse(JSON.stringify(tours)),
+      tours: JSON.parse(JSON.stringify(localizeAttractionTours(tours, locale))),
       totalTours,
       linkedPages,
     };

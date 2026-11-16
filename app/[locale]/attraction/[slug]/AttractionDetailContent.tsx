@@ -12,6 +12,7 @@ import Category from '@/lib/models/Category';
 import {
   ATTRACTION_PAGE_LOCALIZED_FIELDS,
   resolveAttractionPageTours,
+  localizeAttractionTours,
   resolveLinkedPageCards,
 } from '@/lib/attractionPages/pageContent';
 import { localizeEntityFields, localizeStructuredEntries } from '@/lib/i18n/contentLocalization';
@@ -51,7 +52,7 @@ async function getAttractionPageData(slug: string, locale: string) {
 
     return {
       ...localized,
-      tours: JSON.parse(JSON.stringify(tours)),
+      tours: JSON.parse(JSON.stringify(localizeAttractionTours(tours, locale))),
       totalTours,
       linkedPages,
     } as PageRecord & { tours: unknown[]; totalTours: number };
