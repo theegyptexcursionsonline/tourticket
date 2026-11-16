@@ -254,6 +254,11 @@ describe('older attraction and catalogue templates on phones', () => {
       const phone = classesFor(content, template).filter((c) => !/^(sm|md|lg|xl):/.test(c));
       expect(phone.filter((c) => FULL_HEIGHT.test(c) || c === 'items-end')).toEqual([]);
     }
+    // The fixed header (64 px on a phone) covers the top of the hero: the copy
+    // must start below it on every template, or the breadcrumb hides under it.
+    for (const template of ['immersive', 'editorial', 'classic']) {
+      expect(classesFor(content, template)).toEqual(expect.arrayContaining(['pt-24', 'sm:pt-28']));
+    }
     expect(classesFor(content, 'immersive')).toEqual(expect.arrayContaining(['lg:min-h-[76vh]', 'lg:items-end', 'lg:py-24']));
     expect(classesFor(content, 'editorial')).toEqual(expect.arrayContaining(['lg:min-h-[560px]', 'lg:py-20']));
     expect(landing).toContain('<section data-attraction-hero className={`relative overflow-hidden bg-slate-900 ${ATTRACTION_HERO_HEIGHT[pageTemplate]}`}>');

@@ -377,10 +377,12 @@ const ATTRACTION_HERO_HEIGHT: Record<PageTemplate, string> = {
   editorial: 'lg:min-h-[560px]',
   classic: '',
 };
+// The header is fixed over the top of the hero (64 px on a phone), so the copy
+// starts below it: pt-24 on phones, as on the category and destination heroes.
 const ATTRACTION_HERO_CONTENT: Record<PageTemplate, string> = {
-  immersive: 'items-center py-10 sm:py-12 lg:min-h-[76vh] lg:items-end lg:py-24',
-  editorial: 'items-center py-10 sm:py-12 lg:min-h-[560px] lg:py-20',
-  classic: 'py-10 sm:py-12 md:py-24',
+  immersive: 'items-center pt-24 pb-10 sm:pt-28 sm:pb-12 lg:min-h-[76vh] lg:items-end lg:py-24',
+  editorial: 'items-center pt-24 pb-10 sm:pt-28 sm:pb-12 lg:min-h-[560px] lg:py-20',
+  classic: 'pt-24 pb-10 sm:pt-28 sm:pb-12 md:py-24',
 };
 
 const AttractionLandingPage: React.FC<AttractionLandingPageProps> = ({ attraction, linkedPages }) => {
