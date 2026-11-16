@@ -21,6 +21,13 @@ import { PUBLIC_CONTENT_FILTER } from '@/lib/content/publicContentFilter';
 import { contentPath, localizedContentPath, tourContentPath } from '@/lib/content/contentUrl';
 import { resolveLinkedPageCards } from '@/lib/attractionPages/pageContent';
 import { buildContentBreadcrumbs } from '@/lib/content/breadcrumbs';
+import {
+  CATEGORY_TOUR_CATEGORY_SELECT,
+  CATEGORY_TOUR_DESTINATION_SELECT,
+  CATEGORY_TOUR_SELECT,
+  toCategoryTourPayload,
+  withoutTranslations,
+} from '@/lib/content/storefrontTourPayload';
 
 export async function getCategoryMetadata(slug: string, locale: string, canonicalPath?: string): Promise<Metadata | null> {
   await dbConnect();
@@ -99,13 +106,25 @@ async function getPageData(slug: string, locale: string) {
   }
 
   const categoryIds = serializedCategories.map((category) => String(category._id));
+  // Project to the card + booking-sidebar contract. Full tour documents with
+  // fully populated destinations/categories (every language's translations,
+  // itineraries, FAQs, travel tips) made this page several megabytes (#2591).
   const baseTours = await TourModel.find({
     category: { $in: categoryIds },
     ...PUBLIC_CONTENT_FILTER,
     ...DEFAULT_TENANT_FILTER,
   })
-    .populate({ path: 'destination', match: { ...DEFAULT_TENANT_FILTER, ...PUBLIC_CONTENT_FILTER } })
-    .populate({ path: 'category', match: { ...DEFAULT_TENANT_FILTER, ...PUBLIC_CONTENT_FILTER } })
+    .select(CATEGORY_TOUR_SELECT)
+    .populate({
+      path: 'destination',
+      match: { ...DEFAULT_TENANT_FILTER, ...PUBLIC_CONTENT_FILTER },
+      select: CATEGORY_TOUR_DESTINATION_SELECT,
+    })
+    .populate({
+      path: 'category',
+      match: { ...DEFAULT_TENANT_FILTER, ...PUBLIC_CONTENT_FILTER },
+      select: CATEGORY_TOUR_CATEGORY_SELECT,
+    })
     .lean();
 
   const serializedBaseTours = JSON.parse(JSON.stringify(baseTours)) as Record<string, unknown>[];
@@ -122,8 +141,20 @@ async function getPageData(slug: string, locale: string) {
       slug: { $in: candidateSlugs },
       ...DEFAULT_TENANT_FILTER,
     })
-      .populate({ path: 'destination', match: { ...DEFAULT_TENANT_FILTER, ...PUBLIC_CONTENT_FILTER } })
-      .populate({ path: 'category', match: { ...DEFAULT_TENANT_FILTER, ...PUBLIC_CONTENT_FILTER } })
+      // No field projection on this German re-query: it has no sort, so the
+      // trip order comes from MongoDB's plan for this exact query shape, and a
+      // projected shape picked a different plan and reordered /de pages. The
+      // payload mapper below still keeps the full records out of the page.
+      .populate({
+        path: 'destination',
+        match: { ...DEFAULT_TENANT_FILTER, ...PUBLIC_CONTENT_FILTER },
+        select: CATEGORY_TOUR_DESTINATION_SELECT,
+      })
+      .populate({
+        path: 'category',
+        match: { ...DEFAULT_TENANT_FILTER, ...PUBLIC_CONTENT_FILTER },
+        select: CATEGORY_TOUR_CATEGORY_SELECT,
+      })
       .lean();
 
     serializedTourCandidates = JSON.parse(JSON.stringify(localizedTourMatches)) as Record<string, unknown>[];
@@ -172,15 +203,17 @@ async function getPageData(slug: string, locale: string) {
       );
     }
 
-    if (localizedTour.category && typeof localizedTour.category === 'object') {
-      localizedTour.category = localizeEntityFields(
-        localizedTour.category as Record<string, unknown>,
-        locale,
-        ['name', 'description', 'longDescription']
-      );
-    }
+    // `category` is an array of refs; localize each one (spreading the array
+    // itself into localizeEntityFields turned it into an index-keyed object).
+    const localizeCategoryRef = (value: unknown) =>
+      value && typeof value === 'object' && !Array.isArray(value)
+        ? localizeEntityFields(value as Record<string, unknown>, locale, ['name'])
+        : value;
+    localizedTour.category = Array.isArray(localizedTour.category)
+      ? localizedTour.category.map(localizeCategoryRef)
+      : localizeCategoryRef(localizedTour.category);
 
-    return localizedTour;
+    return toCategoryTourPayload(localizedTour);
   });
 
   return {
@@ -300,6 +333,9 @@ export async function renderCategoryDetail(slug: string, locale: string): Promis
     getRelatedCategoryInterests(String(category._id), slug, locale),
     resolveLinkedPageCards(category, locale),
   ]);
+  // The category is already localized; its every-language translations map is
+  // never read by the client page.
+  const clientCategory = withoutTranslations(category);
 
   return (
     <>
@@ -316,7 +352,7 @@ export async function renderCategoryDetail(slug: string, locale: string): Promis
         }))}
       />
       <CategoryPageClient
-        category={category as unknown as CategoryType}
+        category={clientCategory as unknown as CategoryType}
         categoryTours={categoryTours as unknown as TourType[]}
         relatedInterests={relatedInterests}
         linkedPages={linkedPages}

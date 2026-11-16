@@ -72,6 +72,64 @@ export function toDestinationTourPayload(tour: UnknownRecord): UnknownRecord {
   };
 }
 
+/**
+ * Database projection for category (catalogue) page tours. It holds every
+ * field the page renders, the booking sidebar reads, and the localization
+ * helpers score or translate (TOUR_LOCALE_FIELDS, `translations`, `tenantId`,
+ * `isPublished`), so locale selection picks exactly the record it did before.
+ * Itineraries, FAQs, galleries and policy text stay in the database.
+ */
+export const CATEGORY_TOUR_SELECT = [
+  'title', 'description', 'longDescription', 'slug', 'urlType', 'parentPage',
+  'image', 'pricingSummary', 'price', 'discountPrice', 'originalPrice',
+  'discountPercent', 'duration', 'rating', 'reviewCount', 'reviews', 'bookings',
+  'isFeatured', 'isPublished', 'specialOffer', 'fullyBooked', 'spotsLeft',
+  'location', 'destination', 'category', 'availability', 'bookingOptions',
+  'addOns', 'groupSize', 'maxGroupSize', 'languages', 'instantConfirmation',
+  'meetingPoint', 'operatedBy', 'revenueGuestPrices', 'tieredRefunds',
+  'bookingCutoffMinutes', 'pricingKey', 'tags', 'includes', 'highlights',
+  'whatsIncluded', 'whatsNotIncluded', 'metaTitle', 'metaDescription',
+  'translations', 'tenantId',
+].join(' ');
+
+/** Populated destination fields a category page needs (cards, popular destinations, links). */
+export const CATEGORY_TOUR_DESTINATION_SELECT = 'name slug image urlType parentPage country description translations';
+
+/** Populated category fields kept on each category-page tour. */
+export const CATEGORY_TOUR_CATEGORY_SELECT = 'name slug icon urlType parentPage translations';
+
+const categoryPageDestinationRef = (value: unknown): unknown => {
+  const record = asRecord(value);
+  if (!record) return value;
+
+  return {
+    _id: record._id == null ? undefined : String(record._id),
+    name: record.name,
+    slug: record.slug,
+    image: record.image,
+    urlType: record.urlType,
+    parentPage: record.parentPage,
+  };
+};
+
+/**
+ * Category pages render a tour card per trip and open the booking sidebar on
+ * the same record. Send exactly that contract in the visitor's language: no
+ * `translations` map, no itinerary/FAQ/gallery, and compact destination and
+ * category references instead of the full populated documents.
+ */
+export function toCategoryTourPayload(tour: UnknownRecord): UnknownRecord {
+  return {
+    ...toDestinationTourPayload(tour),
+    destination: categoryPageDestinationRef(tour.destination),
+    category: Array.isArray(tour.category)
+      ? tour.category.map(compactTaxonomyRef)
+      : compactTaxonomyRef(tour.category),
+    bookingCutoffMinutes: tour.bookingCutoffMinutes,
+    pricingKey: tour.pricingKey,
+  };
+}
+
 /** Compact card/search payload for the all-tours client grid. */
 export function toToursIndexPayload(tour: UnknownRecord): UnknownRecord {
   const destination = compactTaxonomyRef(tour.destination);
@@ -100,4 +158,14 @@ export function toToursIndexPayload(tour: UnknownRecord): UnknownRecord {
     destination,
     categories,
   };
+}
+
+/**
+ * Drop the every-language `translations` map from a record that has already
+ * been localized for the visitor, before it is handed to a client component.
+ */
+export function withoutTranslations<T extends UnknownRecord>(entry: T): Omit<T, 'translations'> {
+  const { translations: _translations, ...rest } = entry;
+  void _translations;
+  return rest;
 }

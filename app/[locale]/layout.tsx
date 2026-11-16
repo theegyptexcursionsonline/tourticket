@@ -10,6 +10,7 @@ import { CartProvider } from "@/contexts/CartContext";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { WishlistProvider } from "@/contexts/WishlistContext";
 import { NavDataProvider } from "@/contexts/NavDataContext";
+import { withoutTranslations } from "@/lib/content/storefrontTourPayload";
 import CartSidebar from "@/components/CartSidebar";
 import WishlistSidebar from "@/components/WishlistSidebar";
 import AppToaster from '@/components/ui/AppToaster';
@@ -135,28 +136,35 @@ async function getNavData(locale: string): Promise<NavCache> {
       { requireTours: true },
     );
 
+    // Every page ships this menu data to the browser through NavDataProvider.
+    // Send it already localized: the every-language `translations` map was
+    // ~0.6 MB on every page and no header/footer component reads it (#2591).
     const result: NavCache = {
       destinations: selectLocalizedTaxonomyEntries(
         JSON.parse(JSON.stringify(visibleDestinations)) as Record<string, unknown>[],
         locale,
         ['name', 'description', 'country', 'metaTitle', 'metaDescription']
       ).map((destination: Record<string, unknown>) =>
-        localizeEntityFields(destination, locale, ['name', 'description', 'country', 'metaTitle', 'metaDescription'])
+        withoutTranslations(
+          localizeEntityFields(destination, locale, ['name', 'description', 'country', 'metaTitle', 'metaDescription']),
+        )
       ) as unknown as DestinationData[],
       categories: selectLocalizedTaxonomyEntries(
         JSON.parse(JSON.stringify(visibleCategories)) as Record<string, unknown>[],
         locale,
         ['name', 'description', 'longDescription', 'metaTitle', 'metaDescription', 'highlights', 'features']
       ).map((category: Record<string, unknown>) =>
-        localizeEntityFields(category, locale, [
-          'name',
-          'description',
-          'longDescription',
-          'metaTitle',
-          'metaDescription',
-          'highlights',
-          'features',
-        ])
+        withoutTranslations(
+          localizeEntityFields(category, locale, [
+            'name',
+            'description',
+            'longDescription',
+            'metaTitle',
+            'metaDescription',
+            'highlights',
+            'features',
+          ]),
+        )
       ) as unknown as CategoryData[],
     };
 
