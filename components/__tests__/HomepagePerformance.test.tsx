@@ -23,6 +23,7 @@ const tours = Array.from({ length: 6 }, (_, index) => ({
   description: `Tour ${index} description`,
   duration: '4 hours',
   rating: 4.8,
+  reviewCount: 6,
   bookings: 10,
   originalPrice: 100,
   discountPrice: 80,

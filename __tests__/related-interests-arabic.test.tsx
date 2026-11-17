@@ -61,3 +61,18 @@ describe('RelatedInterests in Arabic', () => {
     await screen.findByText('الكرنك');
   });
 });
+
+describe('RelatedInterests in German, French and Spanish', () => {
+  it.each([
+    ['de', 'Ähnliche Interessen', '211 Erlebnisse', 'Empfohlen', 'Kategorie'],
+    ['fr', 'Centres d’intérêt proches', '211 expériences', 'Recommandé', 'Catégorie'],
+    ['es', 'Intereses relacionados', '211 experiencias', 'Destacado', 'Categoría'],
+  ])('%s labels', async (locale, badge, count, featured, category) => {
+    mockLocale = locale as string;
+    render(<RelatedInterests initialInterests={interests} />);
+    await screen.findByText(badge as string);
+    expect(screen.getByText(count as string)).toBeInTheDocument();
+    expect(screen.getByText(featured as string)).toBeInTheDocument();
+    expect(screen.getByText(category as string)).toBeInTheDocument();
+  });
+});

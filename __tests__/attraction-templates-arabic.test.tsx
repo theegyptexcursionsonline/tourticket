@@ -30,6 +30,9 @@ jest.mock('next-intl', () => {
   const messages: Record<string, unknown> = {
     en: jest.requireActual('../messages/en.json'),
     ar: jest.requireActual('../messages/ar.json'),
+    de: jest.requireActual('../messages/de.json'),
+    fr: jest.requireActual('../messages/fr.json'),
+    es: jest.requireActual('../messages/es.json'),
   };
   const lookup = (key: string) =>
     key.split('.').reduce<unknown>((node, part) => (node as Record<string, unknown> | undefined)?.[part], messages[mockLocale]) ?? key;
@@ -150,5 +153,70 @@ describe('older catalogue template in Arabic', () => {
     expect(screen.getByRole('button', { name: 'List view' })).toHaveAttribute('aria-pressed', 'true');
     expect(screen.getByRole('link', { name: 'Home' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Categories' })).toBeInTheDocument();
+  });
+});
+
+describe('older templates in German, French and Spanish (17 Nov)', () => {
+  it.each(['de', 'fr', 'es'] as const)('%s attraction page prints its own template text and breadcrumb', (locale) => {
+    mockLocale = locale;
+    const copy = ATTRACTION_TEMPLATE_COPY[locale];
+    const { container } = render(<AttractionLandingPage attraction={{ ...attraction, title: 'Karnak' }} />);
+    for (const heading of [copy.gallery, copy.whatMakesThisSpecial, copy.availableActivities, copy.travelTips, copy.faqTitle, copy.similarAttractions, copy.topExperiences]) {
+      expect(screen.getByRole('heading', { name: heading })).toBeInTheDocument();
+    }
+    expect(screen.getByText(copy.popularAttraction)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(copy.searchActivities)).toBeInTheDocument();
+    const home = (jest.requireActual(`../messages/${locale}.json`) as { tourPage: { home: string } }).tourPage.home;
+    expect(screen.getByRole('link', { name: home })).toBeInTheDocument();
+    for (const english of ['Popular attraction', 'What makes this special', 'Available activities', 'Similar attractions', 'Top experiences', 'Most popular']) {
+      expect(container.textContent).not.toContain(english);
+    }
+  });
+
+  it.each(['de', 'fr', 'es'] as const)('%s catalogue page prints its own template text', (locale) => {
+    mockLocale = locale;
+    const copy = ATTRACTION_TEMPLATE_COPY[locale];
+    const { container } = render(<AttractionPageTemplate page={{ ...cataloguePage, title: 'Day Trips' }} urlType="category" />);
+    for (const heading of [copy.whyChooseThisExperience, copy.whatMakesThisSpecialTitle, copy.gallery, copy.customersSay, copy.readyToStart]) {
+      expect(screen.getByRole('heading', { name: heading })).toBeInTheDocument();
+    }
+    expect(screen.getByText(copy.showingOf(2, 2))).toBeInTheDocument();
+    for (const english of ['Why Choose This Experience', 'What Our Customers Say', 'Ready to Start Your Adventure?', 'Browse All Tours']) {
+      expect(container.textContent).not.toContain(english);
+    }
+  });
+
+  it('every language table has the same keys and no empty text', () => {
+    const keys = Object.keys(ATTRACTION_TEMPLATE_COPY.en).sort();
+    for (const locale of ['ar', 'de', 'fr', 'es'] as const) {
+      expect(Object.keys(ATTRACTION_TEMPLATE_COPY[locale]).sort()).toEqual(keys);
+      for (const [key, value] of Object.entries(ATTRACTION_TEMPLATE_COPY[locale])) {
+        const text = typeof value === 'function' ? (value as (...a: unknown[]) => string)(3, 9) : String(value);
+        expect(`${key}:${text}`.trim().length).toBeGreaterThan(key.length + 1);
+      }
+    }
+  });
+});
+
+describe('Karnak rating (17 Nov): a score only when reviews back it', () => {
+  it('no page reviews and trips rated 4.5 with no reviews: the hero shows no score', () => {
+    const unreviewed = { ...attraction, title: 'Karnak', reviews: [], tours: [tour(1, { rating: 4.5, reviewCount: 0 }), tour(2, { rating: 4.5, reviewCount: 0 })] };
+    const { container } = render(<AttractionLandingPage attraction={unreviewed} />);
+    const hero = container.querySelector('[data-attraction-hero]')!;
+    expect(hero.textContent).not.toMatch(/4[.,]5/);
+    expect(hero.textContent).toContain('2 activities');
+  });
+
+  it('trips with real reviews give a hero score from those trips only', () => {
+    const mixed = { ...attraction, title: 'Karnak', reviews: [], tours: [tour(1, { rating: 4.5, reviewCount: 0 }), tour(2, { rating: 4.8, reviewCount: 6 })] };
+    const { container } = render(<AttractionLandingPage attraction={mixed} />);
+    expect(container.querySelector('[data-attraction-hero]')!.textContent).toContain('4.8');
+  });
+
+  it('catalogue cards and stats skip unreviewed ratings', () => {
+    const page = { ...cataloguePage, title: 'Day Trips', reviews: [], tours: [tour(1, { rating: 4.5, reviewCount: 0 }), tour(2, { rating: 4.5, reviewCount: undefined })] };
+    const { container } = render(<AttractionPageTemplate page={page} urlType="category" />);
+    expect(container.textContent).not.toMatch(/4\.5/);
+    expect(screen.queryByText('Average Rating')).toBeNull();
   });
 });

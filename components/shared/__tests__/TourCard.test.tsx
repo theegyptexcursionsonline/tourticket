@@ -40,6 +40,7 @@ describe('TourCard', () => {
     description: 'Visit the ancient pyramids',
     duration: '4 hours',
     rating: 4.8,
+    reviewCount: 9,
     bookings: 1500,
     originalPrice: 100,
     discountPrice: 80,
@@ -73,6 +74,16 @@ describe('TourCard', () => {
     render(<TourCard tour={mockTour as Tour} />)
 
     expect(screen.getByText('4.8')).toBeInTheDocument()
+  })
+
+  it('shows no score when no review backs the rating (no 4.5 fallback)', () => {
+    const { rating: _rating, reviewCount: _count, ...unrated } = mockTour
+    void _rating; void _count
+    const { unmount } = render(<TourCard tour={unrated as Tour} />)
+    expect(screen.queryByText('4.5')).not.toBeInTheDocument()
+    unmount()
+    render(<TourCard tour={{ ...mockTour, reviewCount: 0 } as Tour} />)
+    expect(screen.queryByText('4.8')).not.toBeInTheDocument()
   })
 
   it('should render tour link with correct slug', () => {

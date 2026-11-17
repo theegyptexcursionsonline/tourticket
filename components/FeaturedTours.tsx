@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { tourCardRating } from '@/lib/tours/ratingDisplay';
 import { ArrowRight, Star, ShoppingCart, Clock, Users, ImageIcon } from 'lucide-react';
 import Image from 'next/image';
 import { Tour } from '@/types';
@@ -136,15 +137,17 @@ const TourCard = ({ tour, onAddToCartClick }: { tour: Tour; onAddToCartClick: (t
           </div>
         )}
 
-        {/* Rating badge (top-right) */}
-        <div className="absolute top-4 right-4 z-20">
-          <div className="bg-white/95 backdrop-blur-sm px-3 py-2 rounded-full flex items-center gap-2 shadow-lg border border-white/20">
-            <Star size={16} className="text-yellow-500 fill-yellow-500" />
-            <span className="text-sm font-bold text-gray-800">
-              {tour.rating ? tour.rating.toFixed(1) : '0.0'}
-            </span>
+        {/* Rating badge (top-right) — only a score real reviews back */}
+        {typeof tour.rating === 'number' && tour.rating > 0 && (
+          <div className="absolute top-4 right-4 z-20">
+            <div className="bg-white/95 backdrop-blur-sm px-3 py-2 rounded-full flex items-center gap-2 shadow-lg border border-white/20">
+              <Star size={16} className="text-yellow-500 fill-yellow-500" />
+              <span className="text-sm font-bold text-gray-800">
+                {tour.rating.toFixed(1)}
+              </span>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Price pill (overlay bottom-left) */}
         <div className="absolute left-4 bottom-4 z-20">
@@ -252,7 +255,7 @@ export default function FeaturedTours() {
             slug: tour.slug || '',
             originalPrice: typeof tour.originalPrice === 'number' ? tour.originalPrice : null,
             discountPrice: typeof tour.discountPrice === 'number' ? tour.discountPrice : tour.originalPrice || 0,
-            rating: typeof tour.rating === 'number' ? tour.rating : 0,
+            rating: tourCardRating(tour) ?? 0,
             bookings: typeof tour.bookings === 'number' ? tour.bookings : 0,
             duration: tour.duration || 'Duration not specified',
             tags: Array.isArray(tour.tags) ? tour.tags : [],

@@ -144,7 +144,7 @@ type RelatedInterestsLabels = {
   attraction: string; category: string; featured: string; badge: string; viewAll: string;
   open: (name: string) => string; experiences: (count: number) => string;
 };
-const RELATED_INTERESTS_LABELS: Record<'en' | 'ar', RelatedInterestsLabels> = {
+const RELATED_INTERESTS_LABELS: Record<'en' | 'ar' | 'de' | 'fr' | 'es', RelatedInterestsLabels> = {
   en: {
     attraction: 'Attraction', category: 'Category', featured: 'Featured', badge: 'Related Interests', viewAll: 'View All Interests',
     open: (name) => `Open ${name}`,
@@ -154,6 +154,21 @@ const RELATED_INTERESTS_LABELS: Record<'en' | 'ar', RelatedInterestsLabels> = {
     attraction: 'معلم', category: 'فئة', featured: 'مميز', badge: 'اهتمامات ذات صلة', viewAll: 'عرض جميع الاهتمامات',
     open: (name) => `افتح ${name}`,
     experiences: (count) => (count === 1 ? 'تجربة واحدة' : count === 2 ? 'تجربتان' : count <= 10 ? `${count} تجارب` : `${count} تجربة`),
+  },
+  de: {
+    attraction: 'Sehenswürdigkeit', category: 'Kategorie', featured: 'Empfohlen', badge: 'Ähnliche Interessen', viewAll: 'Alle Interessen ansehen',
+    open: (name) => `${name} öffnen`,
+    experiences: (count) => `${count} ${count === 1 ? 'Erlebnis' : 'Erlebnisse'}`,
+  },
+  fr: {
+    attraction: 'Site', category: 'Catégorie', featured: 'Recommandé', badge: 'Centres d’intérêt proches', viewAll: 'Voir tous les centres d’intérêt',
+    open: (name) => `Ouvrir ${name}`,
+    experiences: (count) => `${count} ${count === 1 ? 'expérience' : 'expériences'}`,
+  },
+  es: {
+    attraction: 'Lugar de interés', category: 'Categoría', featured: 'Destacado', badge: 'Intereses relacionados', viewAll: 'Ver todos los intereses',
+    open: (name) => `Abrir ${name}`,
+    experiences: (count) => `${count} ${count === 1 ? 'experiencia' : 'experiencias'}`,
   },
 };
 
@@ -240,7 +255,7 @@ const RelatedInterests: React.FC<RelatedInterestsProps> = ({
   const locale = useLocale();
   const rtl = isRTL(locale);
   const CtaArrow = rtl ? ArrowLeft : ArrowRight;
-  const labels = rtl ? RELATED_INTERESTS_LABELS.ar : RELATED_INTERESTS_LABELS.en;
+  const labels = rtl ? RELATED_INTERESTS_LABELS.ar : RELATED_INTERESTS_LABELS[locale.slice(0, 2) as keyof typeof RELATED_INTERESTS_LABELS] ?? RELATED_INTERESTS_LABELS.en;
   const [interests, setInterests] = useState<Interest[]>([]);
   const [loading, setLoading] = useState(!initialInterests);
 

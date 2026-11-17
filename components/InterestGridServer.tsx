@@ -2,6 +2,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect, useCallback } from "react";
+import { tourCardRating } from '@/lib/tours/ratingDisplay';
 import { cdnImg } from '@/utils/cloudinary';
 import Link from "next/link";
 import Image from "next/image";
@@ -336,10 +337,10 @@ function TourHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limit?: 
                   )}
                   <div className="flex items-center justify-between pt-2 border-t border-gray-100">
                     <div className="flex items-center gap-1.5">
-                      {tour.rating && (
+                      {tourCardRating({ rating: tour.rating, reviewCount: tour.reviews }) !== null && (
                         <div className="flex items-center gap-0.5">
                           <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
-                          <span className="text-[11px] font-medium">{tour.rating}</span>
+                          <span className="text-[11px] font-medium">{tourCardRating({ rating: tour.rating, reviewCount: tour.reviews })}</span>
                           {tour.reviews && <span className="text-[10px] text-gray-400">({tour.reviews})</span>}
                         </div>
                       )}
@@ -809,10 +810,10 @@ export default function InterestGridServer({ categories }: InterestGridServerPro
                     )}
                     <div className="flex items-center justify-between pt-2 border-t border-gray-100">
                       <div className="flex items-center gap-1.5">
-                        {tour.rating && (
+                        {tourCardRating({ rating: tour.rating, reviewCount: tour.reviews }) !== null && (
                           <div className="flex items-center gap-0.5">
                             <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
-                            <span className="text-[11px] font-medium">{tour.rating}</span>
+                            <span className="text-[11px] font-medium">{tourCardRating({ rating: tour.rating, reviewCount: tour.reviews })}</span>
                             {tour.reviews && <span className="text-[10px] text-gray-400">({tour.reviews})</span>}
                           </div>
                         )}

@@ -1,6 +1,7 @@
 'use client';
 
 import { liteClient as algoliasearch } from 'algoliasearch/lite';
+import { resolveReviewCount, tourCardRating } from '@/lib/tours/ratingDisplay';
 import { InstantSearch, SearchBox, Hits, Configure, useInstantSearch } from 'react-instantsearch';
 import { AlertCircle, MapPin, Clock, DollarSign, Search as SearchIcon, Star, Sparkles } from 'lucide-react';
 import 'instantsearch.css/themes/satellite.css';
@@ -122,10 +123,10 @@ export default function AlgoliaSearch() {
                 {hit.duration}
               </span>
             )}
-            {hit.rating && (
+            {tourCardRating(hit) !== null && (
               <span className="flex items-center gap-1">
                 <Star className="w-3.5 h-3.5 text-yellow-500 fill-current" />
-                {hit.rating} ({hit.reviewCount || 0})
+                {tourCardRating(hit)} ({resolveReviewCount(hit.reviewCount ?? (hit as { reviews?: unknown }).reviews)})
               </span>
             )}
           </div>

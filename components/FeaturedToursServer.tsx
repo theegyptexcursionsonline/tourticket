@@ -2,6 +2,7 @@
 'use client';
 
 import dynamic from 'next/dynamic';
+import { tourCardRating } from '@/lib/tours/ratingDisplay';
 import React, { useEffect, useState } from 'react';
 import { ArrowLeft, ArrowRight, Star, ShoppingCart, Clock, Users, ImageIcon, Tag } from 'lucide-react';
 import Image from 'next/image';
@@ -131,12 +132,14 @@ const TourCard = ({ tour, onAddToCartClick }: { tour: Tour; onAddToCartClick: (t
             Egypt Excursions Online
           </span>
 
-          <div className="flex shrink-0 items-center gap-1 rounded-full border border-white/20 bg-white/95 px-2.5 py-1.5 backdrop-blur-sm sm:gap-2 sm:px-3 sm:py-2" style={{ boxShadow: 'none' }}>
-            <Star size={16} className="fill-red-600 text-red-600" />
-            <span className="text-xs font-bold text-gray-800 sm:text-sm">
-              {tour.rating ? tour.rating.toFixed(1) : '0.0'}
-            </span>
-          </div>
+          {typeof tour.rating === 'number' && tour.rating > 0 && (
+            <div className="flex shrink-0 items-center gap-1 rounded-full border border-white/20 bg-white/95 px-2.5 py-1.5 backdrop-blur-sm sm:gap-2 sm:px-3 sm:py-2" style={{ boxShadow: 'none' }}>
+              <Star size={16} className="fill-red-600 text-red-600" />
+              <span className="text-xs font-bold text-gray-800 sm:text-sm">
+                {tour.rating.toFixed(1)}
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Tags */}
@@ -280,7 +283,7 @@ export default function FeaturedToursServer({ tours }: FeaturedToursServerProps)
     slug: toSafeString(tour.slug),
     originalPrice: typeof tour.originalPrice === 'number' ? tour.originalPrice : undefined,
     discountPrice: typeof tour.discountPrice === 'number' ? tour.discountPrice : tour.originalPrice || 0,
-    rating: typeof tour.rating === 'number' ? tour.rating : 0,
+    rating: tourCardRating(tour) ?? 0,
     bookings: typeof tour.bookings === 'number' ? tour.bookings : 0,
     duration: toSafeString(tour.duration) || t('durationNotSpecified'),
     tags: Array.isArray(tour.tags) ? tour.tags : [],

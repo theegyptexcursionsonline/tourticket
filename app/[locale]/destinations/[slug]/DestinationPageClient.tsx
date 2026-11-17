@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useRef, useState, useEffect, useCallback } from "react";
+import { tourCardRating } from '@/lib/tours/ratingDisplay';
 import Image from "next/image";
 import { Link } from '@/i18n/routing';
 import {
@@ -520,9 +521,83 @@ const destinationPageCopy: Record<'en' | 'ar', DestinationPageCopy> = {
   },
 };
 
+// German, French and Spanish pages keep the English page copy for now, but the
+// gallery and practical-information sections speak the language of the page.
+type DestinationSectionLabels = Pick<DestinationPageCopy,
+  'galleryEyebrow' | 'galleryTitle' | 'practicalEyebrow' | 'practicalTitle' | 'practicalRegion' | 'practicalClimate' |
+  'practicalAverageTemperature' | 'practicalSummer' | 'practicalWinter' | 'practicalLanguages' | 'practicalGettingThere' |
+  'practicalGettingAround' | 'practicalVisa' | 'practicalEmergency' | 'practicalLocation' | 'practicalThingsToDo' |
+  'practicalLocalCustoms' | 'practicalWeatherNotes'>;
+
+export const DESTINATION_SECTION_LABELS: Record<'de' | 'fr' | 'es', DestinationSectionLabels> = {
+  de: {
+    galleryEyebrow: 'Bildergalerie',
+    galleryTitle: (destination: string) => `${destination} in Bildern`,
+    practicalEyebrow: 'Gut vorbereitet reisen',
+    practicalTitle: 'Praktische Informationen',
+    practicalRegion: 'Region',
+    practicalClimate: 'Klima',
+    practicalAverageTemperature: 'Durchschnittstemperatur',
+    practicalSummer: 'Sommer',
+    practicalWinter: 'Winter',
+    practicalLanguages: 'Sprachen',
+    practicalGettingThere: 'Anreise',
+    practicalGettingAround: 'Unterwegs vor Ort',
+    practicalVisa: 'Visabestimmungen',
+    practicalEmergency: 'Notrufnummer',
+    practicalLocation: 'Lage',
+    practicalThingsToDo: 'Aktivitäten',
+    practicalLocalCustoms: 'Sitten und Bräuche',
+    practicalWeatherNotes: 'Hinweise zum Wetter',
+  },
+  fr: {
+    galleryEyebrow: 'Galerie photos',
+    galleryTitle: (destination: string) => `${destination} en images`,
+    practicalEyebrow: 'Préparez votre voyage',
+    practicalTitle: 'Informations pratiques',
+    practicalRegion: 'Région',
+    practicalClimate: 'Climat',
+    practicalAverageTemperature: 'Températures moyennes',
+    practicalSummer: 'Été',
+    practicalWinter: 'Hiver',
+    practicalLanguages: 'Langues',
+    practicalGettingThere: 'Comment s’y rendre',
+    practicalGettingAround: 'Se déplacer sur place',
+    practicalVisa: 'Visa',
+    practicalEmergency: 'Numéro d’urgence',
+    practicalLocation: 'Localisation',
+    practicalThingsToDo: 'À faire sur place',
+    practicalLocalCustoms: 'Coutumes locales',
+    practicalWeatherNotes: 'Météo : à savoir',
+  },
+  es: {
+    galleryEyebrow: 'Galería de fotos',
+    galleryTitle: (destination: string) => `${destination} en imágenes`,
+    practicalEyebrow: 'Prepara tu viaje',
+    practicalTitle: 'Información práctica',
+    practicalRegion: 'Región',
+    practicalClimate: 'Clima',
+    practicalAverageTemperature: 'Temperatura media',
+    practicalSummer: 'Verano',
+    practicalWinter: 'Invierno',
+    practicalLanguages: 'Idiomas',
+    practicalGettingThere: 'Cómo llegar',
+    practicalGettingAround: 'Cómo moverse',
+    practicalVisa: 'Requisitos de visado',
+    practicalEmergency: 'Número de emergencias',
+    practicalLocation: 'Ubicación',
+    practicalThingsToDo: 'Qué hacer',
+    practicalLocalCustoms: 'Costumbres locales',
+    practicalWeatherNotes: 'Avisos sobre el clima',
+  },
+};
+
 function useDestinationPageCopy(): DestinationPageCopy {
   const locale = useLocale();
-  return locale.startsWith('ar') ? destinationPageCopy.ar : destinationPageCopy.en;
+  if (locale.startsWith('ar')) return destinationPageCopy.ar;
+  const language = locale.slice(0, 2) as keyof typeof DESTINATION_SECTION_LABELS;
+  const sectionLabels = DESTINATION_SECTION_LABELS[language];
+  return sectionLabels ? { ...destinationPageCopy.en, ...sectionLabels } : destinationPageCopy.en;
 }
 
 // Algolia Configuration
@@ -595,10 +670,10 @@ const TourCard = ({ tour, onHitClick }: { tour: SearchTour; onHitClick?: () => v
           <span className="line-clamp-1 text-gray-600">{tour.location}</span>
         </div>
       )}
-      {tour.rating && (
+      {tourCardRating({ rating: tour.rating, reviewCount: tour.reviews }) !== null && (
         <div className="flex items-center gap-1 mb-1.5">
           <Star className="w-2.5 h-2.5 fill-yellow-400 text-yellow-400" />
-          <span className="text-[10px] font-medium text-gray-900">{tour.rating}</span>
+          <span className="text-[10px] font-medium text-gray-900">{tourCardRating({ rating: tour.rating, reviewCount: tour.reviews })}</span>
           {tour.reviews && <span className="text-[10px] text-gray-400">({tour.reviews})</span>}
         </div>
       )}
@@ -1927,8 +2002,12 @@ const Top10Card = ({ tour, index, onAddToCartClick }: { tour: Tour, index: numbe
         <div className="flex items-center gap-2 mt-1 text-xs sm:text-sm text-slate-500">
           <Clock size={14} />
           <span>{tour.duration}</span>
-          <Star size={14} className="ml-2 text-yellow-500 fill-current" />
-          <span>{tour.rating}</span>
+          {tourCardRating(tour) !== null && (
+            <>
+              <Star size={14} className="ms-2 text-yellow-500 fill-current" />
+              <span>{tourCardRating(tour)}</span>
+            </>
+          )}
         </div>
         <div className="mt-2 text-sm flex items-center gap-2">
           {tour.originalPrice && tour.originalPrice > displayedPrice && <span className="text-slate-500 line-through text-xs sm:text-sm">{formatPrice(tour.originalPrice)}</span>}
@@ -1989,9 +2068,11 @@ const CombiDealCard = ({ tour, onAddToCartClick }: { tour: Tour, onAddToCartClic
           <span className="flex items-center gap-1">
             <Clock size={14} />{tour.duration}
           </span>
-          <span className="flex items-center gap-1">
-            <Star size={14} fill="currentColor" className="text-yellow-500" />{tour.rating}
-          </span>
+          {tourCardRating(tour) !== null && (
+            <span className="flex items-center gap-1">
+              <Star size={14} fill="currentColor" className="text-yellow-500" />{tourCardRating(tour)}
+            </span>
+          )}
           {(tour.bookings || 0) > 0 && <span>{tour.bookings} {copy.bookings}</span>}
         </div>
         <div className="flex items-end justify-end mt-3 sm:mt-4">

@@ -41,6 +41,9 @@ jest.mock('next-intl', () => {
   const messages: Record<string, unknown> = {
     en: jest.requireActual('../messages/en.json'),
     ar: jest.requireActual('../messages/ar.json'),
+    de: jest.requireActual('../messages/de.json'),
+    fr: jest.requireActual('../messages/fr.json'),
+    es: jest.requireActual('../messages/es.json'),
   };
   const lookup = (key: string) =>
     key.split('.').reduce<unknown>((node, part) => (node as Record<string, unknown> | undefined)?.[part], messages[mockLocale]) ?? key;
@@ -270,5 +273,53 @@ describe('older attraction and catalogue templates on phones', () => {
       expect(source).toContain('h-6 w-full max-w-96 bg-slate-200');
       expect(source).not.toMatch(/h-6 w-96 bg-slate-200/);
     }
+  });
+});
+
+describe('German, French and Spanish section headings (17 Nov)', () => {
+  it.each([
+    ['de', 'Bildergalerie', 'Luxor in Bildern', 'Praktische Informationen', ['Klima', 'Durchschnittstemperatur', 'Aktivitäten', 'Sitten und Bräuche'], 'Sommer: 40C · Winter: 22C'],
+    ['fr', 'Galerie photos', 'Luxor en images', 'Informations pratiques', ['Climat', 'Températures moyennes', 'À faire sur place', 'Coutumes locales'], 'Été: 40C · Hiver: 22C'],
+    ['es', 'Galería de fotos', 'Luxor en imágenes', 'Información práctica', ['Clima', 'Temperatura media', 'Qué hacer', 'Costumbres locales'], 'Verano: 40C · Invierno: 22C'],
+  ])('%s destination page shows its own gallery and practical labels', (locale, eyebrow, galleryTitle, practicalTitle, cardTitles, temps) => {
+    const { container } = renderDestination(locale as string);
+    expect(screen.getByText(eyebrow as string)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 2, name: galleryTitle as string })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 2, name: practicalTitle as string })).toBeInTheDocument();
+    for (const title of cardTitles as string[]) expect(screen.getByRole('heading', { level: 3, name: title })).toBeInTheDocument();
+    expect(screen.getByText(temps as string)).toBeInTheDocument();
+    for (const english of ['Destination gallery', 'See Luxor', 'Practical information', 'Average temperature', 'Local customs']) {
+      expect(container.textContent).not.toContain(english);
+    }
+  });
+
+  it.each([
+    ['de', 'Bildergalerie', 'Reisetipps'],
+    ['fr', 'Galerie photos', 'Conseils de voyage'],
+    ['es', 'Galería de fotos', 'Consejos de viaje'],
+  ])('%s category page shows its own gallery and travel tips headings', (locale, gallery, tips) => {
+    mockLocale = locale as string;
+    const category = { _id: 'c', name: 'Aswan Tours', slug: 'aswan-tours', description: 'd', heroImage: '/h.jpg', images: ['/a.jpg'], travelTips: [{ title: 't', content: 'c' }] };
+    render(<CategoryPageClient category={category} categoryTours={[]} />);
+    expect(screen.getByRole('heading', { level: 2, name: gallery as string })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 2, name: tips as string })).toBeInTheDocument();
+  });
+
+  it('English and Arabic keep their own labels', () => {
+    renderDestination('en');
+    expect(screen.getByText('Destination gallery')).toBeInTheDocument();
+  });
+});
+
+describe('destination trip cards show a score only when reviews back it', () => {
+  it('hides the admin-set 4.5 on unreviewed trips and shows a reviewed score', () => {
+    const tours = [
+      { ...tour(1), isFeatured: false, rating: 4.5, reviewCount: 0 },
+      { ...tour(2), isFeatured: false, rating: 4.7, reviewCount: 12 },
+    ];
+    const { container } = renderDestination('en', tours);
+    const grid = container.querySelector('[data-top-tours-grid]')!;
+    expect(grid.textContent).not.toContain('4.5');
+    expect(grid.textContent).toContain('4.7');
   });
 });

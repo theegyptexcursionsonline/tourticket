@@ -41,3 +41,19 @@ export function ratingLabel(rating: unknown, reviews: unknown): string | null {
   if (!provable) return null;
   return `${provable.rating} (${reviewCountLabel(reviews)})`;
 }
+
+/**
+ * Score for a trip card: the rating only when reviews back it, read from the
+ * stored review count or the reviews list, else null (show no score).
+ */
+export function tourCardRating(tour: { rating?: unknown; reviewCount?: unknown; reviews?: unknown } | null | undefined): number | null {
+  if (!tour) return null;
+  return provableRating(tour.rating, tour.reviewCount ?? tour.reviews)?.rating ?? null;
+}
+
+/** Average of the trips' provable ratings, one decimal, or null when none is provable. */
+export function averageProvableRating(tours: Array<{ rating?: unknown; reviewCount?: unknown; reviews?: unknown }> | null | undefined): string | null {
+  const scores = (tours || []).map(tourCardRating).filter((value): value is number => value !== null);
+  if (scores.length === 0) return null;
+  return (scores.reduce((sum, value) => sum + value, 0) / scores.length).toFixed(1);
+}

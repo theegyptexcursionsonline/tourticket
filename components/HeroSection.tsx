@@ -2,6 +2,7 @@
 'use client';
 
 import React, { useEffect, useState, useRef, useCallback } from "react";
+import { tourCardRating } from '@/lib/tours/ratingDisplay';
 import { cdnImg } from '@/utils/cloudinary';
 import { Search, MapPin, Clock, Compass, Tag, X, Sparkles, ChevronUp, Bot, Loader2, ArrowLeft, ChevronLeft, ChevronRight, DollarSign, Star } from "lucide-react";
 import Image from "next/image";
@@ -427,10 +428,10 @@ function TourHits({ onHitClick, limit = 5 }: { onHitClick?: () => void; limit?: 
                   )}
                   <div className="flex items-center justify-between pt-3 border-t-2 border-gray-50">
                     <div className="flex items-center gap-1.5">
-                      {tour.rating && (
+                      {tourCardRating({ rating: tour.rating, reviewCount: tour.reviews }) !== null && (
                         <div className="flex items-center gap-1 bg-yellow-50 px-2 py-1 rounded-lg">
                           <Star className="w-3.5 h-3.5 fill-yellow-400 text-yellow-400" strokeWidth={2} />
-                          <span className="text-[11px] font-bold text-gray-900">{tour.rating}</span>
+                          <span className="text-[11px] font-bold text-gray-900">{tourCardRating({ rating: tour.rating, reviewCount: tour.reviews })}</span>
                           {tour.reviews && <span className="text-[10px] text-gray-400">({tour.reviews})</span>}
                         </div>
                       )}
@@ -724,10 +725,10 @@ const TourCard = ({ tour }: { tour: SearchHit }) => {
         </div>
       )}
       <div className="flex items-center justify-between pt-2.5 border-t-2 border-gray-50">
-        {tour.rating && (
+        {tourCardRating({ rating: tour.rating, reviewCount: tour.reviews }) !== null && (
           <div className="flex items-center gap-1 bg-yellow-50 px-2 py-1 rounded-lg">
             <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" strokeWidth={2} />
-            <span className="text-[11px] font-bold text-gray-900">{tour.rating}</span>
+            <span className="text-[11px] font-bold text-gray-900">{tourCardRating({ rating: tour.rating, reviewCount: tour.reviews })}</span>
             {tour.reviews && <span className="text-[10px] text-gray-400">({tour.reviews})</span>}
           </div>
         )}

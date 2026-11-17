@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { averageProvableRating, tourCardRating } from '@/lib/tours/ratingDisplay';
 import { Link } from '@/i18n/routing';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -62,10 +63,10 @@ const TourCard = ({ tour, index }: { tour: Tour; index: number }) => {
           )}
           
           {/* Rating Badge — only when the tour has a real rating */}
-          {typeof tour.rating === 'number' && (
+          {tourCardRating(tour) !== null && (
             <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm text-slate-900 px-3 py-1 text-sm rounded-full flex items-center gap-1 shadow-lg">
               <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
-              {tour.rating.toFixed(1)}
+              {tourCardRating(tour)!.toFixed(1)}
             </div>
           )}
 
@@ -182,10 +183,10 @@ const TourListItem = ({ tour, index }: { tour: Tour; index: number }) => {
                 <Clock className="h-4 w-4" />
                 {tour.duration}
               </span>
-              {typeof tour.rating === 'number' && (
+              {tourCardRating(tour) !== null && (
                 <span className="flex items-center gap-1">
                   <Star className="h-4 w-4 text-yellow-500 fill-current" />
-                  {tour.rating.toFixed(1)}
+                  {tourCardRating(tour)!.toFixed(1)}
                 </span>
               )}
               {destination && (
@@ -229,12 +230,10 @@ const QuickStats = ({ page }: { page: CategoryPageData }) => {
   const reviews = page.reviews || [];
 
   const ratedReviews = reviews.filter(r => typeof r.rating === 'number');
-  const ratedTours = tours.filter(t => typeof t.rating === 'number');
+  // Page reviews first, else trips whose rating real reviews back.
   const averageRating = ratedReviews.length > 0
     ? (ratedReviews.reduce((acc, r) => acc + (r.rating || 0), 0) / ratedReviews.length).toFixed(1)
-    : ratedTours.length > 0
-      ? (ratedTours.reduce((acc, t) => acc + (t.rating || 0), 0) / ratedTours.length).toFixed(1)
-      : null;
+    : averageProvableRating(tours);
 
   const stats = [
     { label: copy.toursAvailable, value: tours.length > 0 ? tours.length.toString() : null },

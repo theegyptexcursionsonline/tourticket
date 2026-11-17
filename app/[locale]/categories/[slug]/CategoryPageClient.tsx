@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useMemo, useState } from 'react';
+import { averageProvableRating, tourCardRating } from '@/lib/tours/ratingDisplay';
 import Image from 'next/image';
 import { Link } from '@/i18n/routing';
 import { Star, Clock, ShoppingCart, Search, MapPin, Users, TrendingUp, CheckCircle2, Tag, Compass, ChevronDown } from 'lucide-react';
@@ -186,6 +187,20 @@ const CATEGORY_PAGE_COPY: Record<'en' | 'ar', CategoryPageCopy> = {
   },
 };
 
+// German, French and Spanish keep the English page copy for now; the gallery
+// and travel-tips headings already speak the language of the page.
+export const CATEGORY_SECTION_LABELS: Record<'de' | 'fr' | 'es', Pick<CategoryPageCopy, 'experienceGallery' | 'travelTips'>> = {
+  de: { experienceGallery: 'Bildergalerie', travelTips: 'Reisetipps' },
+  fr: { experienceGallery: 'Galerie photos', travelTips: 'Conseils de voyage' },
+  es: { experienceGallery: 'Galería de fotos', travelTips: 'Consejos de viaje' },
+};
+
+export function categoryPageCopyFor(locale: string): CategoryPageCopy {
+  if (locale.startsWith('ar')) return CATEGORY_PAGE_COPY.ar;
+  const sectionLabels = CATEGORY_SECTION_LABELS[locale.slice(0, 2) as keyof typeof CATEGORY_SECTION_LABELS];
+  return sectionLabels ? { ...CATEGORY_PAGE_COPY.en, ...sectionLabels } : CATEGORY_PAGE_COPY.en;
+}
+
 type CategoryInsightDestination = {
   name: string;
   slug: string;
@@ -349,10 +364,9 @@ const StatsSection = ({
   // tour ratings and a customer count summed from real bookings. The old
   // '10K+ customers' / '50+ expert guides' fallbacks were invented claims and
   // published themselves on every category that lacked data.
-  const toursWithRatings = (tours || []).filter(t => t.rating);
-  const averageRating = toursWithRatings.length > 0
-    ? (toursWithRatings.reduce((acc, t) => acc + (t.rating || 0), 0) / toursWithRatings.length).toFixed(1)
-    : null;
+  // Ratings count only where reviews back them (tour.rating is admin-set; every
+  // trip carried 4.5 with no review behind it).
+  const averageRating = averageProvableRating(tours);
 
   const totalBookings = (tours || []).reduce((total, tour) => total + (tour.bookings || 0), 0);
   const happyCustomers = totalBookings >= 1000
@@ -604,10 +618,10 @@ const TopPicksSection = ({
                         {tour.destination.name}
                       </span>
                     )}
-                    {tour.rating && (
+                    {tourCardRating(tour) !== null && (
                       <span className="inline-flex items-center gap-1">
                         <Star size={14} className="fill-current text-yellow-500" />
-                        {tour.rating}
+                        {tourCardRating(tour)}
                       </span>
                     )}
                   </div>
@@ -811,7 +825,7 @@ const TourCard = ({
         </h3>
         <div className="flex items-center gap-4 text-sm text-slate-500 mb-3">
           <div className="flex items-center gap-1"><Clock size={14} /><span>{tour.duration}</span></div>
-          <div className="flex items-center gap-1"><Star size={14} className="text-yellow-500 fill-current" /><span>{tour.rating}</span></div>
+          {tourCardRating(tour) !== null && <div className="flex items-center gap-1"><Star size={14} className="text-yellow-500 fill-current" /><span>{tourCardRating(tour)}</span></div>}
         </div>
         <div className="flex items-center justify-between mt-auto">
           <div>
@@ -853,7 +867,7 @@ export default function CategoryPageClient({
 }) {
     const locale = useLocale();
     const rtl = isRTL(locale);
-    const copy = locale.startsWith('ar') ? CATEGORY_PAGE_COPY.ar : CATEGORY_PAGE_COPY.en;
+    const copy = categoryPageCopyFor(locale);
     const { formatPrice } = useSettings();
     const [selectedTour, setSelectedTour] = useState<Tour | null>(null);
     const [isBookingSidebarOpen, setBookingSidebarOpen] = useState(false);

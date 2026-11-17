@@ -2,6 +2,7 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
+import { averageProvableRating } from '@/lib/tours/ratingDisplay';
 import { Link } from '@/i18n/routing';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -75,12 +76,12 @@ const QuickInfo = ({ attraction }: { attraction: AttractionData }) => {
   const reviews = attraction.reviews || [];
   const totalReviews = reviews.length;
   const ratedReviews = reviews.filter(r => typeof r.rating === 'number');
-  const ratedTours = (attraction.tours || []).filter(t => typeof t.rating === 'number');
+  // Page reviews first, else trips whose rating real reviews back. Trip
+  // ratings alone are admin-set (every trip carried 4.5 with no review), so
+  // the Karnak hero showed 4.5 that nobody gave.
   const avgRating = ratedReviews.length > 0
     ? (ratedReviews.reduce((acc, r) => acc + (r.rating || 0), 0) / ratedReviews.length).toFixed(1)
-    : ratedTours.length > 0
-      ? (ratedTours.reduce((acc, t) => acc + (t.rating || 0), 0) / ratedTours.length).toFixed(1)
-      : null;
+    : averageProvableRating(attraction.tours);
   const showActivities = attraction.totalTours > 0;
 
   if (!avgRating && !showActivities) return null;

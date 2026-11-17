@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { tourCardRating } from '@/lib/tours/ratingDisplay';
 import { Link, useRouter } from '@/i18n/routing';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
@@ -181,10 +182,12 @@ const TourCard: React.FC<TourCardProps> = ({
 
             {/* Bottom Right Rating & Price */}
             <div className="absolute bottom-4 right-4 flex flex-col items-end gap-2">
-              <div className="bg-white/95 backdrop-blur-sm text-slate-900 px-3 py-1 text-sm rounded-full flex items-center gap-1 shadow-lg">
-                <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
-                {tour.rating?.toFixed(1) || '4.5'}
-              </div>
+              {tourCardRating(tour) !== null && (
+                <div className="bg-white/95 backdrop-blur-sm text-slate-900 px-3 py-1 text-sm rounded-full flex items-center gap-1 shadow-lg">
+                  <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
+                  {tourCardRating(tour)!.toFixed(1)}
+                </div>
+              )}
 
               <div className="bg-white/95 backdrop-blur-sm px-3 py-2 rounded-xl shadow-lg text-right">
                 <div className="text-lg font-bold text-slate-900">

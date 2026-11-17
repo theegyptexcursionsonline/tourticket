@@ -2,6 +2,7 @@
 'use client';
 
 import React, { useRef, useState, useEffect } from 'react';
+import { tourCardRating } from '@/lib/tours/ratingDisplay';
 import { Star, ChevronLeft, ChevronRight, Heart, ShoppingCart, Image as ImageIcon, Tag } from 'lucide-react';
 import BookingSidebar from '@/components/BookingSidebar';
 import { Tour } from '@/types';
@@ -31,7 +32,7 @@ const normalizeDayTrips = (value: unknown, untitledTour: string): Tour[] => {
       discountPrice: typeof tour.discountPrice === 'number'
         ? tour.discountPrice
         : typeof tour.originalPrice === 'number' ? tour.originalPrice : 0,
-      rating: typeof tour.rating === 'number' ? tour.rating : 0,
+      rating: tourCardRating(tour) ?? 0,
       bookings: typeof tour.bookings === 'number' ? tour.bookings : 0,
     })) as unknown as Tour[];
 };
@@ -174,12 +175,14 @@ const DayTripCard = ({
         </p>
         
         <div className="flex items-center mt-2 text-xs sm:text-sm">
-          <div className="flex items-center text-yellow-500">
-            <Star size={16} fill="currentColor" />
-            <span className="font-bold text-slate-800 ml-1">
-              {typeof trip.rating === 'number' ? trip.rating.toFixed(1) : trip.rating || '0.0'}
-            </span>
-          </div>
+          {typeof trip.rating === 'number' && trip.rating > 0 && (
+            <div className="flex items-center text-yellow-500">
+              <Star size={16} fill="currentColor" />
+              <span className="font-bold text-slate-800 ms-1">
+                {trip.rating.toFixed(1)}
+              </span>
+            </div>
+          )}
           {(trip.bookings || 0) > 0 && (
             <span className="text-slate-500 ml-2">
               ({trip.bookings?.toLocaleString()})

@@ -34,6 +34,7 @@ describe('FeaturedTours', () => {
       description: 'Explore the ancient pyramids',
       duration: '4 hours',
       rating: 4.9,
+      reviewCount: 40,
       bookings: 5000,
       originalPrice: 100,
       discountPrice: 80,
@@ -48,6 +49,7 @@ describe('FeaturedTours', () => {
       description: 'Luxury cruise on the Nile',
       duration: '3 hours',
       rating: 4.8,
+      reviewCount: 25,
       bookings: 3500,
       originalPrice: 150,
       discountPrice: 120,
@@ -450,7 +452,8 @@ describe('FeaturedTours', () => {
       })
 
       expect(screen.getAllByText('Duration not specified')[0]).toBeInTheDocument()
-      expect(screen.getAllByText('0.0')[0]).toBeInTheDocument()
+      // No rating and no reviews: no score at all (never a made-up 0.0)
+      expect(screen.queryByText('0.0')).not.toBeInTheDocument()
       expect(screen.getAllByText('$0.00')[0]).toBeInTheDocument()
     })
   })

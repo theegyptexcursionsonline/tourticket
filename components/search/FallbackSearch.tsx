@@ -1,6 +1,7 @@
 'use client';
 
 import { liteClient as algoliasearch } from 'algoliasearch/lite';
+import { resolveReviewCount, tourCardRating } from '@/lib/tours/ratingDisplay';
 import {
   InstantSearch,
   SearchBox,
@@ -92,10 +93,10 @@ function TourHit({ hit }: { hit: TourHitData }) {
                 <span>{hit.duration} {hit.duration === 1 ? 'day' : 'days'}</span>
               </div>
             )}
-            {(hit.rating ?? 0) > 0 && (
+            {tourCardRating(hit) !== null && (
               <div className="flex items-center gap-1">
                 <Star className="w-3.5 h-3.5 fill-yellow-400 text-yellow-400" />
-                <span>{hit.rating?.toFixed(1)} ({hit.reviewCount || 0})</span>
+                <span>{tourCardRating(hit)!.toFixed(1)} ({resolveReviewCount(hit.reviewCount ?? (hit as { reviews?: unknown }).reviews)})</span>
               </div>
             )}
           </div>

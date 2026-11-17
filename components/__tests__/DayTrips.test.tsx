@@ -53,6 +53,7 @@ describe('DayTripsSection', () => {
       image: '/images/tour1.jpg',
       duration: '2 hours',
       rating: 4.8,
+      reviewCount: 12,
       bookings: 1500,
       originalPrice: 50,
       discountPrice: 40,
@@ -507,6 +508,24 @@ describe('DayTripsSection', () => {
   })
 
   describe('Data Validation', () => {
+    it('shows no score for a trip whose rating no review backs', async () => {
+      ;(global.fetch as jest.Mock).mockResolvedValue({
+        ok: true,
+        status: 200,
+        text: async () => JSON.stringify({
+          success: true,
+          data: [{ _id: '9', title: 'Unreviewed Trip', slug: 'unreviewed', category: 'day-trips', duration: '3 hours', rating: 4.5, reviewCount: 0, discountPrice: 30 }],
+        }),
+      })
+
+      render(<DayTripsSection />)
+
+      await waitFor(() => {
+        expect(screen.getByText('Unreviewed Trip')).toBeInTheDocument()
+      }, { timeout: 2000 })
+      expect(screen.queryByText('4.5')).not.toBeInTheDocument()
+    })
+
     it('should handle tours with missing optional fields', async () => {
       const incompleteTour = {
         _id: '3',
@@ -533,7 +552,8 @@ describe('DayTripsSection', () => {
 
       // t('durationNotSpecified') returns the key 'durationNotSpecified'
       expect(screen.getByText('durationNotSpecified')).toBeInTheDocument()
-      expect(screen.getByText('0.0')).toBeInTheDocument()
+      // No rating and no reviews: no score at all (never a made-up 0.0)
+      expect(screen.queryByText('0.0')).not.toBeInTheDocument()
       expect(screen.getByText('$0.00')).toBeInTheDocument()
     })
   })

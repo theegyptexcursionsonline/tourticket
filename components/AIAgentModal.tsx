@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
+import { tourCardRating } from '@/lib/tours/ratingDisplay';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Bot, Loader2, ChevronLeft, ChevronRight, MapPin, DollarSign, Star } from 'lucide-react';
 import { useChat } from '@ai-sdk/react';
@@ -210,10 +211,10 @@ export default function AIAgentModal() {
           </div>
         )}
 
-        {tour.rating && (
+        {tourCardRating({ rating: tour.rating, reviewCount: tour.reviews }) !== null && (
           <div className="flex items-center gap-1 mb-2">
             <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
-            <span className="text-xs font-medium">{tour.rating}</span>
+            <span className="text-xs font-medium">{tourCardRating({ rating: tour.rating, reviewCount: tour.reviews })}</span>
             {tour.reviews && (
               <span className="text-xs text-gray-400">({tour.reviews})</span>
             )}

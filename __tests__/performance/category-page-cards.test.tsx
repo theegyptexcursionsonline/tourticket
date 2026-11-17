@@ -77,6 +77,7 @@ const fullTour = (n: number, extra: Doc = {}): Doc => ({
   pricingSummary: { fromPrice: 75 + n },
   duration: `${n + 4} hours`,
   rating: 4 + n / 10,
+  reviewCount: 2 * n,
   bookings: 10 * n,
   highlights: [`Highlight ${n}`],
   bookingOptions: [{ id: `opt-${n}`, price: 80 + n }],
