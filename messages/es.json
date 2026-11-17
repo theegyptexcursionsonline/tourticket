@@ -195,7 +195,19 @@
     "addOnCategoryTransport": "Transporte",
     "addOnCategoryPhotography": "Fotografía",
     "addOnCategoryFood": "Comida",
-    "addOnCategoryExperience": "Experiencia"
+    "addOnCategoryExperience": "Experiencia",
+    "perAdultRate": "Por adulto: {price}",
+    "perChildRate": "Por niño: {price}",
+    "perInfantRate": "Por bebé: {price}",
+    "ageAdultRange": "13 años o más",
+    "ageChildRange": "De 4 a 12 años",
+    "ageInfantRange": "De 0 a 3 años",
+    "difficultyEasy": "Fácil",
+    "difficultyModerate": "Moderada",
+    "difficultyChallenging": "Exigente",
+    "difficultyDifficult": "Difícil",
+    "maxGuests": "Máx. {count}",
+    "departureSelected": "{time} seleccionado"
   },
   "offers": {
     "save": "Ahorra hasta un 20% en paquetes combinados y pases de ciudad!"

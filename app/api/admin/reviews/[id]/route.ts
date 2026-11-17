@@ -1,5 +1,6 @@
 // app/api/admin/reviews/[id]/route.ts
 import { withAdminAudit } from '@/lib/admin/adminAudit';
+import { syncTourReviewStatsSafely } from '@/lib/reviews/tourReviewStats';
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
 import Review from '@/lib/models/Review';
@@ -33,6 +34,8 @@ async function PATCHHandler(
       return NextResponse.json({ message: 'Review not found' }, { status: 404 });
     }
 
+    // Approving or hiding a review changes what the trip may show.
+    await syncTourReviewStatsSafely(updatedReview.tour);
     revalidateStorefrontContent();
 
     return NextResponse.json(updatedReview);
@@ -60,6 +63,7 @@ async function DELETEHandler(
       return NextResponse.json({ message: 'Review not found' }, { status: 404 });
     }
 
+    await syncTourReviewStatsSafely(deletedReview.tour);
     revalidateStorefrontContent();
 
     return NextResponse.json({ message: 'Review deleted successfully' });

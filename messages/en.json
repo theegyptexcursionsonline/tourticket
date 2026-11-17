@@ -195,7 +195,19 @@
     "addOnCategoryTransport": "Transport",
     "addOnCategoryPhotography": "Photography",
     "addOnCategoryFood": "Food",
-    "addOnCategoryExperience": "Experience"
+    "addOnCategoryExperience": "Experience",
+    "perAdultRate": "Per adult: {price}",
+    "perChildRate": "Per child: {price}",
+    "perInfantRate": "Per infant: {price}",
+    "ageAdultRange": "Age 13+",
+    "ageChildRange": "Age 4-12",
+    "ageInfantRange": "Age 0-3",
+    "difficultyEasy": "Easy",
+    "difficultyModerate": "Moderate",
+    "difficultyChallenging": "Challenging",
+    "difficultyDifficult": "Difficult",
+    "maxGuests": "Max {count}",
+    "departureSelected": "{time} selected"
   },
   "offers": {
     "save": "Save up to 20% on combi deals and city passes!"

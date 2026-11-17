@@ -1,4 +1,5 @@
 import dbConnect from '@/lib/dbConnect';
+import { syncTourReviewStatsSafely } from '@/lib/reviews/tourReviewStats';
 import Review from '@/lib/models/Review';
 import { NextResponse, NextRequest } from 'next/server';
 import { authenticateCustomerSession } from '@/lib/auth/customerSession';
@@ -82,6 +83,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<Pa
     if (!updatedReview) {
       return NextResponse.json({ error: 'Review not found' }, { status: 404 });
     }
+    await syncTourReviewStatsSafely(review.tour);
 
     // Transform the response to match what the frontend expects
     const transformedReview = {
@@ -129,6 +131,7 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
 
     // Delete the review
     await Review.deleteOne({ _id: id });
+    await syncTourReviewStatsSafely(review.tour);
     
     return NextResponse.json({ success: true, message: 'Review deleted successfully' });
   } catch (error) {

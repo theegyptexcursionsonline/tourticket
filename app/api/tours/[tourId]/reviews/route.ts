@@ -1,5 +1,6 @@
 // app/api/tours/[tourId]/reviews/route.ts
 import dbConnect from '@/lib/dbConnect';
+import { syncTourReviewStatsSafely } from '@/lib/reviews/tourReviewStats';
 import Booking from '@/lib/models/Booking';
 import Review from '@/lib/models/Review';
 import Tour from '@/lib/models/Tour';
@@ -117,26 +118,8 @@ export async function POST(
       return NextResponse.json({ error: 'Failed to load submitted review' }, { status: 500 });
     }
 
-    // Update tour's average rating (optional - you might want to do this in background)
-    try {
-      const reviewStats = await Review.aggregate([
-        { $match: { tour: new mongoose.Types.ObjectId(tourId) } },
-        { $group: {
-          _id: null,
-          avgRating: { $avg: '$rating' },
-          totalReviews: { $sum: 1 }
-        }}
-      ]);
-
-      if (reviewStats.length > 0) {
-        await Tour.findByIdAndUpdate(tourId, {
-          rating: Math.round(reviewStats[0].avgRating * 10) / 10
-        });
-      }
-    } catch (updateError) {
-      console.error('Error updating tour rating:', updateError);
-      // Don't fail the review creation if rating update fails
-    }
+    // Recount the trip's published reviews (one rule for every review change).
+    await syncTourReviewStatsSafely(tourId);
 
     return NextResponse.json({
       success: true,

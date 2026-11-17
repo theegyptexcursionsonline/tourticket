@@ -1,8 +1,8 @@
 import { useTranslations } from 'next-intl';
-import { effectiveTourPrice, percentageOff, type PricedTour } from '@/lib/pricing/effectivePrice';
+import { displayedTripPrice, percentageOff, type PricedBookingOption, type PricedTour } from '@/lib/pricing/effectivePrice';
 
 interface TourPriceDisplayProps {
-  tour: PricedTour;
+  tour: PricedTour & { bookingOptions?: PricedBookingOption[] | null };
   formatPrice: (value: number) => string;
   align?: 'left' | 'center' | 'right';
   priceClassName?: string;
@@ -16,7 +16,7 @@ const alignmentClasses = {
   right: 'items-end text-right',
 } as const;
 
-/** One truthful base-price presentation for the hero, sidebar and drawer. */
+/** One truthful per-person price for the hero, sidebar and drawer. */
 export default function TourPriceDisplay({
   tour,
   formatPrice,
@@ -26,7 +26,8 @@ export default function TourPriceDisplay({
   showPerPerson = true,
 }: TourPriceDisplayProps) {
   const t = useTranslations();
-  const pricing = effectiveTourPrice(tour);
+  // The lowest price a guest can book (same as the cards and the cart), not the bare base.
+  const pricing = displayedTripPrice(tour);
   const discount = percentageOff(pricing.originalPrice, pricing.price);
 
   return (

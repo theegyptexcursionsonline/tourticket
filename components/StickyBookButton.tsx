@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from 'react';
-import { useSettings } from '@/hooks/useSettings'; // Assuming you have this hook for formatting price
+import { useTranslations } from 'next-intl';
+import { useSettings } from '@/hooks/useSettings';
 
 interface StickyBookButtonProps {
   price: number;
@@ -10,33 +10,20 @@ interface StickyBookButtonProps {
   hidden?: boolean;
 }
 
+// Phone booking bar. It shows from the first screen (the trip page booking card
+// sits far below the photos and story on phones), and a spacer of the same
+// height keeps the end of the page from being covered by it.
 const StickyBookButton: React.FC<StickyBookButtonProps> = ({ price, onClick, hidden = false }) => {
-  const [isVisible, setIsVisible] = useState(false);
   const { formatPrice } = useSettings();
+  const t = useTranslations();
 
-  const handleScroll = () => {
-    const scrollY = window.scrollY;
-    // Adjust this value based on when you want the button to appear
-    if (scrollY > 400) {
-      setIsVisible(true);
-    } else {
-      setIsVisible(false);
-    }
-  };
-
-  useEffect(() => {
-    window.addEventListener('scroll', handleScroll);
-    return () => {
-      window.removeEventListener('scroll', handleScroll);
-    };
-  }, []);
-
-  if (!isVisible || hidden) {
+  if (hidden) {
     return null;
   }
 
   return (
     <>
+      <div aria-hidden="true" data-testid="mobile-booking-bar-spacer" className="h-[calc(5.5rem+env(safe-area-inset-bottom))] md:hidden" />
       <style jsx>{`
         .shimmer-effect {
           position: relative;
@@ -70,7 +57,7 @@ const StickyBookButton: React.FC<StickyBookButtonProps> = ({ price, onClick, hid
         <div className="container mx-auto flex items-center justify-between">
           <div>
             <span className="font-bold text-lg text-slate-800">{formatPrice(price)}</span>
-            <span className="text-sm text-slate-500"> / person</span>
+            <span className="text-sm text-slate-500"> {t('booking.perPersonShort')}</span>
           </div>
           <button
             data-testid="open-booking-drawer-mobile"
@@ -78,7 +65,7 @@ const StickyBookButton: React.FC<StickyBookButtonProps> = ({ price, onClick, hid
             className="shimmer-effect bg-red-600 text-white font-bold py-3 px-6 rounded-full hover:bg-red-700 transition-colors shadow-md"
           >
             <span className="shimmer-line"></span>
-            Book now
+            {t('booking.bookNow')}
           </button>
         </div>
       </div>

@@ -24,11 +24,11 @@ import type { CartItem } from '@/types';
 import { getErrorMessage } from './componentTypes';
 import { CANCELLATION_POLICY_SUMMARY } from '@/lib/bookings/cancellationPolicy';
 import { loadCurrentBookingOptions } from '@/lib/bookings/liveBookingOptions';
-import { effectiveOptionPrice, effectiveTourPrice, percentageOff } from '@/lib/pricing/effectivePrice';
+import { displayedTripPrice, effectiveOptionPrice, effectiveTourPrice, percentageOff } from '@/lib/pricing/effectivePrice';
 import { effectiveSlotGuestPrices, guestPricedSubtotal } from '@/lib/revenue/guestPrices';
 import { ADD_ON_QUANTITY_VERSION, isPerPersonAddOn } from '@/lib/checkout/addOnPricing';
 import { groupAvailableAddOns, isAddOnAvailableForOption, normalizedBookingOptionKeys } from '@/lib/bookings/addOnAvailability';
-import { bookingOptionUnitLabel } from '@/lib/bookings/bookingOptionLabels';
+import { bookingOptionUnitLabel, difficultyLabel } from '@/lib/bookings/bookingOptionLabels';
 import {
   capacityAvailability,
   capacityBlockedMessage,
@@ -278,6 +278,7 @@ const STEPS = [
   { id: 3, title: 'booking.stepEnhance', shortTitle: 'booking.stepShortEnhance', icon: Sparkles },
   { id: 4, title: 'booking.review', shortTitle: 'booking.stepShortReview', icon: CheckCircle },
 ];
+
 
 const StepsIndicator: React.FC<{
   currentStep: number;
@@ -852,7 +853,7 @@ export const TourOptionCard: React.FC<{
         {option.difficulty && (
           <div className="flex items-center gap-1.5">
             <TrendingUp size={13} className="text-orange-500" />
-            <span className="font-medium">{option.difficulty}</span>
+            <span className="font-medium">{difficultyLabel(option.difficulty, t)}</span>
           </div>
         )}
         {collapsible && (
@@ -922,7 +923,11 @@ export const TourOptionCard: React.FC<{
       <div className="bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl px-3 py-2 mb-2 border border-gray-200">
         <div className="flex justify-between items-center text-xs mb-1">
           <span className="text-gray-700 font-medium">
-            {adults} Adult{adults > 1 ? 's' : ''}{childCount > 0 && `, ${childCount} Child${childCount > 1 ? 'ren' : ''}`}{infantCount > 0 && `, ${infantCount} Infant${infantCount > 1 ? 's' : ''}`}
+            {[
+              `${adults} ${adults === 1 ? t('booking.adult') : t('booking.adults')}`,
+              childCount > 0 ? `${childCount} ${childCount === 1 ? t('booking.child') : t('booking.children')}` : null,
+              infantCount > 0 ? `${infantCount} ${infantCount === 1 ? t('booking.infant') : t('booking.infants')}` : null,
+            ].filter(Boolean).join(isRTL(locale) ? '، ' : ', ')}
           </span>
           {savings > 0 && (
             <span className="text-green-600 font-bold bg-green-100 px-1.5 py-0.5 rounded-full text-[10px]">
@@ -940,9 +945,9 @@ export const TourOptionCard: React.FC<{
             // Per-person options quote both rates, and both follow the
             // selected departure (client request 2026-08-21).
             <span className="text-gray-600 text-xs">
-              <span className="block">Per Adult: {formatPrice(basePrice)}</span>
-              <span className="block">Per Child: {formatPrice(childPrice)}</span>
-              <span className="block">Per Infant: {formatPrice(infantPrice)}</span>
+              <span className="block">{t('booking.perAdultRate', { price: formatPrice(basePrice) })}</span>
+              <span className="block">{t('booking.perChildRate', { price: formatPrice(childPrice) })}</span>
+              <span className="block">{t('booking.perInfantRate', { price: formatPrice(infantPrice) })}</span>
             </span>
           )}
           <span className="text-sm font-bold text-gray-900">{formatPrice(subtotal)}</span>
@@ -1575,6 +1580,8 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
   const router = useRouter();
   const { formatPrice } = useSettings();
   const tourBasePricing = useMemo(() => effectiveTourPrice(tour), [tour]);
+  // Headline per-person price: what one guest can actually book (same as the trip page and cards).
+  const headlinePricing = useMemo(() => displayedTripPrice(tour as Parameters<typeof displayedTripPrice>[0]), [tour]);
   const { addToCart } = useCart();
   const locale = useLocale();
   const rtl = isRTL(locale);
@@ -2355,7 +2362,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
     const toastId = `${timeSlot.id}-${timeSlot.time}`;
     if (lastToastTimeSlotRef.current !== toastId) {
       lastToastTimeSlotRef.current = toastId;
-      toast.success(`${timeSlot.time} selected!`, {
+      toast.success(t('booking.departureSelected', { time: timeSlot.time }), {
         icon: '⏰',
         duration: 2000
       });
@@ -2717,26 +2724,29 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
                   {tourDisplayData.ratingLabel}
                 </div>
               )}
-              <div className="bg-red-100 text-red-700 px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1">
-                <Users size={14} className="text-red-500" />
-                {t('tourCard.max')} {tourDisplayData?.maxGroupSize || 15}
-              </div>
+              {/* Group size only when the trip sets one (it fell back to an invented 15). */}
+              {typeof tour.maxGroupSize === 'number' && tour.maxGroupSize > 0 && (
+                <div className="bg-red-100 text-red-700 px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1">
+                  <Users size={14} className="text-red-500" />
+                  {t('booking.maxGuests', { count: tour.maxGroupSize })}
+                </div>
+              )}
             </div>
 
             {/* Compact Price Section */}
             <div className="flex justify-between items-center bg-gray-100 rounded-2xl p-4 text-gray-800 border border-gray-200">
               <div>
-                {tourBasePricing.discountApplied && (
+                {headlinePricing.discountApplied && (
                   <span className="text-sm text-gray-500 line-through block">
-                    {formatPrice(tourBasePricing.originalPrice)}
+                    {formatPrice(headlinePricing.originalPrice)}
                   </span>
                 )}
                 <span className="text-2xl sm:text-3xl font-bold text-red-600 block">
-                  {formatPrice(tourBasePricing.price)}
+                  {formatPrice(headlinePricing.price)}
                 </span>
-                {percentageOff(tourBasePricing.originalPrice, tourBasePricing.price) > 0 && (
+                {percentageOff(headlinePricing.originalPrice, headlinePricing.price) > 0 && (
                   <span className="mt-1 inline-flex rounded-full bg-red-100 px-2 py-0.5 text-xs font-bold text-red-700">
-                    {percentageOff(tourBasePricing.originalPrice, tourBasePricing.price)}% OFF
+                    {t('tourPage.percentOff', { discount: percentageOff(headlinePricing.originalPrice, headlinePricing.price) })}
                   </span>
                 )}
                 <span className="text-xs text-gray-500">{t('booking.perPersonShort')}</span>
@@ -2836,7 +2846,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
                         <div className="flex items-center justify-between">
                           <div className="flex-1 pr-3">
                             <div className="font-medium text-gray-800 text-sm">{t('booking.adults')}</div>
-                            <div className="text-xs text-gray-500">Age 13+</div>
+                            <div className="text-xs text-gray-500">{t('booking.ageAdultRange')}</div>
                           </div>
                           <div className="flex items-center gap-2">
                             <motion.button
@@ -2859,7 +2869,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
                         <div className="flex items-center justify-between">
                           <div className="flex-1 pr-3">
                             <div className="font-medium text-gray-800 text-sm">{t('booking.children')}</div>
-                            <div className="text-xs text-gray-500">Age 4-12</div>
+                            <div className="text-xs text-gray-500">{t('booking.ageChildRange')}</div>
                           </div>
                           <div className="flex items-center gap-2">
                             <motion.button
@@ -2882,7 +2892,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
                         <div className="flex items-center justify-between">
                           <div className="flex-1 pr-3">
                             <div className="font-medium text-gray-800 text-sm">{t('booking.infants')}</div>
-                            <div className="text-xs text-gray-500">Age 0-3</div>
+                            <div className="text-xs text-gray-500">{t('booking.ageInfantRange')}</div>
                           </div>
                           <div className="flex items-center gap-2">
                             <motion.button

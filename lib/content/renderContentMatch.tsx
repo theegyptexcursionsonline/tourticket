@@ -38,8 +38,8 @@ export async function renderContentMatch(
       // One model, two kinds: catalogue pages render the catalogue template,
       // attraction pages the attraction one, at whatever URL shape they chose.
       return match.pageKind === 'category'
-        ? renderCataloguePage(match.slug, locale)
-        : renderAttractionDetail(match.slug, locale);
+        ? renderCataloguePage(match.slug, locale, match.parentSlug)
+        : renderAttractionDetail(match.slug, locale, match.parentSlug);
     default:
       return null;
   }

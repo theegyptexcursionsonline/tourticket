@@ -111,8 +111,57 @@ describe('BookingSidebar participant rows carry no static pricing claims', () =>
   );
 
   it('still tells the customer which ages each category covers', () => {
-    expect(source).toContain('Age 13+');
-    expect(source).toContain('Age 4-12');
-    expect(source).toContain('Age 0-3');
+    expect(source).toContain("t('booking.ageAdultRange')");
+    expect(source).toContain("t('booking.ageChildRange')");
+    expect(source).toContain("t('booking.ageInfantRange')");
+    // Same age bands in every language the site offers.
+    for (const locale of ['en', 'ar', 'de', 'fr', 'es']) {
+      const booking = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'messages', `${locale}.json`), 'utf8')).booking;
+      expect(booking.ageAdultRange).toMatch(/13/);
+      expect(booking.ageChildRange).toMatch(/4[^0-9]+12/);
+      expect(booking.ageInfantRange).toMatch(/0[^0-9]+3/);
+    }
+    expect(JSON.parse(fs.readFileSync(path.join(process.cwd(), 'messages', 'en.json'), 'utf8')).booking.ageAdultRange).toBe('Age 13+');
+  });
+});
+
+describe('BookingSidebar speaks the visitor language on every booking step', () => {
+  const messages = Object.fromEntries(
+    ['en', 'ar', 'de', 'fr', 'es'].map((locale) => [
+      locale,
+      JSON.parse(fs.readFileSync(path.join(process.cwd(), 'messages', `${locale}.json`), 'utf8')).booking,
+    ]),
+  );
+
+  it.each([
+    ['selected!`', 'departure toast'],
+    ['Per Adult:', 'adult rate'],
+    ['Per Child:', 'child rate'],
+    ['Per Infant:', 'infant rate'],
+    ['>Age 13+<', 'adult age band'],
+    ['{option.difficulty}</span>', 'difficulty'],
+    ["{adults} Adult{adults > 1", 'guest summary'],
+    ["Max ${tourDisplayData?.maxGroupSize || 15}", 'group size'],
+  ])('has no fixed English %s (%s)', (fragment) => {
+    // The group size strings were data passed along, never rendered; the
+    // badge itself must come from the trip, not an invented 15.
+    if (fragment.startsWith('Max ')) {
+      expect(source).toContain("t('booking.maxGuests', { count: tour.maxGroupSize })");
+      expect(source).not.toContain("{t('tourCard.max')} {tourDisplayData?.maxGroupSize || 15}");
+      return;
+    }
+    expect(source).not.toContain(fragment);
+  });
+
+  it.each([
+    'perAdultRate', 'perChildRate', 'perInfantRate', 'ageAdultRange', 'ageChildRange', 'ageInfantRange',
+    'difficultyEasy', 'difficultyModerate', 'difficultyChallenging', 'difficultyDifficult', 'maxGuests', 'departureSelected',
+  ])('has %s in every offered language, with its placeholders', (key) => {
+    const placeholders = (value: string) => (value.match(/\{\w+\}/g) || []).sort().join(',');
+    for (const locale of ['ar', 'de', 'fr', 'es']) {
+      expect(typeof messages[locale][key]).toBe('string');
+      expect(placeholders(messages[locale][key])).toBe(placeholders(messages.en[key]));
+    }
+    expect(messages.ar[key]).toMatch(/[؀-ۿ]/);
   });
 });

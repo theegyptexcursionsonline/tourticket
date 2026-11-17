@@ -15,7 +15,7 @@ import {
   localizeAttractionTours,
   resolveLinkedPageCards,
 } from '@/lib/attractionPages/pageContent';
-import { localizeParentPage } from '@/lib/content/localizeParentPage';
+import { localizeParentPage, prefetchParentPage } from '@/lib/content/localizeParentPage';
 import { localizeEntityFields, localizeStructuredEntries } from '@/lib/i18n/contentLocalization';
 import { attractionPageStructuredFields } from '@/lib/i18n/translationFields';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
@@ -24,9 +24,11 @@ import { explicitContentLocales, metadataAlternates } from '@/lib/i18n/seoAltern
 
 type PageRecord = Record<string, unknown>;
 
-async function getAttractionPageData(slug: string, locale: string) {
+async function getAttractionPageData(slug: string, locale: string, parentSlug?: string) {
   try {
     await dbConnect();
+    // The parent read runs alongside the page read, not after it.
+    const parentPrefetch = prefetchParentPage(parentSlug, locale);
 
     const page = await AttractionPageModel.findOne({
       slug,
@@ -49,7 +51,7 @@ async function getAttractionPageData(slug: string, locale: string) {
     const [{ tours, totalTours }, linkedPages, parentPage] = await Promise.all([
       resolveAttractionPageTours(page as unknown as Parameters<typeof resolveAttractionPageTours>[0]),
       resolveLinkedPageCards(page as unknown as Parameters<typeof resolveLinkedPageCards>[0], locale),
-      localizeParentPage((localized as { parentPage?: Parameters<typeof localizeParentPage>[0] }).parentPage, locale),
+      localizeParentPage((localized as { parentPage?: Parameters<typeof localizeParentPage>[0] }).parentPage, locale, parentPrefetch),
     ]);
 
     return {
@@ -67,9 +69,10 @@ async function getAttractionPageData(slug: string, locale: string) {
 
 export async function renderAttractionDetail(
   slug: string,
-  locale: string
+  locale: string,
+  parentSlug?: string,
 ): Promise<React.ReactElement | null> {
-  const page = await getAttractionPageData(slug, locale);
+  const page = await getAttractionPageData(slug, locale, parentSlug);
   if (!page) return null;
 
   type AttractionProps = React.ComponentProps<typeof AttractionLandingPage>;

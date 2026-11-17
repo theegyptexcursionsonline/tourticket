@@ -11,7 +11,7 @@ import { CategoryPageData } from '@/types';
 import dbConnect from '@/lib/dbConnect';
 import AttractionPageModel from '@/lib/models/AttractionPage';
 import Category from '@/lib/models/Category';
-import { localizeParentPage } from '@/lib/content/localizeParentPage';
+import { localizeParentPage, prefetchParentPage } from '@/lib/content/localizeParentPage';
 import { localizeEntityFields } from '@/lib/i18n/contentLocalization';
 import {
   ATTRACTION_PAGE_LOCALIZED_FIELDS,
@@ -23,9 +23,11 @@ import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 import { PUBLIC_CONTENT_FILTER } from '@/lib/content/publicContentFilter';
 import { explicitContentLocales, metadataAlternates } from '@/lib/i18n/seoAlternates';
 
-export async function getCataloguePage(slug: string, locale: string): Promise<CategoryPageData | null> {
+export async function getCataloguePage(slug: string, locale: string, parentSlug?: string): Promise<CategoryPageData | null> {
   try {
     await dbConnect();
+    // The parent read runs alongside the page read, not after it.
+    const parentPrefetch = prefetchParentPage(parentSlug, locale);
 
     const page = await AttractionPageModel.findOne({
       slug,
@@ -66,7 +68,7 @@ export async function getCataloguePage(slug: string, locale: string): Promise<Ca
     const [{ tours, totalTours }, linkedPages, parentPage] = await Promise.all([
       resolveAttractionPageTours(page as unknown as Parameters<typeof resolveAttractionPageTours>[0]),
       resolveLinkedPageCards(page as unknown as Parameters<typeof resolveLinkedPageCards>[0], locale),
-      localizeParentPage(serializedPage.parentPage, locale),
+      localizeParentPage(serializedPage.parentPage, locale, parentPrefetch),
     ]);
 
     return {
@@ -82,8 +84,8 @@ export async function getCataloguePage(slug: string, locale: string): Promise<Ca
   }
 }
 
-export async function renderCataloguePage(slug: string, locale: string): Promise<React.ReactElement | null> {
-  const page = await getCataloguePage(slug, locale);
+export async function renderCataloguePage(slug: string, locale: string, parentSlug?: string): Promise<React.ReactElement | null> {
+  const page = await getCataloguePage(slug, locale, parentSlug);
   if (!page) return null;
 
   return (

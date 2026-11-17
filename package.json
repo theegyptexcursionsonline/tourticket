@@ -36,6 +36,7 @@
     "algolia:clear-sync": "tsx scripts/sync-algolia.ts --clear",
     "algolia:sync-all": "tsx scripts/sync-all-algolia.ts",
     "revenue:backfill-pricing": "tsx scripts/backfill-revenue-pricing.ts",
+    "reviews:sync-stats": "tsx scripts/sync-tour-review-stats.ts",
     "revenue:verify-migration": "tsx scripts/verify-revenue-pricing-migration.ts",
     "revenue:verify-e2e": "tsx scripts/verify-revenue-pricing-e2e.ts",
     "revenue:verify-production": "tsx scripts/verify-revenue-production.ts",

@@ -20,7 +20,7 @@ jest.mock('@/lib/models/Category', () => ({ __esModule: true, default: model('ca
 jest.mock('@/lib/models/Destination', () => ({ __esModule: true, default: model('destination') }));
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const { localizeParentPage } = require('@/lib/content/localizeParentPage') as typeof import('@/lib/content/localizeParentPage');
+const { localizeParentPage, prefetchParentPage } = require('@/lib/content/localizeParentPage') as typeof import('@/lib/content/localizeParentPage');
 
 beforeEach(() => {
   for (const key of Object.keys(records)) delete records[key];
@@ -55,6 +55,38 @@ describe('localizeParentPage', () => {
     await expect(localizeParentPage({ slug: 'egypt', label: 'Egypt', kind: 'landing' }, 'ar')).resolves.toMatchObject({ label: 'Egypt' });
     await expect(localizeParentPage(null, 'ar')).resolves.toBeNull();
     expect(calls).toHaveLength(0);
+  });
+});
+
+describe('parent read started with the page read', () => {
+  it('starts at once and is reused, so the label costs no read after the page', async () => {
+    records['page:aswan-attractions'] = { title: 'Aswan Attractions', translations: { ar: { title: 'معالم أسوان' } } };
+    const early = prefetchParentPage('aswan-attractions', 'ar');
+    expect(early).toBeDefined();
+    await early!.doc;
+    expect(calls).toHaveLength(1);
+    await expect(localizeParentPage(parent, 'ar', early)).resolves.toEqual({ ...parent, label: 'معالم أسوان' });
+    expect(calls).toHaveLength(1);
+  });
+
+  it('is ignored when the page turns out to have another parent or a non-page parent', async () => {
+    records['page:luxor-attractions'] = { title: 'Luxor Attractions', translations: { ar: { title: 'معالم الأقصر' } } };
+    records['page:aswan-attractions'] = { title: 'Aswan Attractions', translations: { ar: { title: 'معالم أسوان' } } };
+    const wrong = prefetchParentPage('luxor-attractions', 'ar');
+    await expect(localizeParentPage(parent, 'ar', wrong)).resolves.toMatchObject({ label: 'معالم أسوان' });
+    records['category:aswan-attractions'] = { name: 'Aswan', translations: { ar: { name: 'أسوان' } } };
+    const pageGuess = prefetchParentPage('aswan-attractions', 'ar');
+    await expect(localizeParentPage({ slug: 'aswan-attractions', label: 'Aswan', kind: 'category' }, 'ar', pageGuess)).resolves.toMatchObject({ label: 'أسوان' });
+  });
+
+  it('does nothing in English or without a parent, and a failed early read keeps the stored label', async () => {
+    expect(prefetchParentPage('aswan-attractions', 'en')).toBeUndefined();
+    expect(prefetchParentPage('', 'ar')).toBeUndefined();
+    expect(prefetchParentPage(undefined, 'ar')).toBeUndefined();
+    expect(calls).toHaveLength(0);
+    records.__throw = {};
+    const early = prefetchParentPage('aswan-attractions', 'ar');
+    await expect(localizeParentPage(parent, 'ar', early)).resolves.toBe(parent);
   });
 });
 

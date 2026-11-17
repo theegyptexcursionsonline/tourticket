@@ -48,7 +48,7 @@ import {
   itineraryStoredDirectionsUrl,
 } from '@/lib/tours/itineraryMap';
 import { meetingPointEmbedUrl, meetingPointMapUrl } from '@/lib/tours/meetingPointMap';
-import { effectiveTourPrice } from '@/lib/pricing/effectivePrice';
+import { displayedTripPrice, effectiveTourPrice } from '@/lib/pricing/effectivePrice';
 import { provableRating, ratingLabel, reviewCountLabel } from '@/lib/tours/ratingDisplay';
 import { askHostedAISearch } from '@/lib/hostedAISearch';
 import { useLocale, useTranslations } from 'next-intl';
@@ -1758,7 +1758,7 @@ export default function TourPageClient({ tour, relatedTours, initialReviews = []
       <BookingSidebar isOpen={isBookingSidebarOpen} onClose={() => setBookingSidebarOpen(false)} tour={tour as unknown as React.ComponentProps<typeof BookingSidebar>['tour']} initialStopSaleDates={initialStopSaleDates} />
 
       <StickyBookButton
-        price={tourBasePricing.price}
+        price={displayedTripPrice(tour as Parameters<typeof displayedTripPrice>[0]).price}
         currency={'$'}
         onClick={openBookingSidebar}
         hidden={isBookingSidebarOpen}

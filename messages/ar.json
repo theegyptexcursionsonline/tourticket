@@ -195,7 +195,19 @@
     "addOnCategoryTransport": "النقل",
     "addOnCategoryPhotography": "التصوير",
     "addOnCategoryFood": "الطعام",
-    "addOnCategoryExperience": "تجربة"
+    "addOnCategoryExperience": "تجربة",
+    "perAdultRate": "للبالغ: {price}",
+    "perChildRate": "للطفل: {price}",
+    "perInfantRate": "للرضيع: {price}",
+    "ageAdultRange": "13 سنة فأكثر",
+    "ageChildRange": "من 4 إلى 12 سنة",
+    "ageInfantRange": "من 0 إلى 3 سنوات",
+    "difficultyEasy": "سهلة",
+    "difficultyModerate": "متوسطة",
+    "difficultyChallenging": "صعبة",
+    "difficultyDifficult": "صعبة جدًا",
+    "maxGuests": "حتى {count}",
+    "departureSelected": "تم اختيار الساعة {time}"
   },
   "offers": {
     "save": "وفّر حتى 20% على العروض المجمعة وبطاقات المدن!"

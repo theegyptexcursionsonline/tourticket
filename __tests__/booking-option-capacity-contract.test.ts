@@ -143,9 +143,11 @@ describe('option card quotes adult and child rates that follow the departure', (
   const sidebar = read('components/BookingSidebar.tsx');
 
   it('replaces the single per-person line with adult, child and infant rates', () => {
-    expect(sidebar).toContain('Per Adult: {formatPrice(basePrice)}');
-    expect(sidebar).toContain('Per Child: {formatPrice(childPrice)}');
-    expect(sidebar).toContain('Per Infant: {formatPrice(infantPrice)}');
+    expect(sidebar).toContain("t('booking.perAdultRate', { price: formatPrice(basePrice) })");
+    expect(sidebar).toContain("t('booking.perChildRate', { price: formatPrice(childPrice) })");
+    expect(sidebar).toContain("t('booking.perInfantRate', { price: formatPrice(infantPrice) })");
+    // The rate labels are translated, never fixed English words.
+    expect(sidebar).not.toContain('Per Adult:');
   });
 
   it('prices follow the selected departure, not the option base', () => {

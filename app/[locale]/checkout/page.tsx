@@ -104,7 +104,7 @@ const CustomerTypeSelector = ({
         <motion.button
           type="button"
           onClick={() => setCustomerType('guest')}
-          className={`w-full p-3 sm:p-4 border-2 rounded-xl text-left transition-all ${
+          className={`w-full p-3 sm:p-4 border-2 rounded-xl text-start transition-all ${
             customerType === 'guest'
               ? 'border-red-500 bg-red-50'
               : 'border-slate-200 hover:border-red-300 hover:bg-red-50'
@@ -136,7 +136,7 @@ const CustomerTypeSelector = ({
         <motion.button
           type="button"
           onClick={onLoginClick}
-          className="w-full p-3 sm:p-4 border-2 border-slate-200 rounded-xl text-left transition-all hover:border-blue-300 hover:bg-blue-50"
+          className="w-full p-3 sm:p-4 border-2 border-slate-200 rounded-xl text-start transition-all hover:border-blue-300 hover:bg-blue-50"
           whileHover={{ scale: 1.01 }}
           whileTap={{ scale: 0.99 }}
         >
@@ -148,7 +148,7 @@ const CustomerTypeSelector = ({
                 <div className="text-xs sm:text-sm text-slate-600 truncate sm:whitespace-normal">{t('checkout.signInHint')}</div>
               </div>
             </div>
-            <div className="text-blue-500 text-xs sm:text-sm font-medium flex-shrink-0 hidden xs:block">Sign In →</div>
+            <ChevronRight aria-hidden="true" size={18} className="text-blue-500 flex-shrink-0 rtl:rotate-180" />
           </div>
         </motion.button>
 
@@ -156,7 +156,7 @@ const CustomerTypeSelector = ({
         <motion.button
           type="button"
           onClick={onSignupClick}
-          className="w-full p-3 sm:p-4 border-2 border-slate-200 rounded-xl text-left transition-all hover:border-green-300 hover:bg-green-50"
+          className="w-full p-3 sm:p-4 border-2 border-slate-200 rounded-xl text-start transition-all hover:border-green-300 hover:bg-green-50"
           whileHover={{ scale: 1.01 }}
           whileTap={{ scale: 0.99 }}
         >
@@ -168,7 +168,7 @@ const CustomerTypeSelector = ({
                 <div className="text-xs sm:text-sm text-slate-600 truncate sm:whitespace-normal">{t('checkout.createHint')}</div>
               </div>
             </div>
-            <div className="text-green-500 text-xs sm:text-sm font-medium flex-shrink-0 hidden xs:block">Sign Up →</div>
+            <ChevronRight aria-hidden="true" size={18} className="text-green-500 flex-shrink-0 rtl:rotate-180" />
           </div>
         </motion.button>
       </div>

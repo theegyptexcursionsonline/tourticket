@@ -118,3 +118,45 @@ export function effectiveOptionPrice(
   const price = applyDiscountPercent(originalPrice, tour?.discountPercent);
   return { price, originalPrice, discountApplied: price < originalPrice };
 }
+
+export interface PricedBookingOption extends PricedOption {
+  /** "Per Person", "Per Group", "Per Family", "Per Couple"; missing means per person. */
+  type?: string | null;
+  timeSlots?: PricedTimeSlot[] | null;
+}
+
+const isPerPersonOption = (option: PricedBookingOption) => !option.type || /person/i.test(option.type);
+
+/**
+ * The cheapest price one guest can actually book: the lowest per-person option
+ * (each time slot that sets its own price counts), through the same rule the
+ * booking panel charges. The trip page headline showed the tour's base price
+ * (e.g. $69.00) while every option, the cards and the cart charged $69.17;
+ * headline, sticky bar and panel now all start from this number. Group,
+ * family and couple options are not per-person prices and are left out.
+ * Returns null when the tour has no per-person option (callers keep the base).
+ */
+export function lowestPerPersonPrice(
+  tour: (PricedTour & { bookingOptions?: PricedBookingOption[] | null }) | null | undefined,
+): { price: number; originalPrice: number; discountApplied: boolean } | null {
+  const options = Array.isArray(tour?.bookingOptions)
+    ? tour!.bookingOptions!.filter((option) => isPerPersonOption(option)
+      && typeof option.price === 'number' && Number.isFinite(option.price) && option.price >= 0)
+    : [];
+  let best: { price: number; originalPrice: number; discountApplied: boolean } | null = null;
+  for (const option of options) {
+    const slots = Array.isArray(option.timeSlots) && option.timeSlots.length > 0 ? option.timeSlots : [undefined];
+    for (const slot of slots) {
+      const quote = effectiveOptionPrice(tour, option, slot);
+      if (!best || quote.price < best.price) best = quote;
+    }
+  }
+  return best;
+}
+
+/** What the trip page shows as its per-person price: the bookable minimum, else the base price. */
+export function displayedTripPrice(
+  tour: (PricedTour & { bookingOptions?: PricedBookingOption[] | null }) | null | undefined,
+): { price: number; originalPrice: number; discountApplied: boolean } {
+  return lowestPerPersonPrice(tour) ?? effectiveTourPrice(tour);
+}

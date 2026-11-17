@@ -230,6 +230,7 @@ export interface ITour extends Document {
   // Virtual fields
   reviewDetails?: unknown[];
   reviewCount?: number;
+  reviewStatsSyncedAt?: Date;
 
   // Localized overrides by locale code (e.g. en, ar, de)
   translations?: Record<string, ITourTranslation>;
@@ -938,6 +939,10 @@ const TourSchema: Schema<ITour> = new Schema({
     max: [5, 'Rating cannot exceed 5'],
     index: true
   },
+  // Kept in step with published reviews by lib/reviews/tourReviewStats.ts;
+  // never typed by hand. A count of 0 keeps any stored rating off the pages.
+  reviewCount: { type: Number, min: 0 },
+  reviewStatsSyncedAt: { type: Date },
   bookings: { 
     type: Number, 
     default: 0,
@@ -1280,25 +1285,10 @@ TourSchema.statics.generateUniqueSlug = async function(baseSlug: string, exclude
 };
 
 // Instance methods
+// Kept for callers of the old method: the one review rule does the counting.
 TourSchema.methods.updateRating = async function() {
-  try {
-    const Review = mongoose.model('Review');
-    const stats = await Review.aggregate([
-      { $match: { tour: this._id } },
-      { $group: { 
-        _id: null, 
-        avgRating: { $avg: '$rating' },
-        totalReviews: { $sum: 1 }
-      }}
-    ]);
-    
-    if (stats.length > 0) {
-      this.rating = Math.round(stats[0].avgRating * 10) / 10;
-      await this.save();
-    }
-  } catch (error) {
-    console.error('Error updating tour rating:', error);
-  }
+  const { syncTourReviewStatsSafely } = await import('@/lib/reviews/tourReviewStats');
+  await syncTourReviewStatsSafely(this._id);
 };
 
 TourSchema.methods.incrementBookings = async function() {
