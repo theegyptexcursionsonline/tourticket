@@ -1907,6 +1907,16 @@ const DestinationGallerySection = ({ destination }: { destination: Destination }
   );
 };
 
+// 0,0 is the empty default of the coordinates field, not a place in Egypt: the
+// card printed "0, 0" with a map link into the Atlantic (seen on /aswan).
+export function hasRealCoordinates(coordinates: { lat?: number; lng?: number } | null | undefined): coordinates is { lat: number; lng: number } {
+  if (!coordinates) return false;
+  const { lat, lng } = coordinates;
+  if (typeof lat !== 'number' || typeof lng !== 'number' || !Number.isFinite(lat) || !Number.isFinite(lng)) return false;
+  if (lat === 0 && lng === 0) return false;
+  return Math.abs(lat) <= 90 && Math.abs(lng) <= 180;
+}
+
 const DestinationPracticalSection = ({ destination }: { destination: Destination }) => {
   const copy = useDestinationPageCopy();
   const detailCards = [
@@ -1922,7 +1932,7 @@ const DestinationPracticalSection = ({ destination }: { destination: Destination
     destination.gettingAround && { title: copy.practicalGettingAround, value: destination.gettingAround, icon: <MapPin className="h-5 w-5" /> },
     destination.visaRequirements && { title: copy.practicalVisa, value: destination.visaRequirements, icon: <Shield className="h-5 w-5" /> },
     destination.emergencyNumber && { title: copy.practicalEmergency, value: destination.emergencyNumber, icon: <Phone className="h-5 w-5" /> },
-    destination.coordinates && {
+    hasRealCoordinates(destination.coordinates) && {
       title: copy.practicalLocation,
       value: `${destination.coordinates.lat}, ${destination.coordinates.lng}`,
       icon: <MapPin className="h-5 w-5" />,

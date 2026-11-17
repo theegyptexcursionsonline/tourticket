@@ -8,8 +8,18 @@ import type { LocalizedInternalLinkBlock } from '@/lib/navigation/internalLinks'
 
 const cache = new Map<string, LocalizedInternalLinkBlock | null>();
 
+// Block chrome in the page language; the heading and links are content of the block.
+const BLOCK_LABELS: Record<string, { eyebrow: string; tabs: string }> = {
+  en: { eyebrow: 'Discover more', tabs: 'Explore links' },
+  ar: { eyebrow: 'اكتشف المزيد', tabs: 'روابط للاستكشاف' },
+  de: { eyebrow: 'Mehr entdecken', tabs: 'Weitere Links' },
+  fr: { eyebrow: 'À découvrir aussi', tabs: 'Liens à explorer' },
+  es: { eyebrow: 'Descubre más', tabs: 'Enlaces para explorar' },
+};
+
 export default function InternalLinkBlock() {
   const locale = useLocale();
+  const labels = BLOCK_LABELS[locale.slice(0, 2)] ?? BLOCK_LABELS.en;
   const [block, setBlock] = useState<LocalizedInternalLinkBlock | null>(() => cache.get(locale) || null);
   const [activeId, setActiveId] = useState('');
 
@@ -46,7 +56,7 @@ export default function InternalLinkBlock() {
       <div className="container mx-auto px-4 py-8 sm:py-10">
         <div className="mb-5 flex items-end justify-between gap-4">
           <div>
-            <p className="text-xs font-bold uppercase tracking-[0.18em] text-red-600">Discover more</p>
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-red-600">{labels.eyebrow}</p>
             <h2 id="internal-links-heading" className="mt-2 text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">
               {block.heading || 'Explore Egypt'}
             </h2>
@@ -54,7 +64,7 @@ export default function InternalLinkBlock() {
         </div>
 
         <div className="-mx-4 overflow-x-auto px-4 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          <div role="tablist" aria-label="Explore links" className="flex min-w-max gap-2">
+          <div role="tablist" aria-label={labels.tabs} className="flex min-w-max gap-2">
             {block.groups.map((group) => (
               <button
                 key={group.id}

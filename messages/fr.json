@@ -10,7 +10,14 @@
     "myProfile": "Mon Profil",
     "myBookings": "Mes Reservations",
     "favorites": "Favoris",
-    "signOut": "Se Deconnecter"
+    "signOut": "Se Deconnecter",
+    "searchToursTickets": "Rechercher excursions et billets",
+    "appearance": "Apparence",
+    "wishlist": "Voir vos favoris",
+    "openCart": "Ouvrir le panier",
+    "openSearch": "Ouvrir la recherche",
+    "openMenu": "Ouvrir le menu",
+    "closeSearch": "Fermer la recherche"
   },
   "search": {
     "placeholder": "Ou allez-vous?",
@@ -18,7 +25,11 @@
     "searching": "Recherche...",
     "tours": "Tours",
     "mostPopular": "Les plus populaires",
-    "recentSearches": "Vos recherches recentes"
+    "recentSearches": "Vos recherches recentes",
+    "searchToursInEgypt": "Rechercher une excursion en Égypte…",
+    "noMatchingTours": "Aucune excursion ne correspond",
+    "tryDestination": "Essayez une destination comme Le Caire, Louxor ou Charm el-Cheikh.",
+    "whatAreYouLookingFor": "Que recherchez-vous ?"
   },
   "currency": {
     "title": "Selectionner une Devise"
@@ -707,7 +718,8 @@
       "signup": "S'inscrire",
       "bookNow": "Reserver ce tour",
       "bookNowHint": "Reservez maintenant et nous vous inviterons a laisser un avis apres votre sortie.",
-      "completeTourHint": "Terminez d'abord ce tour et nous vous enverrons automatiquement votre lien d'avis verifie par e-mail."
+      "completeTourHint": "Terminez d'abord ce tour et nous vous enverrons automatiquement votre lien d'avis verifie par e-mail.",
+      "eligibilityNote": "Seuls les clients ayant effectué cette excursion peuvent laisser un avis. Les voyageurs concernés reçoivent automatiquement un e-mail après leur sortie."
     },
     "userFallback": "Utilisateur",
     "form": {
@@ -1115,6 +1127,23 @@
       "cultural": "Culture",
       "reviews": "Avis",
       "faq": "FAQ"
-    }
+    },
+    "whatsIncluded": "Ce qui est inclus",
+    "whatsNotIncluded": "Ce qui n’est pas inclus"
+  },
+  "routeMap": {
+    "loading": "Chargement de la carte du parcours…",
+    "unavailable": "La carte du parcours est momentanément indisponible.",
+    "tryAgain": "Réessayer",
+    "openRoute": "Ouvrir le parcours",
+    "roadMap": "Carte du parcours · {count} étapes",
+    "selectStage": "Choisir une étape du programme",
+    "showStage": "Afficher l’étape {index} : {title}",
+    "exactPlace": "Lieu exact",
+    "approximateStage": "Étape approximative",
+    "note": "Les étapes numérotées suivent l’ordre du programme. Les étapes de prise en charge, en mer et à bord sont approximatives ; le lieu exact de prise en charge est confirmé après la réservation.",
+    "gestureDesktop": "Ctrl + molette pour zoomer sur la carte",
+    "gestureMac": "⌘ + molette pour zoomer sur la carte",
+    "gestureMobile": "Utilisez deux doigts pour déplacer la carte"
   }
 }

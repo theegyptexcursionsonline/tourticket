@@ -10,7 +10,14 @@
     "myProfile": "Mein Profil",
     "myBookings": "Meine Buchungen",
     "favorites": "Favoriten",
-    "signOut": "Abmelden"
+    "signOut": "Abmelden",
+    "searchToursTickets": "Touren und Tickets suchen",
+    "appearance": "Darstellung",
+    "wishlist": "Merkliste ansehen",
+    "openCart": "Warenkorb öffnen",
+    "openSearch": "Suche öffnen",
+    "openMenu": "Menü öffnen",
+    "closeSearch": "Suche schließen"
   },
   "search": {
     "placeholder": "Wohin gehst du?",
@@ -18,7 +25,11 @@
     "searching": "Suche...",
     "tours": "Touren",
     "mostPopular": "Am beliebtesten",
-    "recentSearches": "Ihre letzten Suchen"
+    "recentSearches": "Ihre letzten Suchen",
+    "searchToursInEgypt": "Touren in Ägypten suchen …",
+    "noMatchingTours": "Keine passenden Touren gefunden",
+    "tryDestination": "Versuchen Sie ein Reiseziel wie Kairo, Luxor oder Sharm El Sheikh.",
+    "whatAreYouLookingFor": "Wonach suchen Sie?"
   },
   "currency": {
     "title": "Wahrung Auswahlen"
@@ -707,7 +718,8 @@
       "signup": "Registrieren",
       "bookNow": "Diese Tour buchen",
       "bookNowHint": "Buchen Sie jetzt und wir laden Sie nach Abschluss Ihrer Reise zur Bewertung ein.",
-      "completeTourHint": "Schließen Sie diese Tour zuerst ab, dann senden wir Ihnen Ihren verifizierten Bewertungslink per E-Mail."
+      "completeTourHint": "Schließen Sie diese Tour zuerst ab, dann senden wir Ihnen Ihren verifizierten Bewertungslink per E-Mail.",
+      "eligibilityNote": "Bewertungen sind nur für Kunden möglich, die diese Tour gemacht haben. Berechtigte Gäste erhalten nach der Reise automatisch eine E-Mail zur Bewertung."
     },
     "userFallback": "Benutzer",
     "form": {
@@ -1115,6 +1127,23 @@
       "cultural": "Kultur",
       "reviews": "Bewertungen",
       "faq": "FAQ"
-    }
+    },
+    "whatsIncluded": "Inklusive",
+    "whatsNotIncluded": "Nicht inklusive"
+  },
+  "routeMap": {
+    "loading": "Routenkarte wird geladen …",
+    "unavailable": "Die Routenkarte ist vorübergehend nicht verfügbar.",
+    "tryAgain": "Erneut versuchen",
+    "openRoute": "Route öffnen",
+    "roadMap": "Routenkarte · {count} Stationen",
+    "selectStage": "Station des Programms wählen",
+    "showStage": "Station {index} anzeigen: {title}",
+    "exactPlace": "Genauer Ort",
+    "approximateStage": "Ungefähre Station",
+    "note": "Die nummerierten Stationen folgen dem Programm. Allgemeine Abhol-, See- und Bordstationen sind ungefähr; der genaue Abholort wird nach der Buchung bestätigt.",
+    "gestureDesktop": "Strg + Scrollen zum Zoomen der Karte",
+    "gestureMac": "⌘ + Scrollen zum Zoomen der Karte",
+    "gestureMobile": "Karte mit zwei Fingern bewegen"
   }
 }

@@ -475,6 +475,22 @@ const ItinerarySection = ({ itinerary, tourLocation, tourTitle, sectionRef }: { 
   const selectItineraryStage = useCallback((index: number) => {
     setActiveItineraryIndex(index);
   }, []);
+  // The map is memoised; a stable label object keeps it from re-rendering.
+  const routeMapLabels = useMemo(() => ({
+    loading: t('routeMap.loading'),
+    unavailable: t('routeMap.unavailable'),
+    tryAgain: t('routeMap.tryAgain'),
+    openRoute: t('routeMap.openRoute'),
+    roadMap: (count: number) => t('routeMap.roadMap', { count }),
+    selectStage: t('routeMap.selectStage'),
+    showStage: (index: number, title: string) => t('routeMap.showStage', { index, title }),
+    exactPlace: t('routeMap.exactPlace'),
+    approximateStage: t('routeMap.approximateStage'),
+    note: t('routeMap.note'),
+    gestureDesktop: t('routeMap.gestureDesktop'),
+    gestureMac: t('routeMap.gestureMac'),
+    gestureMobile: t('routeMap.gestureMobile'),
+  }), [t]);
 
   return (
     <div ref={sectionRef} id="itinerary" className="space-y-6 scroll-mt-40">
@@ -593,6 +609,7 @@ const ItinerarySection = ({ itinerary, tourLocation, tourTitle, sectionRef }: { 
               openMapsUrl={openMapsUrl}
               activeIndex={activeItineraryIndex}
               onSelect={selectItineraryStage}
+              labels={routeMapLabels}
             />
           </div>
         )}
@@ -1046,7 +1063,7 @@ const OverviewSection = ({ tour, sectionRef }: { tour: ITour, sectionRef: React.
           <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-5">
             <h3 className="mb-4 flex items-center gap-2.5 text-lg font-semibold text-slate-900">
               <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50"><CheckCircle size={18} className="text-emerald-600" /></span>
-              What&apos;s included
+              {t('tourPage.whatsIncluded')}
             </h3>
             <ul className="space-y-3">
               {mergeContentLists(tour.includes, tour.whatsIncluded).map((item, index) => (
@@ -1062,7 +1079,7 @@ const OverviewSection = ({ tour, sectionRef }: { tour: ITour, sectionRef: React.
           <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-5">
             <h3 className="mb-4 flex items-center gap-2.5 text-lg font-semibold text-slate-900">
               <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-rose-50"><X size={18} className="text-rose-600" /></span>
-              What&apos;s not included
+              {t('tourPage.whatsNotIncluded')}
             </h3>
             <ul className="space-y-3">
               {mergeContentLists(tour.whatsNotIncluded).map((item, index) => (

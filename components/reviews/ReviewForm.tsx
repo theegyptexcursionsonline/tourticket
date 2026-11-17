@@ -276,7 +276,7 @@ const ReviewForm: React.FC<ReviewFormProps> = ({ tourId, onReviewSubmitted, onBo
           </div>
           <h3 className="text-xl font-semibold text-gray-800 mb-2">{t('guest.title')}</h3>
           <p className="text-gray-600">
-            Reviews are only available to customers who completed this tour. Eligible guests receive a post-trip review email automatically.
+            {t('guest.eligibilityNote')}
           </p>
           {onBookNow && (
             <div className="mt-6 flex flex-col items-center gap-3">

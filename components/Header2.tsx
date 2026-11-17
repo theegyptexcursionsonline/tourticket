@@ -19,7 +19,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
-import Link from 'next/link';
+import { Link } from '@/i18n/routing';
 import { useCart } from '@/hooks/useCart';
 import { useAuth } from '@/contexts/AuthContext';
 import CurrencyLanguageSwitcher from '@/components/shared/CurrencyLanguageSwitcher';
@@ -27,7 +27,7 @@ import ThemeToggle from '@/components/ThemeToggle';
 import { Destination, Category, Tour } from '@/types';
 import { useWishlist } from '@/contexts/WishlistContext';
 import { useNavData } from '@/contexts/NavDataContext';
-import { useLocale } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import type { SearchHit } from './componentTypes';
 import { contentPath, localizedTourContentPath } from '@/lib/content/contentUrl';
 import { safeLocalStorage } from '@/lib/browserStorage';
@@ -87,19 +87,9 @@ const useRecentSearches = (storageKey = 'recentTravelSearches') => {
   return { recentSearches, addSearchTerm, removeSearchTerm };
 };
 
-const usePopularSearches = () => useMemo(() => ['LIGHT FESTIVAL', 'MUSEUM', 'CANAL CRUISE'], []);
+// Same Egypt search shortcuts as the main header (the old list named another city).
+const usePopularSearches = () => useMemo(() => ['Pyramids of Giza', 'Nile Cruise', 'Luxor Temple', 'Desert Safari', 'Cairo Tours', 'Red Sea Diving'], []);
 
-/** Sliding suggestions for placeholder */
-const SEARCH_SUGGESTIONS = [
-  'Where are you going?',
-  'Find museums near you',
-  'Discover food tours',
-  'Book canal cruises',
-  'Explore art galleries',
-  'City passes & tickets',
-  'Weekend getaways',
-  'Cultural experiences'
-];
 
 function useOnClickOutside(ref: React.RefObject<HTMLElement | null>, handler: (event: MouseEvent | TouchEvent) => void) {
   useEffect(() => {
@@ -136,14 +126,6 @@ function useScrollDirection() {
   return { scrollY, isVisible };
 }
 
-const useSlidingText = (texts: string[], interval = 3000) => {
-  const [currentIndex, setCurrentIndex] = useState(0);
-  useEffect(() => {
-    const timer = setInterval(() => setCurrentIndex(prev => (prev + 1) % texts.length), interval);
-    return () => clearInterval(timer);
-  }, [texts.length, interval]);
-  return texts[currentIndex];
-};
 
 // =================================================================
 // --- SUB-COMPONENTS ---
@@ -184,6 +166,7 @@ SearchSuggestion.displayName = 'SearchSuggestion';
 // =================================================================
 function TourHits({ hits, onHitClick, limit = 5 }: { hits: SearchHit[]; onHitClick?: () => void; limit?: number }) {
   const locale = useLocale();
+  const t = useTranslations();
   const limitedHits = hits.slice(0, limit);
 
   if (limitedHits.length === 0) return null;
@@ -196,7 +179,7 @@ function TourHits({ hits, onHitClick, limit = 5 }: { hits: SearchHit[]; onHitCli
             <Landmark className="w-3 h-3 text-white" />
           </div>
           <span className="text-xs font-bold text-blue-900 uppercase tracking-wider">
-            Tours ({hits.length})
+            {t('search.tours')} ({hits.length})
           </span>
         </div>
       </div>
@@ -276,6 +259,7 @@ const TourResultSkeleton = () => (
 
 // Mobile Inline Search Component
 const MobileInlineSearch: FC<{ isOpen: boolean; onClose: () => void }> = React.memo(({ isOpen, onClose }) => {
+  const t = useTranslations();
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<SearchHit[]>([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -360,7 +344,7 @@ const MobileInlineSearch: FC<{ isOpen: boolean; onClose: () => void }> = React.m
                         setIsSearching(false);
                       }
                     }}
-                    placeholder="Search tours in Egypt..."
+                    placeholder={t('search.searchToursInEgypt')}
                     className="w-full rounded-xl bg-transparent py-3.5 pl-12 pr-14 text-base font-medium text-slate-900 outline-none placeholder:text-slate-400"
                     autoFocus
                   />
@@ -376,7 +360,7 @@ const MobileInlineSearch: FC<{ isOpen: boolean; onClose: () => void }> = React.m
                   <button
                     onClick={onClose}
                     className="absolute right-4 top-1/2 transform -translate-y-1/2 p-2 hover:bg-gray-100 rounded-full transition-colors"
-                    aria-label="Close search"
+                    aria-label={t('header.closeSearch')}
                   >
                     <X className="w-5 h-5 text-gray-400" />
                   </button>
@@ -395,15 +379,15 @@ const MobileInlineSearch: FC<{ isOpen: boolean; onClose: () => void }> = React.m
                   className="absolute left-0 right-0 top-full mt-2 max-h-[min(62vh,32rem)] overflow-y-auto overscroll-contain rounded-2xl border border-slate-200 bg-white shadow-2xl shadow-slate-900/15"
                 >
                   {isSearching ? (
-                    <div className="space-y-3 p-4" aria-label="Searching tours">
+                    <div className="space-y-3 p-4" aria-label={t('search.searching')}>
                       {[0, 1, 2].map((item) => <TourResultSkeleton key={item} />)}
                     </div>
                   ) : searchResults.length > 0 ? (
                     <TourHits hits={searchResults} onHitClick={onClose} limit={10} />
                   ) : (
                     <div className="px-6 py-8 text-center">
-                      <p className="font-semibold text-slate-800">No matching tours found</p>
-                      <p className="mt-1 text-sm text-slate-500">Try a destination such as Cairo, Luxor, or Sharm El Sheikh.</p>
+                      <p className="font-semibold text-slate-800">{t('search.noMatchingTours')}</p>
+                      <p className="mt-1 text-sm text-slate-500">{t('search.tryDestination')}</p>
                     </div>
                   )}
                 </motion.div>
@@ -447,6 +431,7 @@ MobileInlineSearch.displayName = 'MobileInlineSearch';
 // Old SearchModal component removed - now using MobileInlineSearch
 export const SearchModalLegacy: FC<{ onClose: () => void; onSearch: (term: string) => void }> = ({ onClose, onSearch }) => {
   const locale = useLocale();
+  const t = useTranslations();
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState<Tour[]>([]);
   const [loading, setLoading] = useState(false);
@@ -542,7 +527,7 @@ export const SearchModalLegacy: FC<{ onClose: () => void; onSearch: (term: strin
         transition={{ duration: 0.3, ease: 'easeInOut' }}
         className="relative w-full max-w-5xl bg-white shadow-2xl rounded-lg p-6 sm:p-8 mt-16"
       >
-        <button onClick={onClose} className="absolute top-4 right-4 p-2 rounded-full text-slate-500 hover:bg-slate-100" aria-label="Close search">
+        <button onClick={onClose} className="absolute top-4 right-4 p-2 rounded-full text-slate-500 hover:bg-slate-100" aria-label={t('header.closeSearch')}>
           <X size={28} />
         </button>
 
@@ -553,7 +538,7 @@ export const SearchModalLegacy: FC<{ onClose: () => void; onSearch: (term: strin
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="What are you looking for?"
+              placeholder={t('search.whatAreYouLookingFor')}
               autoFocus
               className="w-full text-xl sm:text-2xl pl-10 pr-6 py-4 bg-transparent border-b-2 border-slate-200 focus:outline-none focus:border-red-500"
             />
@@ -562,7 +547,7 @@ export const SearchModalLegacy: FC<{ onClose: () => void; onSearch: (term: strin
 
         {loading && (
           <div className="mb-8">
-            <h3 className="text-slate-500 font-bold text-base tracking-wider uppercase mb-4">Searching...</h3>
+            <h3 className="text-slate-500 font-bold text-base tracking-wider uppercase mb-4">{t('search.searching')}</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {[...Array(3)].map((_, i) => (
                 <TourResultSkeleton key={i} />
@@ -573,7 +558,7 @@ export const SearchModalLegacy: FC<{ onClose: () => void; onSearch: (term: strin
 
         {!loading && searchResults.length > 0 && (
           <div className="mb-8">
-            <h3 className="text-slate-500 font-bold text-base tracking-wider uppercase mb-4">Tours</h3>
+            <h3 className="text-slate-500 font-bold text-base tracking-wider uppercase mb-4">{t('search.tours')}</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {searchResults.map((tour) => (
                 <a key={tour._id} href={localizedTourContentPath(tour, locale)} className="group block bg-white rounded-lg shadow-md overflow-hidden transition-shadow hover:shadow-xl">
@@ -592,13 +577,13 @@ export const SearchModalLegacy: FC<{ onClose: () => void; onSearch: (term: strin
 
         {!loading && searchTerm.length > 2 && searchResults.length === 0 && (
           <div className="text-center py-8 text-slate-500">
-            <p>No tours found for &quot;{searchTerm}&quot;. Try a different search.</p>
+            <p>{t('search.noResults', { query: searchTerm })}</p>
           </div>
         )}
 
         <div className="space-y-8">
           <div>
-            <h3 className="text-slate-500 font-bold text-base tracking-wider uppercase mb-4">Most popular</h3>
+            <h3 className="text-slate-500 font-bold text-base tracking-wider uppercase mb-4">{t('search.mostPopular')}</h3>
             <div className="flex flex-wrap gap-3">
               {popularSearches.map((item) => (
                 <SearchSuggestion key={item} term={item} icon={Zap} onSelect={handlePopularSearch} />
@@ -608,7 +593,7 @@ export const SearchModalLegacy: FC<{ onClose: () => void; onSearch: (term: strin
 
           {recentSearches.length > 0 && (
             <div>
-              <h3 className="text-slate-500 font-bold text-base tracking-wider uppercase mb-4">Your recent searches</h3>
+              <h3 className="text-slate-500 font-bold text-base tracking-wider uppercase mb-4">{t('search.recentSearches')}</h3>
               <div className="flex flex-wrap gap-3">
                 {recentSearches.map((item) => (
                   <SearchSuggestion key={item} term={item} icon={Clock} onSelect={handleRecentSearch} onRemove={removeSearchTerm} />
@@ -626,6 +611,7 @@ export const SearchModalLegacy: FC<{ onClose: () => void; onSearch: (term: strin
 // --- MEGA MENU ---
 // =================================================================
 const MegaMenu: FC<{ isOpen: boolean; onClose: () => void; destinations: Destination[]; categories: Category[] }> = React.memo(({ isOpen, onClose, destinations, categories }) => {
+  const t = useTranslations();
   const menuRef = useRef<HTMLDivElement>(null);
   useOnClickOutside(menuRef, onClose);
 
@@ -656,32 +642,32 @@ const MegaMenu: FC<{ isOpen: boolean; onClose: () => void; destinations: Destina
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
             <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-8">
               <div className="md:col-span-2">
-                <h3 className="text-sm font-bold uppercase tracking-wider text-gray-500 mb-4">Top Destinations</h3>
+                <h3 className="text-sm font-bold uppercase tracking-wider text-gray-500 mb-4">{t('header.destinations')}</h3>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                   {destinations.slice(0, 6).map((dest) => (
-                    <a key={dest._id} href={contentPath('destination', dest.slug, dest.urlType, null, dest.parentPage?.slug)} className="group block">
+                    <Link key={dest._id} href={contentPath('destination', dest.slug, dest.urlType, null, dest.parentPage?.slug)} className="group block">
                       <div className="aspect-square w-full rounded-lg overflow-hidden relative bg-slate-200">
                         <Image src={dest.image} alt={dest.name} fill sizes="(max-width: 768px) 50vw, 33vw" className="object-cover transition-transform duration-300 group-hover:scale-110" />
                         <div className="absolute inset-0 bg-black/20 group-hover:bg-black/40 transition-colors" />
                       </div>
                       <h4 className="mt-2 font-bold text-gray-900 group-hover:text-red-500">{dest.name.toUpperCase()}</h4>
                       <p className="text-xs text-gray-500">{dest.country || ''}</p>
-                    </a>
+                    </Link>
                   ))}
                 </div>
               </div>
 
               <div>
-                <h3 className="text-sm font-bold uppercase tracking-wider text-gray-500 mb-4">Activity Types</h3>
+                <h3 className="text-sm font-bold uppercase tracking-wider text-gray-500 mb-4">{t('header.activities')}</h3>
                 <ul className="space-y-3">
                   {categories.slice(0, 9).map((activity) => {
                     const Icon = activityIcons[activity.slug] || Ticket;
                     return (
                       <li key={activity._id}>
-                        <a href={contentPath('category', activity.slug, activity.urlType, null, activity.parentPage?.slug)} className="flex items-center gap-3 text-gray-700 hover:text-red-500 group">
+                        <Link href={contentPath('category', activity.slug, activity.urlType, null, activity.parentPage?.slug)} className="flex items-center gap-3 text-gray-700 hover:text-red-500 group">
                           <Icon size={20} className="text-gray-400 group-hover:text-red-500" />
                           <span className="font-semibold">{activity.name}</span>
-                        </a>
+                        </Link>
                       </li>
                     );
                   })}
@@ -690,9 +676,9 @@ const MegaMenu: FC<{ isOpen: boolean; onClose: () => void; destinations: Destina
 
               <div className="bg-gray-50 rounded-lg p-6 flex flex-col justify-center items-center text-center">
                 <Star size={32} className="text-yellow-500 mb-2" />
-                <h3 className="font-bold text-lg text-gray-800">Special Offers</h3>
-                <p className="text-sm text-gray-600 my-2">Save up to 20% on combi deals and city passes!</p>
-                <Link href="/search" className="mt-2 bg-red-500 text-white font-bold py-2 px-4 rounded-full hover:bg-red-600 text-sm">View Deals</Link>
+                <h3 className="font-bold text-lg text-gray-800">{t('header.specialOffers')}</h3>
+                <p className="text-sm text-gray-600 my-2">{t('offers.save')}</p>
+                <Link href="/search" className="mt-2 bg-red-500 text-white font-bold py-2 px-4 rounded-full hover:bg-red-600 text-sm">{t('header.deals')}</Link>
               </div>
             </div>
           </div>
@@ -707,6 +693,7 @@ MegaMenu.displayName = 'MegaMenu';
 // --- USER MENU ---
 // =================================================================
 const UserMenu: FC<{ user: AuthUser; onLogout: () => void }> = ({ user, onLogout }) => {
+  const t = useTranslations();
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -734,15 +721,15 @@ const UserMenu: FC<{ user: AuthUser; onLogout: () => void }> = ({ user, onLogout
             </div>
 
             <div className="py-2">
-              <Link href="/user/profile" className="flex items-center gap-3 px-4 py-2 text-slate-700 hover:bg-slate-50 transition-colors"><User size={16} /><span>My Profile</span></Link>
-              <Link href="/user/bookings" className="flex items-center gap-3 px-4 py-2 text-slate-700 hover:bg-slate-50 transition-colors"><Calendar size={16} /><span>My Bookings</span></Link>
-              <Link href="/user/favorites" className="flex items-center gap-3 px-4 py-2 text-slate-700 hover:bg-slate-50 transition-colors"><Heart size={16} /><span>Favorites</span></Link>
+              <Link href="/user/profile" className="flex items-center gap-3 px-4 py-2 text-slate-700 hover:bg-slate-50 transition-colors"><User size={16} /><span>{t('header.myProfile')}</span></Link>
+              <Link href="/user/bookings" className="flex items-center gap-3 px-4 py-2 text-slate-700 hover:bg-slate-50 transition-colors"><Calendar size={16} /><span>{t('header.myBookings')}</span></Link>
+              <Link href="/user/favorites" className="flex items-center gap-3 px-4 py-2 text-slate-700 hover:bg-slate-50 transition-colors"><Heart size={16} /><span>{t('header.favorites')}</span></Link>
             </div>
 
             <div className="border-t py-2">
               <button onClick={onLogout} className="flex items-center gap-3 px-4 py-2 text-red-600 hover:bg-red-50 transition-colors w-full text-left">
                 <LogOut size={16} />
-                <span>Sign Out</span>
+                <span>{t('header.signOut')}</span>
               </button>
             </div>
           </motion.div>
@@ -762,6 +749,7 @@ const MobileMenu: FC<{
   destinations: Destination[];
   categories: Category[];
 }> = React.memo(({ isOpen, onClose, onOpenSearch, destinations, categories }) => {
+  const t = useTranslations();
   const menuRef = useRef<HTMLDivElement>(null);
   const { user, logout } = useAuth();
 
@@ -823,16 +811,16 @@ const MobileMenu: FC<{
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <Link href="/user/profile" className="block py-2 text-slate-700 hover:text-red-500" onClick={onClose}>My Profile</Link>
-                    <Link href="/user/bookings" className="block py-2 text-slate-700 hover:text-red-500" onClick={onClose}>My Bookings</Link>
-                    <button onClick={() => { logout(); onClose(); }} className="block py-2 text-red-600 hover:text-red-700 w-full text-left">Sign Out</button>
+                    <Link href="/user/profile" className="block py-2 text-slate-700 hover:text-red-500" onClick={onClose}>{t('header.myProfile')}</Link>
+                    <Link href="/user/bookings" className="block py-2 text-slate-700 hover:text-red-500" onClick={onClose}>{t('header.myBookings')}</Link>
+                    <button onClick={() => { logout(); onClose(); }} className="block py-2 text-red-600 hover:text-red-700 w-full text-start">{t('header.signOut')}</button>
                   </div>
                 </div>
               ) : (
                 <div className="p-6 border-b">
                   <div className="space-y-3">
-                    <Link href="/login" className="block w-full bg-red-600 text-white text-center py-3 rounded-lg hover:bg-red-700 transition-colors">Log In</Link>
-                    <Link href="/signup" className="block w-full border border-red-600 text-red-600 text-center py-3 rounded-lg hover:bg-red-50 transition-colors">Sign Up</Link>
+                    <Link href="/login" className="block w-full bg-red-600 text-white text-center py-3 rounded-lg hover:bg-red-700 transition-colors">{t('header.login')}</Link>
+                    <Link href="/signup" className="block w-full border border-red-600 text-red-600 text-center py-3 rounded-lg hover:bg-red-50 transition-colors">{t('header.signup')}</Link>
                   </div>
                 </div>
               )}
@@ -840,30 +828,30 @@ const MobileMenu: FC<{
               <div className="flex-1 overflow-y-auto p-6 space-y-6">
                 <button onClick={() => { onOpenSearch(); onClose(); }} className="w-full flex items-center gap-3 p-4 bg-slate-100 rounded-lg text-left">
                   <Search size={20} className="text-slate-500" />
-                  <span className="text-slate-700">Search tours & tickets</span>
+                  <span className="text-slate-700">{t('header.searchToursTickets')}</span>
                 </button>
 
                 <div>
-                  <h3 className="font-bold text-lg text-slate-800 mb-4">Destinations</h3>
+                  <h3 className="font-bold text-lg text-slate-800 mb-4">{t('header.destinations')}</h3>
                   <div className="space-y-2">
                     {destinations.map((dest) => (
-                      <a key={dest._id} href={contentPath('destination', dest.slug, dest.urlType, null, dest.parentPage?.slug)} className="block py-2 text-slate-700 hover:text-red-500" onClick={onClose}>
+                      <Link key={dest._id} href={contentPath('destination', dest.slug, dest.urlType, null, dest.parentPage?.slug)} className="block py-2 text-slate-700 hover:text-red-500" onClick={onClose}>
                         {dest.name}
-                      </a>
+                      </Link>
                     ))}
                   </div>
                 </div>
 
                 <div>
-                  <h3 className="font-bold text-lg text-slate-800 mb-4">Activities</h3>
+                  <h3 className="font-bold text-lg text-slate-800 mb-4">{t('header.activities')}</h3>
                   <div className="space-y-2">
                     {categories.map((activity) => {
                       const Icon = activityIcons[activity.slug] || Ticket;
                       return (
-                        <a key={activity._id} href={contentPath('category', activity.slug, activity.urlType, null, activity.parentPage?.slug)} className="flex items-center gap-3 py-2 text-slate-700 hover:text-red-500" onClick={onClose}>
+                        <Link key={activity._id} href={contentPath('category', activity.slug, activity.urlType, null, activity.parentPage?.slug)} className="flex items-center gap-3 py-2 text-slate-700 hover:text-red-500" onClick={onClose}>
                           <Icon size={16} />
                           <span>{activity.name}</span>
-                        </a>
+                        </Link>
                       );
                     })}
                   </div>
@@ -871,7 +859,7 @@ const MobileMenu: FC<{
               </div>
 
               <div className="flex items-center justify-between px-6 pt-5">
-                <span className="font-semibold text-slate-700">Appearance</span>
+                <span className="font-semibold text-slate-700">{t('header.appearance')}</span>
                 <ThemeToggle />
               </div>
               <div className="p-6 border-t">
@@ -890,7 +878,8 @@ MobileMenu.displayName = 'MobileMenu';
 // --- HEADER SEARCH BAR (desktop) ---
 // =================================================================
 const HeaderSearchBar: FC<{ onFocus: () => void; isTransparent: boolean }> = React.memo(({ onFocus, isTransparent }) => {
-  const currentSuggestion = useSlidingText(SEARCH_SUGGESTIONS, 2500);
+  const t = useTranslations();
+  const currentSuggestion = t('search.placeholder');
   const borderColor = isTransparent ? 'border-transparent' : 'border-slate-200';
   return (
     <div className="hidden lg:block flex-1 max-w-2xl mx-8 transition-colors duration-500">
@@ -909,6 +898,7 @@ HeaderSearchBar.displayName = 'HeaderSearchBar';
 // --- MAIN HEADER COMPONENT (EXPORTED) ---
 // =================================================================
 export default function Header2({ startSolid = false }: { startSolid?: boolean }) {
+  const t = useTranslations();
   const [isMegaMenuOpen, setMegaMenuOpen] = useState(false);
   const [isMobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isMobileSearchOpen, setMobileSearchOpen] = useState(false);
@@ -950,7 +940,7 @@ export default function Header2({ startSolid = false }: { startSolid?: boolean }
                   onMouseEnter={() => setMegaMenuOpen(true)} // open on hover
                   className={`${headerText} ${linkHoverColor} flex items-center gap-1 font-semibold group text-sm lg:text-base`}
                 >
-                  <span>EXPLORE</span>
+                  <span>{t('header.explore')}</span>
                   <motion.div animate={{ rotate: isMegaMenuOpen ? 180 : 0 }} transition={{ duration: 0.3 }}>
                     <ChevronDown size={20} />
                   </motion.div>
@@ -966,7 +956,7 @@ export default function Header2({ startSolid = false }: { startSolid?: boolean }
 
               <ThemeToggle className="hidden md:inline-flex" />
 
-              <button onClick={openWishlistSidebar} className="relative group p-2" aria-label="View your wishlist">
+              <button onClick={openWishlistSidebar} className="relative group p-2" aria-label={t('header.wishlist')}>
                 <Heart size={24} className={`${headerText} ${linkHoverColor}`} />
                 {wishlist?.length > 0 && (
                   <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] rounded-full h-5 w-5 flex items-center justify-center font-bold border-2 border-white">
@@ -975,7 +965,7 @@ export default function Header2({ startSolid = false }: { startSolid?: boolean }
                 )}
               </button>
 
-              <button onClick={openCart} className="relative group p-2" aria-label="Open cart">
+              <button onClick={openCart} className="relative group p-2" aria-label={t('header.openCart')}>
                 <ShoppingCart size={24} className={`${headerText} ${linkHoverColor}`} />
                 {totalItems > 0 && (
                   <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] rounded-full h-5 w-5 flex items-center justify-center font-bold border-2 border-white">
@@ -984,7 +974,7 @@ export default function Header2({ startSolid = false }: { startSolid?: boolean }
                 )}
               </button>
 
-              <button onClick={handleMobileSearchOpen} className={`${headerText} ${linkHoverColor} lg:hidden group p-2`} aria-label="Open search">
+              <button onClick={handleMobileSearchOpen} className={`${headerText} ${linkHoverColor} lg:hidden group p-2`} aria-label={t('header.openSearch')}>
                 <Search size={22} className="group-hover:text-red-500" />
               </button>
 
@@ -992,12 +982,12 @@ export default function Header2({ startSolid = false }: { startSolid?: boolean }
                 <UserMenu user={user} onLogout={logout} />
               ) : (
                 <div className="hidden md:flex items-center gap-3">
-                  <Link href="/login" className={`${headerText} ${linkHoverColor} font-semibold text-sm`}>Log In</Link>
-                  <Link href="/signup" className="bg-red-600 text-white px-4 py-2 rounded-full font-semibold text-sm hover:bg-red-700 transition-colors">Sign Up</Link>
+                  <Link href="/login" className={`${headerText} ${linkHoverColor} font-semibold text-sm`}>{t('header.login')}</Link>
+                  <Link href="/signup" className="bg-red-600 text-white px-4 py-2 rounded-full font-semibold text-sm hover:bg-red-700 transition-colors">{t('header.signup')}</Link>
                 </div>
               )}
 
-              <button onClick={handleMobileMenuOpen} className="md:hidden p-2" aria-label="Open menu">
+              <button onClick={handleMobileMenuOpen} className="md:hidden p-2" aria-label={t('header.openMenu')}>
                 <Menu size={24} className={`${headerText} ${linkHoverColor}`} />
               </button>
             </div>

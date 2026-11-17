@@ -10,7 +10,14 @@
     "myProfile": "Mi Perfil",
     "myBookings": "Mis Reservas",
     "favorites": "Favoritos",
-    "signOut": "Cerrar Sesion"
+    "signOut": "Cerrar Sesion",
+    "searchToursTickets": "Buscar excursiones y entradas",
+    "appearance": "Apariencia",
+    "wishlist": "Ver tu lista de deseos",
+    "openCart": "Abrir carrito",
+    "openSearch": "Abrir búsqueda",
+    "openMenu": "Abrir menú",
+    "closeSearch": "Cerrar búsqueda"
   },
   "search": {
     "placeholder": "A donde vas?",
@@ -18,7 +25,11 @@
     "searching": "Buscando...",
     "tours": "Tours",
     "mostPopular": "Mas populares",
-    "recentSearches": "Tus busquedas recientes"
+    "recentSearches": "Tus busquedas recientes",
+    "searchToursInEgypt": "Buscar excursiones en Egipto…",
+    "noMatchingTours": "No hay excursiones que coincidan",
+    "tryDestination": "Prueba con un destino como El Cairo, Luxor o Sharm El Sheikh.",
+    "whatAreYouLookingFor": "¿Qué estás buscando?"
   },
   "currency": {
     "title": "Seleccionar una Moneda"
@@ -707,7 +718,8 @@
       "signup": "Registrarse",
       "bookNow": "Reservar este tour",
       "bookNowHint": "Reserva ahora y te invitaremos a dejar tu resena despues de completar el viaje.",
-      "completeTourHint": "Completa primero este tour y te enviaremos automaticamente tu enlace de resena verificada por correo."
+      "completeTourHint": "Completa primero este tour y te enviaremos automaticamente tu enlace de resena verificada por correo.",
+      "eligibilityNote": "Solo pueden opinar los clientes que han hecho esta excursión. Quienes cumplen el requisito reciben automáticamente un correo tras el viaje."
     },
     "userFallback": "Usuario",
     "form": {
@@ -1115,6 +1127,23 @@
       "cultural": "Cultura",
       "reviews": "Opiniones",
       "faq": "Preguntas"
-    }
+    },
+    "whatsIncluded": "Qué incluye",
+    "whatsNotIncluded": "Qué no incluye"
+  },
+  "routeMap": {
+    "loading": "Cargando el mapa de la ruta…",
+    "unavailable": "El mapa de la ruta no está disponible en este momento.",
+    "tryAgain": "Reintentar",
+    "openRoute": "Abrir ruta",
+    "roadMap": "Mapa de la ruta · {count} etapas",
+    "selectStage": "Elige una etapa del itinerario",
+    "showStage": "Ver etapa {index}: {title}",
+    "exactPlace": "Lugar exacto",
+    "approximateStage": "Etapa aproximada",
+    "note": "Las etapas numeradas siguen el orden del itinerario. Las etapas genéricas de recogida, en el mar y a bordo son aproximadas; el punto exacto de recogida se confirma tras la reserva.",
+    "gestureDesktop": "Usa Ctrl + rueda para hacer zoom en el mapa",
+    "gestureMac": "Usa ⌘ + rueda para hacer zoom en el mapa",
+    "gestureMobile": "Usa dos dedos para mover el mapa"
   }
 }

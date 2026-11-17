@@ -44,7 +44,41 @@ interface InteractiveItineraryMapProps {
   openMapsUrl: string;
   activeIndex: number;
   onSelect: (index: number) => void;
+  /** Interface text in the page language; English when the page passes none. */
+  labels?: Partial<RouteMapLabels>;
 }
+
+export interface RouteMapLabels {
+  loading: string;
+  unavailable: string;
+  tryAgain: string;
+  openRoute: string;
+  roadMap: (stages: number) => string;
+  selectStage: string;
+  showStage: (index: number, title: string) => string;
+  exactPlace: string;
+  approximateStage: string;
+  note: string;
+  gestureDesktop: string;
+  gestureMac: string;
+  gestureMobile: string;
+}
+
+export const DEFAULT_ROUTE_MAP_LABELS: RouteMapLabels = {
+  loading: 'Loading route map…',
+  unavailable: 'The route map is temporarily unavailable.',
+  tryAgain: 'Try again',
+  openRoute: 'Open route',
+  roadMap: (stages) => `Road map · ${stages} route stages`,
+  selectStage: 'Select an itinerary stage',
+  showStage: (index, title) => `Show stage ${index}: ${title}`,
+  exactPlace: 'Exact place',
+  approximateStage: 'Approximate stage',
+  note: 'Numbered stages follow the itinerary order. Generic pickup, sea and onboard stages are approximate; exact pickup is confirmed after booking.',
+  gestureDesktop: 'Use Ctrl + scroll to zoom the map',
+  gestureMac: 'Use ⌘ + scroll to zoom the map',
+  gestureMobile: 'Use two fingers to move the map',
+};
 
 type MapLibreModule = typeof import('maplibre-gl');
 type MapLibreMap = import('maplibre-gl').Map;
@@ -84,7 +118,14 @@ function InteractiveItineraryMap({
   openMapsUrl,
   activeIndex,
   onSelect,
+  labels: labelOverrides,
 }: InteractiveItineraryMapProps) {
+  const labels = useMemo(() => ({ ...DEFAULT_ROUTE_MAP_LABELS, ...labelOverrides }), [labelOverrides]);
+  // Read by the map set-up and marker code, which run outside render.
+  const labelsRef = useRef(labels);
+  useEffect(() => {
+    labelsRef.current = labels;
+  }, [labels]);
   const mapElementRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<MapLibreMap | null>(null);
   const maplibreRef = useRef<MapLibreModule | null>(null);
@@ -207,6 +248,11 @@ function InteractiveItineraryMap({
           zoom: 10,
           attributionControl: false,
           cooperativeGestures: true,
+          locale: {
+            'CooperativeGesturesHandler.WindowsHelpText': labelsRef.current.gestureDesktop,
+            'CooperativeGesturesHandler.MacHelpText': labelsRef.current.gestureMac,
+            'CooperativeGesturesHandler.MobileHelpText': labelsRef.current.gestureMobile,
+          },
         });
         mapInstanceRef.current = map;
         maplibreRef.current = maplibre;
@@ -292,7 +338,7 @@ function InteractiveItineraryMap({
       element.type = 'button';
       element.className = markerClass(index === activeIndexRef.current);
       element.textContent = String(index + 1);
-      element.setAttribute('aria-label', `Show stage ${index + 1}: ${stages[index]?.title || ''}`);
+      element.setAttribute('aria-label', labelsRef.current.showStage(index + 1, stages[index]?.title || ''));
       const selectStage = () => onSelectRef.current(index);
       for (const event of ['click', 'mouseenter', 'focus']) {
         element.addEventListener(event, selectStage);
@@ -367,13 +413,13 @@ function InteractiveItineraryMap({
 
         {effectiveMapState === 'loading' && (
           <div className="absolute inset-0 flex items-center justify-center bg-slate-100 text-sm font-semibold text-slate-700">
-            Loading route map…
+            {labels.loading}
           </div>
         )}
         {effectiveMapState === 'unavailable' && (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-slate-100 p-6 text-center">
             <MapPin className="h-8 w-8 text-slate-400" aria-hidden="true" />
-            <p className="text-sm font-semibold text-slate-700">The route map is temporarily unavailable.</p>
+            <p className="text-sm font-semibold text-slate-700">{labels.unavailable}</p>
             <div className="flex flex-wrap items-center justify-center gap-2">
               <button
                 type="button"
@@ -384,7 +430,7 @@ function InteractiveItineraryMap({
                 className="inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white px-4 py-2 text-xs font-semibold text-slate-800 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-500 focus-visible:ring-offset-2"
               >
                 <RefreshCw size={13} />
-                Try again
+                {labels.tryAgain}
               </button>
               <a
                 href={openMapsUrl}
@@ -393,19 +439,19 @@ function InteractiveItineraryMap({
                 className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-4 py-2 text-xs font-semibold text-white hover:bg-slate-700"
               >
                 <Navigation size={13} />
-                Open route
+                {labels.openRoute}
               </a>
             </div>
           </div>
         )}
 
         <div className="pointer-events-none absolute left-3 top-3 rounded-full bg-white/95 px-3 py-1.5 text-xs font-semibold text-slate-800 shadow-md backdrop-blur-sm">
-          Road map · {itinerary.length} route stages
+          {labels.roadMap(itinerary.length)}
         </div>
       </div>
 
       <div className="border-t border-slate-100 px-3 py-3">
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide" aria-label="Select an itinerary stage">
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide" aria-label={labels.selectStage}>
           {itinerary.map((item, index) => (
             <button
               key={`${item.title}-${index}`}
@@ -413,7 +459,7 @@ function InteractiveItineraryMap({
               onMouseEnter={() => onSelect(index)}
               onFocus={() => onSelect(index)}
               onClick={() => onSelect(index)}
-              aria-label={`Show stage ${index + 1}: ${item.title}`}
+              aria-label={labels.showStage(index + 1, item.title)}
               aria-pressed={activeIndex === index}
               className={`inline-flex h-9 min-w-9 flex-shrink-0 scroll-mx-3 items-center justify-center rounded-full text-xs font-bold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2 ${activeIndex === index ? 'bg-red-700 text-white ring-4 ring-red-100' : 'bg-red-50 text-red-700 hover:bg-red-100'}`}
             >
@@ -427,7 +473,7 @@ function InteractiveItineraryMap({
             className="ml-auto inline-flex h-9 flex-shrink-0 items-center justify-center gap-1.5 rounded-full bg-slate-900 px-3 text-xs font-semibold text-white hover:bg-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-500 focus-visible:ring-offset-2"
           >
             <Navigation size={13} />
-            Open route
+            {labels.openRoute}
           </a>
         </div>
       </div>
@@ -442,7 +488,7 @@ function InteractiveItineraryMap({
               <div className="flex flex-wrap items-center gap-2">
                 <h4 className="font-bold text-slate-900">{selected.title}</h4>
                 <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${selectedIsExact ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-800'}`}>
-                  {selectedIsExact ? 'Exact place' : 'Approximate stage'}
+                  {selectedIsExact ? labels.exactPlace : labels.approximateStage}
                 </span>
               </div>
               <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500">
@@ -457,7 +503,7 @@ function InteractiveItineraryMap({
 
       <div className="border-t border-slate-100 px-3 pb-4 pt-3">
         <p className="mt-2 text-[10px] leading-relaxed text-slate-500">
-          Numbered stages follow the itinerary order. Generic pickup, sea and onboard stages are approximate; exact pickup is confirmed after booking.
+          {labels.note}
         </p>
         <p className="mt-1 text-[10px] text-slate-500">
           © <a className="underline hover:text-slate-700" href="https://www.openmaptiles.org/" target="_blank" rel="noopener noreferrer">OpenMapTiles</a> · Map data © <a className="underline hover:text-slate-700" href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap contributors</a>

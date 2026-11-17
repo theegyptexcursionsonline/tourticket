@@ -10,7 +10,14 @@
     "myProfile": "My Profile",
     "myBookings": "My Bookings",
     "favorites": "Favorites",
-    "signOut": "Sign Out"
+    "signOut": "Sign Out",
+    "searchToursTickets": "Search tours & tickets",
+    "appearance": "Appearance",
+    "wishlist": "View your wishlist",
+    "openCart": "Open cart",
+    "openSearch": "Open search",
+    "openMenu": "Open menu",
+    "closeSearch": "Close search"
   },
   "search": {
     "placeholder": "Where are you going?",
@@ -18,7 +25,11 @@
     "searching": "Searching...",
     "tours": "Tours",
     "mostPopular": "Most popular",
-    "recentSearches": "Your recent searches"
+    "recentSearches": "Your recent searches",
+    "searchToursInEgypt": "Search tours in Egypt…",
+    "noMatchingTours": "No matching tours found",
+    "tryDestination": "Try a destination such as Cairo, Luxor or Sharm El Sheikh.",
+    "whatAreYouLookingFor": "What are you looking for?"
   },
   "currency": {
     "title": "Select a Currency"
@@ -707,7 +718,8 @@
       "signup": "Sign Up",
       "bookNow": "Book This Tour",
       "bookNowHint": "Book now and we will invite you to review after your trip is completed.",
-      "completeTourHint": "Complete this tour first and we will email your verified review link automatically."
+      "completeTourHint": "Complete this tour first and we will email your verified review link automatically.",
+      "eligibilityNote": "Reviews are only available to customers who completed this tour. Eligible guests receive a post-trip review email automatically."
     },
     "userFallback": "User",
     "form": {
@@ -1115,6 +1127,23 @@
       "cultural": "Cultural Info",
       "reviews": "Reviews",
       "faq": "FAQ"
-    }
+    },
+    "whatsIncluded": "What’s included",
+    "whatsNotIncluded": "What’s not included"
+  },
+  "routeMap": {
+    "loading": "Loading route map…",
+    "unavailable": "The route map is temporarily unavailable.",
+    "tryAgain": "Try again",
+    "openRoute": "Open route",
+    "roadMap": "Road map · {count} route stages",
+    "selectStage": "Select an itinerary stage",
+    "showStage": "Show stage {index}: {title}",
+    "exactPlace": "Exact place",
+    "approximateStage": "Approximate stage",
+    "note": "Numbered stages follow the itinerary order. Generic pickup, sea and onboard stages are approximate; exact pickup is confirmed after booking.",
+    "gestureDesktop": "Use Ctrl + scroll to zoom the map",
+    "gestureMac": "Use ⌘ + scroll to zoom the map",
+    "gestureMobile": "Use two fingers to move the map"
   }
 }
