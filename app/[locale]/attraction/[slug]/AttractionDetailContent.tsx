@@ -15,6 +15,7 @@ import {
   localizeAttractionTours,
   resolveLinkedPageCards,
 } from '@/lib/attractionPages/pageContent';
+import { localizeParentPage } from '@/lib/content/localizeParentPage';
 import { localizeEntityFields, localizeStructuredEntries } from '@/lib/i18n/contentLocalization';
 import { attractionPageStructuredFields } from '@/lib/i18n/translationFields';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
@@ -45,13 +46,15 @@ async function getAttractionPageData(slug: string, locale: string) {
       ATTRACTION_PAGE_LOCALIZED_FIELDS
     );
 
-    const [{ tours, totalTours }, linkedPages] = await Promise.all([
+    const [{ tours, totalTours }, linkedPages, parentPage] = await Promise.all([
       resolveAttractionPageTours(page as unknown as Parameters<typeof resolveAttractionPageTours>[0]),
       resolveLinkedPageCards(page as unknown as Parameters<typeof resolveLinkedPageCards>[0], locale),
+      localizeParentPage((localized as { parentPage?: Parameters<typeof localizeParentPage>[0] }).parentPage, locale),
     ]);
 
     return {
       ...localized,
+      parentPage,
       tours: JSON.parse(JSON.stringify(localizeAttractionTours(tours, locale))),
       totalTours,
       linkedPages,

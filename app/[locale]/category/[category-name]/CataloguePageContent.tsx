@@ -11,6 +11,7 @@ import { CategoryPageData } from '@/types';
 import dbConnect from '@/lib/dbConnect';
 import AttractionPageModel from '@/lib/models/AttractionPage';
 import Category from '@/lib/models/Category';
+import { localizeParentPage } from '@/lib/content/localizeParentPage';
 import { localizeEntityFields } from '@/lib/i18n/contentLocalization';
 import {
   ATTRACTION_PAGE_LOCALIZED_FIELDS,
@@ -62,13 +63,15 @@ export async function getCataloguePage(slug: string, locale: string): Promise<Ca
       );
     }
 
-    const [{ tours, totalTours }, linkedPages] = await Promise.all([
+    const [{ tours, totalTours }, linkedPages, parentPage] = await Promise.all([
       resolveAttractionPageTours(page as unknown as Parameters<typeof resolveAttractionPageTours>[0]),
       resolveLinkedPageCards(page as unknown as Parameters<typeof resolveLinkedPageCards>[0], locale),
+      localizeParentPage(serializedPage.parentPage, locale),
     ]);
 
     return {
       ...serializedPage,
+      parentPage,
       tours: JSON.parse(JSON.stringify(localizeAttractionTours(tours, locale))),
       totalTours,
       linkedPages,
