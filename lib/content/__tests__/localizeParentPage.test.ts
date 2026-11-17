@@ -57,3 +57,5 @@ describe('localizeParentPage', () => {
     expect(calls).toHaveLength(0);
   });
 });
+
+export {};
