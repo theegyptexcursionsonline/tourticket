@@ -153,3 +153,12 @@ describe('the running-total estimate before a departure is chosen', () => {
     expect(source).toContain('{t(\'booking.chooseOptionForTotal\')}');
   });
 });
+
+describe('option card toggle in right-to-left pages', () => {
+  const source = fs.readFileSync(path.join(process.cwd(), 'components', 'BookingSidebar.tsx'), 'utf8');
+
+  it('sits at the far end of the row in Arabic as in English (logical margin)', () => {
+    expect(source).toContain('ms-auto flex items-center gap-1 text-[11px] font-semibold');
+    expect(source).not.toContain('ml-auto flex items-center gap-1 text-[11px] font-semibold');
+  });
+});

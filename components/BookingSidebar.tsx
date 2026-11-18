@@ -904,7 +904,7 @@ export const TourOptionCard: React.FC<{
           </div>
         )}
         {collapsible && (
-          <div className={`ml-auto flex items-center gap-1 text-[11px] font-semibold ${option.priceUnavailable ? 'text-slate-600' : 'text-red-600'}`}>
+          <div className={`ms-auto flex items-center gap-1 text-[11px] font-semibold ${option.priceUnavailable ? 'text-slate-600' : 'text-red-600'}`}>
             {/* An option with no price has no time to select: its toggle only
                 opens the description, so it must not read "Select Time". */}
             {isOpen ? t('common.showLess') : option.priceUnavailable ? t('common.readMore') : t('booking.selectTime')}
