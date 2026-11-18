@@ -36,6 +36,8 @@ import HostedAISearchEntry from '@/components/HostedAISearchEntry';
 import { contentPath, tourContentPath } from '@/lib/content/contentUrl';
 import ContextualDiscoveryLinks from '@/components/seo/ContextualDiscoveryLinks';
 import type { ContextualDiscoveryLink } from '@/lib/seo/contextualDiscovery';
+import { listingFromPrice } from '@/lib/pricing/effectivePrice';
+import ListingPrice from '@/components/pricing/ListingPrice';
 
 interface DestinationPageClientProps {
   destination: Destination;
@@ -1992,7 +1994,7 @@ const DestinationPracticalSection = ({ destination }: { destination: Destination
 const Top10Card = ({ tour, index, onAddToCartClick }: { tour: Tour, index: number, onAddToCartClick: (tour: Tour) => void }) => {
   const copy = useDestinationPageCopy();
   const { formatPrice } = useSettings();
-  const displayedPrice = tour.pricingSummary?.fromPrice ?? tour.discountPrice ?? tour.originalPrice ?? 0;
+  const displayedPrice = listingFromPrice(tour);
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -2020,8 +2022,8 @@ const Top10Card = ({ tour, index, onAddToCartClick }: { tour: Tour, index: numbe
           )}
         </div>
         <div className="mt-2 text-sm flex items-center gap-2">
-          {tour.originalPrice && tour.originalPrice > displayedPrice && <span className="text-slate-500 line-through text-xs sm:text-sm">{formatPrice(tour.originalPrice)}</span>}
-          <span className="text-red-600 font-bold text-lg sm:text-xl">{formatPrice(displayedPrice)}</span>
+          {tour.originalPrice && displayedPrice !== null && tour.originalPrice > displayedPrice && <span className="text-slate-500 line-through text-xs sm:text-sm">{formatPrice(tour.originalPrice)}</span>}
+          <span className="text-red-600 font-bold text-lg sm:text-xl"><ListingPrice value={displayedPrice} formatPrice={formatPrice} /></span>
         </div>
       </div>
       <div className="flex sm:flex-col flex-shrink-0 items-center gap-2 ms-auto sm:ms-0">
@@ -2052,7 +2054,7 @@ const InterestCard = ({ category, tourCount }: { category: Category, tourCount: 
 const CombiDealCard = ({ tour, onAddToCartClick }: { tour: Tour, onAddToCartClick: (tour: Tour) => void }) => {
   const copy = useDestinationPageCopy();
   const { formatPrice } = useSettings();
-  const displayedPrice = tour.pricingSummary?.fromPrice ?? tour.discountPrice ?? tour.originalPrice ?? 0;
+  const displayedPrice = listingFromPrice(tour);
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -2086,8 +2088,8 @@ const CombiDealCard = ({ tour, onAddToCartClick }: { tour: Tour, onAddToCartClic
           {(tour.bookings || 0) > 0 && <span>{tour.bookings} {copy.bookings}</span>}
         </div>
         <div className="flex items-end justify-end mt-3 sm:mt-4">
-          {tour.originalPrice && tour.originalPrice > displayedPrice && <span className="text-slate-500 line-through mr-2 text-sm">{formatPrice(tour.originalPrice)}</span>}
-          <span className="text-lg sm:text-xl font-extrabold text-red-600">{formatPrice(displayedPrice)}</span>
+          {tour.originalPrice && displayedPrice !== null && tour.originalPrice > displayedPrice && <span className="text-slate-500 line-through mr-2 text-sm">{formatPrice(tour.originalPrice)}</span>}
+          <span className="text-lg sm:text-xl font-extrabold text-red-600"><ListingPrice value={displayedPrice} formatPrice={formatPrice} /></span>
         </div>
       </div>
     </Link>

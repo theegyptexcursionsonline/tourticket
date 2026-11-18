@@ -82,7 +82,8 @@
     "free": "مجاني",
     "off": "خصم",
     "save": "وفّر",
-    "totalPrice": "السعر الإجمالي"
+    "totalPrice": "السعر الإجمالي",
+    "onRequest": "السعر عند الطلب"
   },
   "booking": {
     "adults": "بالغون",
@@ -207,7 +208,8 @@
     "difficultyChallenging": "صعبة",
     "difficultyDifficult": "صعبة جدًا",
     "maxGuests": "حتى {count}",
-    "departureSelected": "تم اختيار الساعة {time}"
+    "departureSelected": "تم اختيار الساعة {time}",
+    "optionPriceUnavailable": "لا يمكن حجز هذا الخيار عبر الإنترنت حاليًا. تواصل معنا لمعرفة السعر."
   },
   "offers": {
     "save": "وفّر حتى 20% على العروض المجمعة وبطاقات المدن!"

@@ -82,7 +82,8 @@
     "free": "Gratuit",
     "off": "de rabais",
     "save": "Économiser",
-    "totalPrice": "Prix total"
+    "totalPrice": "Prix total",
+    "onRequest": "Prix sur demande"
   },
   "booking": {
     "adults": "Adultes",
@@ -207,7 +208,8 @@
     "difficultyChallenging": "Exigeante",
     "difficultyDifficult": "Difficile",
     "maxGuests": "Max. {count}",
-    "departureSelected": "{time} sélectionné"
+    "departureSelected": "{time} sélectionné",
+    "optionPriceUnavailable": "Cette option n'est pas encore réservable en ligne. Contactez-nous pour connaître le prix."
   },
   "offers": {
     "save": "Economisez jusqu'a 20% sur les offres combinees et les pass ville!"

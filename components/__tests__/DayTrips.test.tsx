@@ -554,7 +554,9 @@ describe('DayTripsSection', () => {
       expect(screen.getByText('durationNotSpecified')).toBeInTheDocument()
       // No rating and no reviews: no score at all (never a made-up 0.0)
       expect(screen.queryByText('0.0')).not.toBeInTheDocument()
-      expect(screen.getByText('$0.00')).toBeInTheDocument()
+      // No price anywhere: "price on request", never an advertised $0.00 (#2727)
+      expect(screen.queryByText('$0.00')).not.toBeInTheDocument()
+      expect(screen.getByText('price.onRequest')).toBeInTheDocument()
     })
   })
 

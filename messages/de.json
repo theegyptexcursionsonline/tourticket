@@ -82,7 +82,8 @@
     "free": "Kostenlos",
     "off": "Rabatt",
     "save": "Sparen",
-    "totalPrice": "Gesamtpreis"
+    "totalPrice": "Gesamtpreis",
+    "onRequest": "Preis auf Anfrage"
   },
   "booking": {
     "adults": "Erwachsene",
@@ -207,7 +208,8 @@
     "difficultyChallenging": "Anspruchsvoll",
     "difficultyDifficult": "Schwer",
     "maxGuests": "Max. {count}",
-    "departureSelected": "{time} Uhr ausgewählt"
+    "departureSelected": "{time} Uhr ausgewählt",
+    "optionPriceUnavailable": "Diese Option ist online noch nicht buchbar. Fragen Sie uns gern nach dem Preis."
   },
   "offers": {
     "save": "Sparen Sie bis zu 20% bei Kombi-Deals und City-Passen!"

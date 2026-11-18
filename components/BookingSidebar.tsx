@@ -24,7 +24,7 @@ import type { CartItem } from '@/types';
 import { getErrorMessage } from './componentTypes';
 import { CANCELLATION_POLICY_SUMMARY } from '@/lib/bookings/cancellationPolicy';
 import { loadCurrentBookingOptions } from '@/lib/bookings/liveBookingOptions';
-import { displayedTripPrice, effectiveOptionPrice, effectiveTourPrice, percentageOff } from '@/lib/pricing/effectivePrice';
+import { bookableTripPrice, effectiveOptionPrice, effectiveTourPrice, isRealPrice, percentageOff } from '@/lib/pricing/effectivePrice';
 import { effectiveSlotGuestPrices, guestPricedSubtotal } from '@/lib/revenue/guestPrices';
 import { ADD_ON_QUANTITY_VERSION, isPerPersonAddOn } from '@/lib/checkout/addOnPricing';
 import { groupAvailableAddOns, isAddOnAvailableForOption, normalizedBookingOptionKeys } from '@/lib/bookings/addOnAvailability';
@@ -215,6 +215,8 @@ interface TourOption {
   isRecommended?: boolean;
   isStopSaleBlocked?: boolean;
   stopSaleReason?: string;
+  /** No departure of this option carries a real price, so it cannot be booked online. */
+  priceUnavailable?: boolean;
 }
 
 interface SpecialOffer {
@@ -818,6 +820,11 @@ export const TourOptionCard: React.FC<{
         </div>
 
         {/* Price Section */}
+        {option.priceUnavailable ? (
+        <div className="flex-shrink-0 text-right bg-gray-50 rounded-xl px-2.5 py-2 w-[96px] sm:w-[104px]" data-price-state="on-request">
+          <div className="text-xs font-bold text-slate-700 leading-tight">{t('price.onRequest')}</div>
+        </div>
+        ) : (
         <div className="flex-shrink-0 text-right bg-gray-50 rounded-xl px-2.5 py-2 w-[96px] sm:w-[104px]">
           {originalSubtotal > subtotal && (
             <div className="text-xs text-gray-400 line-through whitespace-nowrap">
@@ -831,6 +838,7 @@ export const TourOptionCard: React.FC<{
             {t('price.totalPrice')}
           </div>
         </div>
+        )}
       </div>
 
       {/* Specs Row */}
@@ -919,7 +927,15 @@ export const TourOptionCard: React.FC<{
         </div>
       )}
 
+      {/* No real price on any departure: explain, offer nothing to select. */}
+      {option.priceUnavailable && (
+        <div role="status" data-testid="option-price-unavailable" className="mb-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700">
+          {t('booking.optionPriceUnavailable')}
+        </div>
+      )}
+
       {/* Price Summary */}
+      {!option.priceUnavailable && (
       <div className="bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl px-3 py-2 mb-2 border border-gray-200">
         <div className="flex justify-between items-center text-xs mb-1">
           <span className="text-gray-700 font-medium">
@@ -953,8 +969,10 @@ export const TourOptionCard: React.FC<{
           <span className="text-sm font-bold text-gray-900">{formatPrice(subtotal)}</span>
         </div>
       </div>
+      )}
 
       {/* Time Slots */}
+      {!option.priceUnavailable && (
       <div ref={departureRef}>
         <div className="flex items-center justify-between mb-2">
           <h4 className="font-semibold text-gray-800 text-xs">{t('booking.availableDepartureTimes')}</h4>
@@ -1153,6 +1171,7 @@ export const TourOptionCard: React.FC<{
           })}
         </div>
       </div>
+      )}
 
       {/* Trust Indicators */}
       <div className="flex items-center gap-2.5 mt-2 pt-2 border-t border-gray-200">
@@ -1581,7 +1600,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
   const { formatPrice } = useSettings();
   const tourBasePricing = useMemo(() => effectiveTourPrice(tour), [tour]);
   // Headline per-person price: what one guest can actually book (same as the trip page and cards).
-  const headlinePricing = useMemo(() => displayedTripPrice(tour as Parameters<typeof displayedTripPrice>[0]), [tour]);
+  const headlinePricing = useMemo(() => bookableTripPrice(tour as Parameters<typeof bookableTripPrice>[0]), [tour]);
   const { addToCart } = useCart();
   const locale = useLocale();
   const rtl = isRTL(locale);
@@ -1862,7 +1881,9 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
           // arrive already priced (they carry no opt-in flag), so this is a
           // passthrough for them and only reprices the embedded fallback.
           const pricing = effectiveOptionPrice(tourDisplayData, option);
-          const optionPrice = typeof option.price === 'number' ? pricing.price : (tourDisplayData?.discountPrice ?? 50);
+          // Checkout refuses an option without a stored price, so it is
+          // quoted as unpriced (never the tour base or an invented figure).
+          const optionPrice = typeof option.price === 'number' ? pricing.price : 0;
           const optionId = option.id || option._id || `option-${index}`;
           const isStopSaleBlocked = selectedStopSale?.status === 'partial' && selectedStopSale.stoppedOptionIds.includes(optionId);
           const stopSaleReason = selectedStopSale?.reasons?.[optionId] || selectedStopSale?.reasons?.all;
@@ -1881,6 +1902,10 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
                 };
               })
             : generateTimeSlotsFromAvailability(optionPrice, index);
+          // A departure without a real price (a 0 base that no start-time
+          // price overrides) is not offered: checkout would refuse it, and
+          // showing it quoted the option at $0.00.
+          const pricedTimeSlots = baseTimeSlots.filter((slot) => isRealPrice(slot.price));
           return {
             id: optionId,
             pricingKey: option.pricingKey,
@@ -1898,10 +1923,11 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
             duration: option.duration || tourDisplayData?.duration || '',
             languages: option.languages || tourDisplayData?.languages || ['English'],
             description: option.description || 'Experience our tour',
-            timeSlots: bindTimeSlotsToOption(optionId, futureDepartureSlots(selectedDateKey, baseTimeSlots, new Date(), tour.bookingCutoffMinutes)).map((slot: TimeSlot) => ({
+            timeSlots: bindTimeSlotsToOption(optionId, futureDepartureSlots(selectedDateKey, pricedTimeSlots, new Date(), tour.bookingCutoffMinutes)).map((slot: TimeSlot) => ({
               ...slot,
               available: isStopSaleBlocked ? 0 : slot.available,
             })),
+            priceUnavailable: pricedTimeSlots.length === 0,
             highlights: option.highlights || tourDisplayData?.highlights?.slice(0, 3) || [],
             included: option.included || tourDisplayData?.includes?.slice(0, 3) || [],
             groupSize: option.groupSize || `Max ${tourDisplayData?.maxGroupSize || 15} people`,
@@ -1916,13 +1942,19 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
             stopSaleReason,
           };
         });
+        // Bookable options first; an unpriced one stays visible, below them.
+        tourOptions = [
+          ...tourOptions.filter((option) => !option.priceUnavailable),
+          ...tourOptions.filter((option) => option.priceUnavailable),
+        ];
       } else {
         // Fallback to default tour options using actual availability slots.
         // The standard no-option path is the one place checkout honours a
         // universal slot price, so quote it here too.
         const standardPricing = effectiveTourPrice(tourDisplayData);
         const standardPrice = standardPricing.price;
-        const baseTimeSlots = generateTimeSlotsFromAvailability(standardPrice, 0, true);
+        const baseTimeSlots = generateTimeSlotsFromAvailability(standardPrice, 0, true)
+          .filter((slot) => isRealPrice(slot.price));
         const fallbackOptionId = 'standard-default';
         const isStopSaleBlocked = selectedStopSale?.status === 'partial' && selectedStopSale.stoppedOptionIds.includes(fallbackOptionId);
         tourOptions = [
@@ -1944,6 +1976,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
               ...slot,
               available: isStopSaleBlocked ? 0 : slot.available,
             })),
+            priceUnavailable: baseTimeSlots.length === 0,
             highlights: tourDisplayData?.highlights?.slice(0, 3) || [],
             included: tourDisplayData?.includes?.slice(0, 3) || [],
             groupSize: `Max ${tourDisplayData?.maxGroupSize || 15} people`,
@@ -2735,6 +2768,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
 
             {/* Compact Price Section */}
             <div className="flex justify-between items-center bg-gray-100 rounded-2xl p-4 text-gray-800 border border-gray-200">
+              {headlinePricing ? (
               <div>
                 {headlinePricing.discountApplied && (
                   <span className="text-sm text-gray-500 line-through block">
@@ -2751,10 +2785,15 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
                 )}
                 <span className="text-xs text-gray-500">{t('booking.perPersonShort')}</span>
               </div>
+              ) : (
+                <span className="text-xl font-bold text-slate-700" data-price-state="on-request">{t('price.onRequest')}</span>
+              )}
+              {headlinePricing && (
               <div className="flex items-center gap-2 text-green-700 font-semibold bg-green-100 px-3 py-1 rounded-full text-sm">
                 <BadgeDollarSign size={16} />
                 <span>{t('booking.greatValue')}</span>
               </div>
+              )}
             </div>
 
             {/* Compact Highlights */}

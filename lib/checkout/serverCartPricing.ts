@@ -9,7 +9,7 @@ import {
   hasChosenAddOnQuantities,
   isPerPersonAddOn,
 } from '@/lib/checkout/addOnPricing';
-import { effectiveOptionPrice, effectiveTourPrice } from '@/lib/pricing/effectivePrice';
+import { effectiveOptionPrice, effectiveTourPrice, isRealPrice } from '@/lib/pricing/effectivePrice';
 import { authoritativeBasePrice } from '@/lib/pricing/authoritativePrice';
 import { isAddOnAvailableForOption, normalizedBookingOptionKeys } from '@/lib/bookings/addOnAvailability';
 import { clampAddOnQuantity, perPersonAddOnLimit } from '@/lib/bookings/bookingSelection';
@@ -143,6 +143,20 @@ export class BookingOptionRequiredError extends PublicInputError {
 
 function hasAuthoredBookingOptions(tour: { bookingOptions?: unknown[] | null }): boolean {
   return Array.isArray(tour.bookingOptions) && tour.bookingOptions.some(Boolean);
+}
+
+/**
+ * The chosen option, departure or tour carries no real price (0 or blank).
+ * The catalogue sells nothing for free, so this is missing data, not a free
+ * trip: refuse it before any payment is prepared rather than book it at $0.
+ */
+export class PriceUnavailableError extends PublicInputError {
+  code = 'PRICE_UNAVAILABLE';
+
+  constructor() {
+    super('This option has no price yet and cannot be booked online. Please choose another option or contact us.', 409);
+    this.name = 'PriceUnavailableError';
+  }
 }
 
 export class PriceChangedError extends Error {
@@ -313,6 +327,10 @@ export async function secureCartPricing(
       }
       option.price = quote.prices.adult;
     }
+
+    // Final authority on the adult (or per-unit) price, after any dated
+    // override: 0 here means the option or departure was never priced.
+    if (!isRealPrice(option.price)) throw new PriceUnavailableError();
 
     // Capacity gates are server-enforced: UI graying is presentation, not
     // authorization. Fail closed before any charge can be derived.

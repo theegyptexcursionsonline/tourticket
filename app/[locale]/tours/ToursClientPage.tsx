@@ -10,6 +10,8 @@ import { useSettings } from '@/hooks/useSettings';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLocale } from 'next-intl';
 import { tourContentPath } from '@/lib/content/contentUrl';
+import { listingFromPrice } from '@/lib/pricing/effectivePrice';
+import ListingPrice from '@/components/pricing/ListingPrice';
 
 type TourWithDetails = Omit<ITour, 'destination'> & {
   destination?: Destination;
@@ -129,7 +131,7 @@ const TOURS_PAGE_COPY: Record<'en' | 'ar' | 'de', ToursPageCopy> = {
 
 const TourCard = ({ tour, copy, rtl }: { tour: TourWithDetails; copy: ToursPageCopy; rtl: boolean }) => {
   const { formatPrice } = useSettings();
-  const displayedPrice = tour.pricingSummary?.fromPrice ?? tour.discountPrice;
+  const displayedPrice = listingFromPrice(tour);
   const discountPercent = tour.originalPrice && tour.discountPrice
     ? Math.round(((tour.originalPrice - tour.discountPrice) / tour.originalPrice) * 100)
     : 0;
@@ -214,14 +216,14 @@ const TourCard = ({ tour, copy, rtl }: { tour: TourWithDetails; copy: ToursPageC
           {/* Price Section */}
           <div className="pt-4 border-t border-slate-100 flex justify-between items-end">
             <div>
-              {tour.originalPrice && displayedPrice < tour.originalPrice && (
+              {tour.originalPrice && displayedPrice !== null && displayedPrice < tour.originalPrice && (
                 <div className="text-sm text-slate-400 line-through">
                   {formatPrice(tour.originalPrice)}
                 </div>
               )}
               <div className="flex items-baseline gap-1">
                 <span className="text-2xl font-bold text-red-600">
-                  <span className="text-xs font-medium text-slate-500">From </span>{formatPrice(displayedPrice)}
+                  <ListingPrice value={displayedPrice} formatPrice={formatPrice} prefix={<span className="text-xs font-medium text-slate-500">From </span>} />
                 </span>
                 <span className="text-xs text-slate-500">{copy.perPerson}</span>
               </div>
@@ -284,10 +286,10 @@ export default function ToursClientPage({ tours }: ToursClientPageProps) {
     // Sort
     switch (sortBy) {
       case 'price-low':
-        filtered.sort((a, b) => (a.pricingSummary?.fromPrice ?? a.discountPrice ?? 0) - (b.pricingSummary?.fromPrice ?? b.discountPrice ?? 0));
+        filtered.sort((a, b) => (listingFromPrice(a) ?? Number.POSITIVE_INFINITY) - (listingFromPrice(b) ?? Number.POSITIVE_INFINITY));
         break;
       case 'price-high':
-        filtered.sort((a, b) => (b.pricingSummary?.fromPrice ?? b.discountPrice ?? 0) - (a.pricingSummary?.fromPrice ?? a.discountPrice ?? 0));
+        filtered.sort((a, b) => (listingFromPrice(b) ?? -1) - (listingFromPrice(a) ?? -1));
         break;
       case 'rating':
         filtered.sort((a, b) => (b.rating || 0) - (a.rating || 0));

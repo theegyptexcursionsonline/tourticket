@@ -15,6 +15,8 @@ import { useSettings } from '@/hooks/useSettings';
 import { useWishlist } from '@/contexts/WishlistContext';
 import toast from 'react-hot-toast';
 import { contentPath, tourContentPath } from '@/lib/content/contentUrl';
+import { listingFromPrice } from '@/lib/pricing/effectivePrice';
+import ListingPrice from '@/components/pricing/ListingPrice';
 
 interface TourCardProps {
   tour: Tour;
@@ -48,7 +50,7 @@ const TourCard: React.FC<TourCardProps> = ({
   }
 
   const tourIsWishlisted = isWishlisted(tour._id);
-  const displayedPrice = tour.pricingSummary?.fromPrice ?? tour.discountPrice;
+  const displayedPrice = listingFromPrice(tour);
 
   const handleWishlistToggle = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -191,9 +193,9 @@ const TourCard: React.FC<TourCardProps> = ({
 
               <div className="bg-white/95 backdrop-blur-sm px-3 py-2 rounded-xl shadow-lg text-right">
                 <div className="text-lg font-bold text-slate-900">
-                  <span className="text-[10px] font-medium text-slate-500">From </span>{formatPrice(displayedPrice)}
+                  <ListingPrice value={displayedPrice} formatPrice={formatPrice} prefix={<span className="text-[10px] font-medium text-slate-500">From </span>} />
                 </div>
-                {tour.originalPrice && tour.originalPrice > displayedPrice && (
+                {tour.originalPrice && displayedPrice !== null && tour.originalPrice > displayedPrice && (
                   <div className="text-xs text-slate-500 line-through">
                     {formatPrice(tour.originalPrice)}
                   </div>

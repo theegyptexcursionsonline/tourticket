@@ -454,7 +454,9 @@ describe('FeaturedTours', () => {
       expect(screen.getAllByText('Duration not specified')[0]).toBeInTheDocument()
       // No rating and no reviews: no score at all (never a made-up 0.0)
       expect(screen.queryByText('0.0')).not.toBeInTheDocument()
-      expect(screen.getAllByText('$0.00')[0]).toBeInTheDocument()
+      // No price anywhere: "price on request", never an advertised $0.00 (#2727)
+      expect(screen.queryByText('$0.00')).not.toBeInTheDocument()
+      expect(screen.getAllByText('price.onRequest')[0]).toBeInTheDocument()
     })
   })
 

@@ -22,6 +22,14 @@ describe('quick add on a tour sold through options', () => {
     expect(handler.slice(guard, adds)).toMatch(/setBookingSidebarOpen\(true\);\s*return;/);
   });
 
+  it('opens the booking panel instead of adding a tour that has no real price', () => {
+    const guard = handler.indexOf('if (!isRealPrice(tourBasePricing.price)) {');
+    const adds = handler.indexOf('addToCart(quickAddCartItem);');
+    expect(guard).toBeGreaterThan(-1);
+    expect(adds).toBeGreaterThan(guard);
+    expect(handler.slice(guard, adds)).toMatch(/setBookingSidebarOpen\(true\);\s*return;/);
+  });
+
   it('tells the customer what to do when an old cart line reaches payment', () => {
     const pricing = source('lib/checkout/serverCartPricing.ts');
     expect(pricing).toContain('Choose an option and a departure time for this tour, then add it to your cart again.');

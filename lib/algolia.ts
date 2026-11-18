@@ -141,8 +141,10 @@ export const ALGOLIA_INDEX_NAME = ALGOLIA_INDEX_TOURS;
 
 // Helper function to format tour data for Algolia
 export const formatTourForAlgolia = (tour: AlgoliaTourSource) => {
-  const fromPrice = Number.isFinite(Number(tour.pricingSummary?.fromPrice))
-    ? Number(tour.pricingSummary?.fromPrice)
+  // A stored 0 summary is an unpriced option, never the search "from" price.
+  const summaryPrice = Number(tour.pricingSummary?.fromPrice);
+  const fromPrice = Number.isFinite(summaryPrice) && summaryPrice > 0
+    ? summaryPrice
     : Number(tour.discountPrice || tour.price || 0);
   return {
     objectID: tour._id.toString(),

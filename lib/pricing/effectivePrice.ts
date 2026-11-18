@@ -29,11 +29,32 @@ export interface PricedOption {
 }
 
 export interface PricedTimeSlot {
+  time?: string | null;
   price?: number | null;
 }
 
 /** Round to cents so repeated percentage maths cannot drift. */
 const toMoney = (value: number) => Math.round(value * 100) / 100;
+
+/**
+ * A price a guest can actually be charged: a finite amount above zero.
+ *
+ * The catalogue has no free products, and card payment cannot take $0, so a
+ * 0 or blank price is "not priced yet", never "free". An option with a 0 base
+ * that prices each start time is priced by those times; an option with a 0
+ * base and no start-time price has no price at all.
+ */
+export function isRealPrice(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value) && value > 0;
+}
+
+/** The first candidate that is a real price, or null when none is. */
+export function firstRealPrice(...candidates: unknown[]): number | null {
+  for (const candidate of candidates) {
+    if (isRealPrice(candidate)) return candidate;
+  }
+  return null;
+}
 
 export function normalizeDiscountPercent(percent?: number | null): number {
   if (typeof percent !== 'number' || !Number.isFinite(percent)) return 0;
@@ -134,7 +155,10 @@ const isPerPersonOption = (option: PricedBookingOption) => !option.type || /pers
  * (e.g. $69.00) while every option, the cards and the cart charged $69.17;
  * headline, sticky bar and panel now all start from this number. Group,
  * family and couple options are not per-person prices and are left out.
- * Returns null when the tour has no per-person option (callers keep the base).
+ * A 0 quote is not a price (an option with a 0 base priced only per start
+ * time, or one priced nowhere, showed the whole trip at $0.00), so it never
+ * counts as the lowest.
+ * Returns null when the tour has no priced per-person option (callers keep the base).
  */
 export function lowestPerPersonPrice(
   tour: (PricedTour & { bookingOptions?: PricedBookingOption[] | null }) | null | undefined,
@@ -148,10 +172,40 @@ export function lowestPerPersonPrice(
     const slots = Array.isArray(option.timeSlots) && option.timeSlots.length > 0 ? option.timeSlots : [undefined];
     for (const slot of slots) {
       const quote = effectiveOptionPrice(tour, option, slot);
+      if (!isRealPrice(quote.price)) continue;
       if (!best || quote.price < best.price) best = quote;
     }
   }
   return best;
+}
+
+/**
+ * The per-person price the trip page, the booking panel and the phone bar
+ * show: the bookable minimum, else the tour's own base price — or null when
+ * neither is a real price, so the page shows "price on request" instead of
+ * advertising $0.00.
+ */
+export function bookableTripPrice(
+  tour: (PricedTour & { bookingOptions?: PricedBookingOption[] | null }) | null | undefined,
+): { price: number; originalPrice: number; discountApplied: boolean } | null {
+  const lowest = lowestPerPersonPrice(tour);
+  if (lowest) return lowest;
+  const base = effectiveTourPrice(tour);
+  return isRealPrice(base.price) ? base : null;
+}
+
+/**
+ * A tour card's "from" price: the stored listing summary, else the tour's own
+ * prices, skipping any that are 0 or blank. A summary built before 0 quotes
+ * were excluded still holds 0 for a tour whose options price only some start
+ * times; that is never the price to advertise. Null means no real price.
+ */
+export function listingFromPrice(tour: {
+  pricingSummary?: { fromPrice?: number | null } | null;
+  discountPrice?: number | null;
+  originalPrice?: number | null;
+} | null | undefined): number | null {
+  return firstRealPrice(tour?.pricingSummary?.fromPrice, tour?.discountPrice, tour?.originalPrice);
 }
 
 /** What the trip page shows as its per-person price: the bookable minimum, else the base price. */

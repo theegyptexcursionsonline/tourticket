@@ -1,5 +1,5 @@
 import { useTranslations } from 'next-intl';
-import { displayedTripPrice, percentageOff, type PricedBookingOption, type PricedTour } from '@/lib/pricing/effectivePrice';
+import { bookableTripPrice, percentageOff, type PricedBookingOption, type PricedTour } from '@/lib/pricing/effectivePrice';
 
 interface TourPriceDisplayProps {
   tour: PricedTour & { bookingOptions?: PricedBookingOption[] | null };
@@ -27,7 +27,17 @@ export default function TourPriceDisplay({
 }: TourPriceDisplayProps) {
   const t = useTranslations();
   // The lowest price a guest can book (same as the cards and the cart), not the bare base.
-  const pricing = displayedTripPrice(tour);
+  const pricing = bookableTripPrice(tour);
+
+  // No real price anywhere: say so, never advertise $0.00.
+  if (!pricing) {
+    return (
+      <div className={`flex flex-col ${alignmentClasses[align]}`} data-testid="tour-base-price" data-price-state="on-request">
+        <span className="text-xl md:text-2xl font-bold text-slate-700">{t('price.onRequest')}</span>
+      </div>
+    );
+  }
+
   const discount = percentageOff(pricing.originalPrice, pricing.price);
 
   return (

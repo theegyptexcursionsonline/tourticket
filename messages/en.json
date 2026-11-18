@@ -82,7 +82,8 @@
     "free": "Free",
     "off": "off",
     "save": "Save",
-    "totalPrice": "Total price"
+    "totalPrice": "Total price",
+    "onRequest": "Price on request"
   },
   "booking": {
     "adults": "Adults",
@@ -207,7 +208,8 @@
     "difficultyChallenging": "Challenging",
     "difficultyDifficult": "Difficult",
     "maxGuests": "Max {count}",
-    "departureSelected": "{time} selected"
+    "departureSelected": "{time} selected",
+    "optionPriceUnavailable": "This option can't be booked online yet. Contact us for a price."
   },
   "offers": {
     "save": "Save up to 20% on combi deals and city passes!"

@@ -40,6 +40,22 @@ describe('StickyBookButton (phone booking bar)', () => {
     expect(onClick).toHaveBeenCalledTimes(1);
   });
 
+  it('says the price is on request instead of $0.00 when the tour has no real price', () => {
+    const onClick = jest.fn();
+    render(<StickyBookButton price={null} currency="$" onClick={onClick} />);
+    expect(screen.getByText('price.onRequest')).toBeInTheDocument();
+    expect(screen.queryByText('$0.00')).not.toBeInTheDocument();
+    expect(screen.queryByText(/booking\.perPersonShort/)).not.toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('open-booking-drawer-mobile'));
+    expect(onClick).toHaveBeenCalledTimes(1);
+  });
+
+  it('never shows a 0 price, even if one is passed', () => {
+    render(<StickyBookButton price={0} currency="$" onClick={jest.fn()} />);
+    expect(screen.queryByText('$0.00')).not.toBeInTheDocument();
+    expect(screen.getByText('price.onRequest')).toBeInTheDocument();
+  });
+
   it('renders nothing while the drawer is open', () => {
     const { container } = render(<StickyBookButton price={10} currency="$" onClick={jest.fn()} hidden />);
     expect(container).toBeEmptyDOMElement();

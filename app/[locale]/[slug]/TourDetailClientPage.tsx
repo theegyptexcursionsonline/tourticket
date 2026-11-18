@@ -48,7 +48,7 @@ import {
   itineraryStoredDirectionsUrl,
 } from '@/lib/tours/itineraryMap';
 import { meetingPointEmbedUrl, meetingPointMapUrl } from '@/lib/tours/meetingPointMap';
-import { displayedTripPrice, effectiveTourPrice } from '@/lib/pricing/effectivePrice';
+import { bookableTripPrice, effectiveTourPrice, isRealPrice } from '@/lib/pricing/effectivePrice';
 import { provableRating, ratingLabel, reviewCountLabel } from '@/lib/tours/ratingDisplay';
 import { askHostedAISearch } from '@/lib/hostedAISearch';
 import { useLocale, useTranslations } from 'next-intl';
@@ -1311,6 +1311,12 @@ export default function TourPageClient({ tour, relatedTours, initialReviews = []
       setBookingSidebarOpen(true);
       return;
     }
+    // Likewise a tour with no real price: the panel explains it cannot be
+    // booked online, instead of a $0.00 line checkout refuses.
+    if (!isRealPrice(tourBasePricing.price)) {
+      setBookingSidebarOpen(true);
+      return;
+    }
     setIsAdding(true);
     setLiveMessage(t('tourPage.addingToCart'));
 
@@ -1758,7 +1764,7 @@ export default function TourPageClient({ tour, relatedTours, initialReviews = []
       <BookingSidebar isOpen={isBookingSidebarOpen} onClose={() => setBookingSidebarOpen(false)} tour={tour as unknown as React.ComponentProps<typeof BookingSidebar>['tour']} initialStopSaleDates={initialStopSaleDates} />
 
       <StickyBookButton
-        price={displayedTripPrice(tour as Parameters<typeof displayedTripPrice>[0]).price}
+        price={bookableTripPrice(tour as Parameters<typeof bookableTripPrice>[0])?.price ?? null}
         currency={'$'}
         onClick={openBookingSidebar}
         hidden={isBookingSidebarOpen}

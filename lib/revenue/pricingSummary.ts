@@ -37,9 +37,10 @@ export function pricingProjectionRetryDelayMs(attempts: number) {
   return Math.min(PROJECTION_RETRY_MAX_MS, PROJECTION_RETRY_BASE_MS * (2 ** (normalizedAttempts - 1)));
 }
 
+// A 0 quote is an unpriced option or departure, not a "from $0" listing price.
 const finitePrices = (values: unknown[]) => values
   .map(Number)
-  .filter((value) => Number.isFinite(value) && value >= 0);
+  .filter((value) => Number.isFinite(value) && value > 0);
 
 export function catalogueFromPrice(tour: Pick<SummaryTour, 'discountPrice' | 'discountPercent' | 'bookingOptions'>) {
   const options = Array.isArray(tour.bookingOptions)

@@ -9,6 +9,8 @@ import BookingSidebar from '@/components/BookingSidebar';
 import { Tour } from '@/types';
 import { useSettings } from '@/hooks/useSettings';
 import { contentPath } from '@/lib/content/contentUrl';
+import { listingFromPrice } from '@/lib/pricing/effectivePrice';
+import ListingPrice from '@/components/pricing/ListingPrice';
 
 interface EgyptToursClientProps {
   tours: Tour[];
@@ -85,7 +87,7 @@ const getTagColor = (tag: string) => {
 // Simplified Tour Card Component
 const SimpleTourCard = ({ tour, onAddToCartClick }: { tour: Tour; onAddToCartClick: (tour: Tour) => void }) => {
   const { formatPrice } = useSettings();
-  const displayedPrice = tour.pricingSummary?.fromPrice ?? tour.discountPrice ?? tour.originalPrice ?? 0;
+  const displayedPrice = listingFromPrice(tour);
 
   return (
     <Link
@@ -137,8 +139,8 @@ const SimpleTourCard = ({ tour, onAddToCartClick }: { tour: Tour; onAddToCartCli
         {/* Price Badge */}
         <div className="absolute left-4 bottom-4 z-20">
           <div className="bg-gradient-to-r from-amber-500 to-amber-400 text-black px-3 py-2 rounded-full font-black text-sm sm:text-base border-2 border-white/20">
-            {formatPrice(displayedPrice)}
-            {tour.originalPrice && tour.discountPrice && tour.originalPrice > tour.discountPrice && (
+            <ListingPrice value={displayedPrice} formatPrice={formatPrice} />
+            {displayedPrice !== null && tour.originalPrice && tour.discountPrice && tour.originalPrice > tour.discountPrice && (
               <span className="ml-2 text-xs font-medium line-through opacity-70">
                 {formatPrice(tour.originalPrice)}
               </span>
@@ -191,9 +193,9 @@ const SimpleTourCard = ({ tour, onAddToCartClick }: { tour: Tour; onAddToCartCli
             <div className="text-xs text-gray-500 mb-0.5">Starting from</div>
             <div className="flex items-baseline gap-2">
               <span className="text-xl font-black text-gray-900">
-                {formatPrice(displayedPrice)}
+                <ListingPrice value={displayedPrice} formatPrice={formatPrice} />
               </span>
-              {tour.originalPrice && tour.discountPrice && tour.originalPrice > tour.discountPrice && (
+              {displayedPrice !== null && tour.originalPrice && tour.discountPrice && tour.originalPrice > tour.discountPrice && (
                 <span className="text-xs text-gray-400 line-through">
                   {formatPrice(tour.originalPrice)}
                 </span>

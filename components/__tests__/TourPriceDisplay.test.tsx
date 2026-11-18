@@ -58,4 +58,47 @@ describe('TourPriceDisplay', () => {
       mockLocale = 'en';
     }
   });
+
+  it('shows the priced option, never $0.00, when another option has a 0 price (Cairo Private Shopping Tour)', () => {
+    render(
+      <TourPriceDisplay
+        tour={{
+          discountPrice: 60,
+          bookingOptions: [
+            { type: 'Per Person', price: 60, timeSlots: [{}] },
+            { type: 'Per Person', price: 0, timeSlots: [{}, {}] },
+          ],
+        }}
+        formatPrice={formatPrice}
+      />,
+    );
+    expect(screen.getByText('$60.00')).toBeInTheDocument();
+    expect(screen.queryByText('$0.00')).not.toBeInTheDocument();
+  });
+
+  it('shows the lowest start-time price of an option whose base is 0', () => {
+    render(
+      <TourPriceDisplay
+        tour={{ discountPrice: 12, bookingOptions: [{ type: 'Per Person', price: 0, timeSlots: [{ price: 34.96 }] }, { type: 'Per Person', price: 12.35 }] }}
+        formatPrice={formatPrice}
+      />,
+    );
+    expect(screen.getByText('$12.35')).toBeInTheDocument();
+  });
+
+  it('says "Price on request" when nothing is priced, in English and in German', () => {
+    const tour = { discountPrice: 0, bookingOptions: [{ type: 'Per Person', price: 0 }] };
+    const { unmount } = render(<TourPriceDisplay tour={tour} formatPrice={formatPrice} />);
+    expect(screen.getByText('Price on request')).toBeInTheDocument();
+    expect(screen.queryByText('$0.00')).not.toBeInTheDocument();
+    expect(screen.queryByText('per person')).not.toBeInTheDocument();
+    unmount();
+    mockLocale = 'de';
+    try {
+      render(<TourPriceDisplay tour={tour} formatPrice={formatPrice} />);
+      expect(screen.getByText('Preis auf Anfrage')).toBeInTheDocument();
+    } finally {
+      mockLocale = 'en';
+    }
+  });
 });
