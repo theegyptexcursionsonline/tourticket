@@ -627,6 +627,45 @@ export const CalendarWidget: React.FC<{
   );
 };
 
+/**
+ * What an option is quoted at in the running total before a departure is
+ * picked: its own price, else the price of the departure its card shows (an
+ * option with a 0 base priced per start time). null when it has no real
+ * price: such an option is not an estimate of anything, and counting it made
+ * the footer read $0.00 beside a priced option.
+ */
+export function optionEstimatePrice(option: Pick<TourOption, 'price' | 'priceUnavailable' | 'timeSlots'>): number | null {
+  if (option.priceUnavailable) return null;
+  if (isRealPrice(option.price)) return option.price;
+  const shown = option.timeSlots.find((timeSlot) => timeSlot.available > 0) || option.timeSlots[0];
+  return shown && isRealPrice(shown.price) ? shown.price : null;
+}
+
+/**
+ * The money line in the drawer footer. A total that is not a real price (no
+ * priced option chosen or estimable yet) is never printed as $0.00; the
+ * customer is asked to choose an option instead.
+ */
+export const BookingFooterTotal: React.FC<{ total: number; totalSavings: number }> = ({ total, totalSavings }) => {
+  const t = useTranslations();
+  const { formatPrice } = useSettings();
+  if (!isRealPrice(total)) {
+    return (
+      <div data-testid="booking-footer-total" data-total-state="choose-option" className="min-w-0 pr-2">
+        <span className="block text-sm font-semibold text-gray-700 leading-snug">{t('booking.chooseOptionForTotal')}</span>
+      </div>
+    );
+  }
+  return (
+    <div data-testid="booking-footer-total" data-total-state="priced">
+      <span className="block font-bold text-lg text-red-600">{formatPrice(total)}</span>
+      <span className="text-xs text-gray-500">
+        {t('booking.totalPrice')} {totalSavings > 0 && `(${t('booking.saveAmount', { amount: formatPrice(totalSavings) })})`}
+      </span>
+    </div>
+  );
+};
+
 // MODIFIED: TourOptionCard now uses real tour data
 export const TourOptionCard: React.FC<{
   option: TourOption;
@@ -865,13 +904,24 @@ export const TourOptionCard: React.FC<{
           </div>
         )}
         {collapsible && (
-          <div className="ml-auto flex items-center gap-1 text-[11px] font-semibold text-red-600">
-            {isOpen ? t('common.showLess') : t('booking.selectTime')}
+          <div className={`ml-auto flex items-center gap-1 text-[11px] font-semibold ${option.priceUnavailable ? 'text-slate-600' : 'text-red-600'}`}>
+            {/* An option with no price has no time to select: its toggle only
+                opens the description, so it must not read "Select Time". */}
+            {isOpen ? t('common.showLess') : option.priceUnavailable ? t('common.readMore') : t('booking.selectTime')}
             <ChevronDown size={14} className={`transition-transform ${isOpen ? 'rotate-180' : ''}`} />
           </div>
         )}
       </div>
       </div>
+
+      {/* No real price on any departure: explain it on the card itself, so the
+          collapsed summary already says it cannot be booked online. Kept out of
+          the expand control so it is read as a note, not as part of a button. */}
+      {option.priceUnavailable && (
+        <div role="status" data-testid="option-price-unavailable" className="mb-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700">
+          {t('booking.optionPriceUnavailable')}
+        </div>
+      )}
 
       <div id={bodyId} hidden={!isOpen}>
       {/* Description */}
@@ -924,13 +974,6 @@ export const TourOptionCard: React.FC<{
               </div>
             )}
           </div>
-        </div>
-      )}
-
-      {/* No real price on any departure: explain, offer nothing to select. */}
-      {option.priceUnavailable && (
-        <div role="status" data-testid="option-price-unavailable" className="mb-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700">
-          {t('booking.optionPriceUnavailable')}
         </div>
       )}
 
@@ -2079,20 +2122,33 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
       // a whole-unit card. Estimate from the cheapest option the party can
       // actually take, through the same rule the cards use.
       const party = bookingData.adults + bookingData.children + bookingData.infants;
+      const tourOptionsForEstimate = availability?.tourOptions ?? [];
       const estimate = (availability?.tourOptions ?? [])
         .filter((candidate) => capacityAvailability(candidate, party).available)
-        .map((candidate) => {
+        // Only an option with a real price can be an estimate (see
+        // optionEstimatePrice); options that already carry one are unchanged.
+        .flatMap((candidate) => {
+          const quoted = optionEstimatePrice(candidate);
+          if (quoted === null) return [];
           const unitPriced = isUnitPricedType(candidate.type);
           const units = unitPriced ? unitCount(party, effectiveUnitSize(candidate)) : null;
           const price = units !== null
-            ? units * candidate.price
-            : (bookingData.adults * candidate.price) + (bookingData.children * candidate.price * 0.5);
-          return { candidate, price, unitPriced };
+            ? units * quoted
+            : (bookingData.adults * quoted) + (bookingData.children * quoted * 0.5);
+          return [{ candidate, quoted, price, unitPriced }];
         })
         .sort((a, b) => a.price - b.price)[0];
+      if (!estimate && tourOptionsForEstimate.length > 0 && tourOptionsForEstimate.every((candidate) => optionEstimatePrice(candidate) === null)) {
+        // Nothing on this tour can be booked online: no figure to estimate, so
+        // the footer asks for an option instead of quoting the tour base price.
+        basePrice = 0;
+        originalBasePrice = 0;
+      }
       if (estimate) {
-        basePrice = estimate.candidate.price;
-        originalBasePrice = estimate.candidate.originalPrice || estimate.candidate.price;
+        basePrice = estimate.quoted;
+        originalBasePrice = isRealPrice(estimate.candidate.price)
+          ? (estimate.candidate.originalPrice || estimate.candidate.price)
+          : estimate.quoted;
         if (estimate.unitPriced) {
           optionIsUnitPriced = true;
           unitSizeForTotals = effectiveUnitSize(estimate.candidate);
@@ -2667,11 +2723,11 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
       setTimeout(() => {
         const scrollContainer = scrollableContentRef.current;
         const elementToScrollTo = datePickerRef.current;
+        // The drawer may have moved on to the options step within the delay.
+        if (!scrollContainer || !elementToScrollTo) return;
 
-        const topPosition = elementToScrollTo!.offsetTop;
-
-        scrollContainer!.scrollTo({
-          top: topPosition,
+        scrollContainer.scrollTo({
+          top: elementToScrollTo.offsetTop,
           behavior: 'smooth'
         });
       }, 150);
@@ -3284,12 +3340,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
                 >
                   {/* Price Display */}
                   <div className="flex items-center justify-between mb-4">
-                    <div>
-                      <span className="block font-bold text-lg text-red-600">{formatPrice(total)}</span>
-                      <span className="text-xs text-gray-500">
-                        {t('booking.totalPrice')} {totalSavings > 0 && `(${t('booking.saveAmount', { amount: formatPrice(totalSavings) })})`}
-                      </span>
-                    </div>
+                    <BookingFooterTotal total={total} totalSavings={totalSavings} />
                     
                     {/* Action Buttons */}
                     <div className="flex gap-2">

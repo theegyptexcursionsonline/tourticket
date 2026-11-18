@@ -209,7 +209,8 @@
     "difficultyDifficult": "Difficult",
     "maxGuests": "Max {count}",
     "departureSelected": "{time} selected",
-    "optionPriceUnavailable": "This option can't be booked online yet. Contact us for a price."
+    "optionPriceUnavailable": "This option can't be booked online yet. Contact us for a price.",
+    "chooseOptionForTotal": "Choose an option to see the total"
   },
   "offers": {
     "save": "Save up to 20% on combi deals and city passes!"

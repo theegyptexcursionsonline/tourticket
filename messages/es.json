@@ -209,7 +209,8 @@
     "difficultyDifficult": "Difícil",
     "maxGuests": "Máx. {count}",
     "departureSelected": "{time} seleccionado",
-    "optionPriceUnavailable": "Esta opción aún no se puede reservar en línea. Contáctenos para conocer el precio."
+    "optionPriceUnavailable": "Esta opción aún no se puede reservar en línea. Contáctenos para conocer el precio.",
+    "chooseOptionForTotal": "Elija una opción para ver el total"
   },
   "offers": {
     "save": "Ahorra hasta un 20% en paquetes combinados y pases de ciudad!"

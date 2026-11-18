@@ -1,4 +1,5 @@
 import { bookingCutoffPayloadError, cutoffScheduleError } from '@/lib/bookings/bookingCutoff';
+import { unpricedOptionsWarning } from '@/lib/admin/unpricedBookingOptions';
 import { isMissingMainImage, MAIN_IMAGE_REQUIRED_MESSAGE } from '@/lib/admin/tourMainImage';
 // app/api/admin/tours/route.ts
 import { withAdminAudit } from '@/lib/admin/adminAudit';
@@ -227,7 +228,7 @@ async function POSTHandler(request: NextRequest) {
       console.error('Auto-translate tour failed:', err)
     );
 
-    return NextResponse.json({ success: true, data: populated ?? tour }, { status: 201 });
+    return NextResponse.json({ success: true, data: populated ?? tour, warnings: unpricedOptionsWarning(tour.bookingOptions) }, { status: 201 });
   } catch (error) {
     if (error instanceof TourTaxonomyOwnershipError) {
       return NextResponse.json({ success: false, error: error.message }, { status: 400 });

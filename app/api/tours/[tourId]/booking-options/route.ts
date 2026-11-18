@@ -8,6 +8,7 @@ import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 import { hasOnlyConfiguredTimeSlots } from '@/lib/pricing/bookingOptionSlots';
 import { bookingOptionCapacityError, cleanBookingOptions } from '@/lib/admin/cleanBookingOptions';
 import type { IBookingOption } from '@/lib/models/Tour';
+import { unpricedOptionsWarning } from '@/lib/admin/unpricedBookingOptions';
 
 async function PUTHandler(
   request: NextRequest,
@@ -72,7 +73,8 @@ async function PUTHandler(
     return NextResponse.json({ 
       success: true, 
       message: 'Booking option updated successfully',
-      bookingOptions: tour.bookingOptions 
+      bookingOptions: tour.bookingOptions,
+      warnings: unpricedOptionsWarning(tour.bookingOptions),
     });
 
   } catch (error: unknown) {

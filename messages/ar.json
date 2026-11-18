@@ -209,7 +209,8 @@
     "difficultyDifficult": "صعبة جدًا",
     "maxGuests": "حتى {count}",
     "departureSelected": "تم اختيار الساعة {time}",
-    "optionPriceUnavailable": "لا يمكن حجز هذا الخيار عبر الإنترنت حاليًا. تواصل معنا لمعرفة السعر."
+    "optionPriceUnavailable": "لا يمكن حجز هذا الخيار عبر الإنترنت حاليًا. تواصل معنا لمعرفة السعر.",
+    "chooseOptionForTotal": "اختر خيارًا لمعرفة السعر الإجمالي"
   },
   "offers": {
     "save": "وفّر حتى 20% على العروض المجمعة وبطاقات المدن!"
