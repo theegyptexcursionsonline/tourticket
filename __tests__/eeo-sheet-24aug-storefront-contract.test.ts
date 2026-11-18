@@ -31,7 +31,8 @@ describe('EEO sheet 24 Aug — storefront and admin contracts', () => {
 
   it('shows and totals the authored infant price on each per-person option card', () => {
     expect(sidebar).toContain('guestPricedSubtotal(cardGuestPrices, adults, childCount, infantCount)');
-    expect(sidebar).toContain('Per Infant: {formatPrice(infantPrice)}');
+    // The infant rate is still shown on the card, now in the visitor language.
+    expect(sidebar).toContain("t('booking.perInfantRate', { price: formatPrice(infantPrice) })");
   });
 
   it('shows every cart, checkout and booking surface the chosen units, not the party size', () => {
