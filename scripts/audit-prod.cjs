@@ -28,6 +28,17 @@ const ACCEPTED = [
     expires: '2026-12-17',
     reason: 'No patched picomatch exists; build-time-only path through the Sentry webpack loader.',
   },
+  {
+    id: 'GHSA-fc5q-39xc-vjpf',
+    package: 'picomatch',
+    // Reached through the translation package (next-intl > @parcel/watcher >
+    // picomatch): the file watcher behind its message extraction, which runs
+    // while the site is built or developed. No request-time code loads it and no
+    // visitor input reaches it. Accepted by the owner on 18 Nov 2026.
+    via: ['next-intl', '@parcel/watcher'],
+    expires: '2026-12-17',
+    reason: 'No patched picomatch exists; build-time-only path through the translation package message-extraction file watcher.',
+  },
 ];
 
 const SEVERE = new Set(['high', 'critical']);
@@ -51,12 +62,13 @@ function evaluateAudit(report, { today = new Date() } = {}) {
     if (!SEVERE.has(advisory.severity)) continue;
     const name = advisory.module_name;
     const id = advisory.github_advisory_id || String(advisory.url || '').split('/').pop();
-    const rule = ACCEPTED.find((item) => item.id === id && item.package === name);
+    const rules = ACCEPTED.filter((item) => item.id === id && item.package === name);
+    const rule = rules[0];
     if (!rule) {
       failures.push(`${name}: ${id} (${advisory.severity}) ${advisory.title || ''}`.trim());
       continue;
     }
-    if (new Date(`${rule.expires}T23:59:59Z`) < today) {
+    if (rules.some((item) => new Date(`${item.expires}T23:59:59Z`) < today)) {
       failures.push(`${name}: ${id} acceptance expired on ${rule.expires}; review it`);
       continue;
     }
@@ -65,12 +77,16 @@ function evaluateAudit(report, { today = new Date() } = {}) {
       continue;
     }
     const chains = (advisory.findings || []).flatMap((finding) => finding.paths || []).map((path) => chainOf(path, name));
-    const outside = chains.filter((chain) => !rule.via.every((step, index) => chain[index] === step));
+    // Every path must match one recorded path; each matched path is reported.
+    const ruleFor = (chain) => rules.find((item) => item.via.every((step, index) => chain[index] === step));
+    const outside = chains.filter((chain) => !ruleFor(chain));
     if (chains.length === 0 || outside.length > 0) {
       failures.push(`${name}: ${id} is reached outside its accepted path (${(outside[0] || ['unknown']).join(' > ')})`);
       continue;
     }
-    accepted.push(`${name}: ${id} accepted until ${rule.expires} - ${rule.reason}`);
+    for (const used of new Set(chains.map(ruleFor))) {
+      accepted.push(`${name}: ${id} via ${used.via.join(' > ')} accepted until ${used.expires} - ${used.reason}`);
+    }
   }
   return { failures, accepted };
 }

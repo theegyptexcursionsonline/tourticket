@@ -29,9 +29,22 @@ test('the recorded acceptance passes on its own path, before it expires', () => 
   expect(accepted).toHaveLength(1);
 });
 
-test('the same advisory reached through another package fails', () => {
-  const { failures } = evaluateAudit(picomatch([SENTRY, '.>next-intl>@parcel/watcher>picomatch']), { today: TODAY });
-  expect(failures[0]).toMatch(/outside its accepted path \(next-intl > @parcel\/watcher\)/);
+const NEXT_INTL = '.>next-intl>@parcel/watcher>picomatch';
+
+test('the second recorded path (translation file watcher) also passes, and both are reported', () => {
+  const { failures, accepted } = evaluateAudit(picomatch([SENTRY, NEXT_INTL]), { today: TODAY });
+  expect(failures).toEqual([]);
+  expect(accepted).toHaveLength(2);
+  expect(accepted[1]).toMatch(/via next-intl > @parcel\/watcher accepted until 2026-12-17/);
+});
+
+test('a third path to the same advisory still fails', () => {
+  const { failures } = evaluateAudit(picomatch([SENTRY, NEXT_INTL, '.>micromatch>picomatch']), { today: TODAY });
+  expect(failures[0]).toMatch(/outside its accepted path \(micromatch\)/);
+});
+
+test('both recorded paths stop counting after the expiry', () => {
+  expect(evaluateAudit(picomatch([NEXT_INTL]), { today: new Date('2026-12-18T00:00:00Z') }).failures[0]).toMatch(/expired/);
 });
 
 test('an unknown path fails rather than being assumed safe', () => {
