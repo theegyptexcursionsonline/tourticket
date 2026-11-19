@@ -10,6 +10,8 @@ type SummaryTour = {
   discountPrice?: number;
   discountPercent?: number;
   bookingOptions?: Array<{
+    id?: string;
+    pricingKey?: string;
     price?: number;
     applyTourDiscount?: boolean;
     timeSlots?: Array<{ price?: number }>;
@@ -59,6 +61,72 @@ export function catalogueFromPrice(tour: Pick<SummaryTour, 'discountPrice' | 'di
   return candidates.length ? Math.min(...candidates) : null;
 }
 
+type DatedPrice = {
+  optionKey?: string;
+  time?: string;
+  prices?: { adult?: number };
+  version?: number;
+  date?: Date;
+  currency?: string;
+};
+
+const dayKey = (value: Date) => new Date(value).toISOString().slice(0, 10);
+
+/**
+ * Keep only the date-specific prices a customer can still book: not on a day
+ * stopped for that option (or the whole tour), and not on a departure that is
+ * blocked or full. A "from" price nobody can buy is not a price to advertise.
+ */
+export function filterBookableDatedPrices<T extends DatedPrice>(
+  prices: T[],
+  context: {
+    optionIdForKey: (key: string | undefined) => string | undefined;
+    stopSales: Array<{ startDate: Date; endDate: Date; optionIds?: string[] }>;
+    days: Array<{ date: Date; stopSale?: boolean; slots?: Array<{ time?: string; capacity?: number; booked?: number; blocked?: boolean; extraCapacity?: number }> }>;
+  },
+): T[] {
+  return prices.filter((price) => {
+    if (!price.date) return false;
+    const key = dayKey(price.date);
+    const optionId = context.optionIdForKey(price.optionKey);
+    const stopped = context.stopSales.some((stop) => dayKey(stop.startDate) <= key && key <= dayKey(stop.endDate)
+      && (!stop.optionIds?.length || (optionId !== undefined && stop.optionIds.includes(optionId))));
+    if (stopped) return false;
+    const day = context.days.find((candidate) => dayKey(candidate.date) === key);
+    if (day?.stopSale) return false;
+    const slot = day?.slots?.find((candidate) => candidate.time === price.time);
+    if (slot && (slot.blocked || Number(slot.booked || 0) >= Number(slot.capacity || 0) + Number(slot.extraCapacity || 0))) return false;
+    return true;
+  });
+}
+
+async function bookableDatedPrices(tour: SummaryTour, prices: DatedPrice[]): Promise<DatedPrice[]> {
+  if (prices.length === 0) return prices;
+  const dates = prices.map((price) => price.date).filter((date): date is Date => Boolean(date));
+  const first = new Date(Math.min(...dates.map((date) => new Date(date).getTime())));
+  const last = new Date(Math.max(...dates.map((date) => new Date(date).getTime())));
+  // Loaded only when there are dated prices to check.
+  const [{ default: StopSale }, { default: Availability }] = await Promise.all([
+    import('@/lib/models/StopSale'),
+    import('@/lib/models/Availability'),
+  ]);
+  const [stopSales, days] = await Promise.all([
+    StopSale.find({ tourId: tour._id, startDate: { $lte: last }, endDate: { $gte: first } })
+      .select('startDate endDate optionIds').lean<Array<{ startDate: Date; endDate: Date; optionIds?: string[] }>>(),
+    Availability.find({ tour: tour._id, date: { $gte: first, $lte: last } })
+      .select('date stopSale slots').lean<Array<{ date: Date; stopSale?: boolean; slots?: Array<{ time?: string; capacity?: number; booked?: number; blocked?: boolean; extraCapacity?: number }> }>>(),
+  ]);
+  const options = Array.isArray(tour.bookingOptions) ? tour.bookingOptions : [];
+  return filterBookableDatedPrices(prices, {
+    optionIdForKey: (key) => {
+      const index = options.findIndex((option) => option.pricingKey === key);
+      return index < 0 ? undefined : String(options[index].id || `option-${index}`);
+    },
+    stopSales,
+    days,
+  });
+}
+
 /**
  * Rebuild the one listing/search price summary from authoritative catalogue
  * prices plus active future exact overrides. Historical overrides must not
@@ -66,19 +134,15 @@ export function catalogueFromPrice(tour: Pick<SummaryTour, 'discountPrice' | 'di
  */
 export async function refreshTourPricingSummary(tourId: string, currency = 'USD', authoritativeVersion?: number) {
   const tour = await Tour.findOne({ _id: tourId, ...DEFAULT_TENANT_FILTER })
-    .select('_id discountPrice discountPercent bookingOptions.price bookingOptions.applyTourDiscount bookingOptions.timeSlots.price')
+    .select('_id discountPrice discountPercent bookingOptions.id bookingOptions.pricingKey bookingOptions.price bookingOptions.applyTourDiscount bookingOptions.timeSlots.price')
     .lean<SummaryTour | null>();
   if (!tour) return null;
 
   const today = new Date(`${new Date().toISOString().slice(0, 10)}T00:00:00.000Z`);
-  const overrides = await RevenuePriceOverride.find({
+  const datedPrices = await RevenuePriceOverride.find({
     tenantId: 'default', tourId: tour._id, active: true, date: { $gte: today },
-  }).select('prices.adult version date currency').lean<Array<{
-    prices?: { adult?: number };
-    version?: number;
-    date?: Date;
-    currency?: string;
-  }>>();
+  }).select('optionKey time prices.adult version date currency').lean<Array<DatedPrice>>();
+  const overrides = await bookableDatedPrices(tour, datedPrices);
 
   const cataloguePrice = catalogueFromPrice(tour);
   const candidates = finitePrices([

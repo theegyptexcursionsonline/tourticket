@@ -30,7 +30,9 @@ import { safeLocalStorage } from '@/lib/browserStorage';
 export const APP_ENTRY_STORAGE_KEY = 'eeo-app-entry';
 export const APP_ENTRY_AUTO_OPEN_DELAY_MS = 6000;
 const AUTO_OPEN_QUIET_DAYS = 30;
-const DESKTOP_QUERY = '(min-width: 1024px)';
+// Wide enough that the card, under the header button, stays clear of the
+// home hero search on the left.
+const DESKTOP_QUERY = '(min-width: 1280px)';
 
 // The same funnel rules as the search and voice launchers: transactional and
 // account screens stay clean, and a tour page owns its booking call to action.
@@ -103,10 +105,15 @@ export function assistantPanelOpen(): boolean {
   return isShown(frame) && (frame as HTMLElement).getBoundingClientRect().height >= VOICE_PANEL_MIN_HEIGHT_PX;
 }
 
-/** Auto-open is allowed on browsing pages only. */
+/**
+ * Auto-open is allowed on the home page only. On list, search, category and
+ * destination pages the card dropped over the results (19 Nov 2026, search
+ * results at 1440 px); there it opens only from its header button.
+ */
 export function autoOpenAllowedOnPath(pathname: string): boolean {
   const path = pathname.replace(/^\/(en|ar|de|fr|es)(?=\/|$)/, '') || '/';
-  return !NO_AUTO_OPEN_ROUTES.some((route) => path === route || path.startsWith(`${route}/`));
+  if (NO_AUTO_OPEN_ROUTES.some((route) => path === route || path.startsWith(`${route}/`))) return false;
+  return path === '/';
 }
 
 const AppleMark = () => (

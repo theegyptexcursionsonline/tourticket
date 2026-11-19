@@ -210,7 +210,11 @@
     "maxGuests": "Máx. {count}",
     "departureSelected": "{time} seleccionado",
     "optionPriceUnavailable": "Esta opción aún no se puede reservar en línea. Contáctenos para conocer el precio.",
-    "chooseOptionForTotal": "Elija una opción para ver el total"
+    "chooseOptionForTotal": "Elija una opción para ver el total",
+    "noDeparturesToday": "Hoy no hay salidas disponibles. Elige otra fecha disponible.",
+    "unavailableDatesNote": "No se pueden elegir fechas no disponibles. Elige una fecha con salida disponible.",
+    "noDeparturesThisMonth": "No hay salidas disponibles este mes. Prueba con otro mes.",
+    "noDeparturesThisDate": "No hay salidas disponibles en esta fecha. Elige otra fecha."
   },
   "offers": {
     "save": "Ahorra hasta un 20% en paquetes combinados y pases de ciudad!"

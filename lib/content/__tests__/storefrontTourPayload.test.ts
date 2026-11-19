@@ -50,7 +50,10 @@ describe('storefront tour payloads', () => {
       destination: { name: 'Cairo' },
       categories: [{ name: 'Day trips' }],
     });
-    expect(payload).not.toHaveProperty('bookingOptions');
+    // Only the option prices the card needs to show the trip page figure
+    // (19 Nov 2026); never option labels, descriptions or booking setup.
+    expect(payload.bookingOptions).toEqual([{ price: 45, type: null, applyTourDiscount: false, timeSlots: [] }]);
+    expect(JSON.stringify(payload.bookingOptions)).not.toContain('Private');
     expect(payload).not.toHaveProperty('availability');
     expect(payload).not.toHaveProperty('translations');
   });

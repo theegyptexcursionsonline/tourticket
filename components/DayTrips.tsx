@@ -16,7 +16,7 @@ import { isRTL } from '@/i18n/config';
 import { getErrorMessage, isRecord } from './componentTypes';
 import { tourContentPath } from '@/lib/content/contentUrl';
 import { safeLocalStorage } from '@/lib/browserStorage';
-import { listingFromPrice } from '@/lib/pricing/effectivePrice';
+import { listingFromPrice, listingCompareAtPrice } from '@/lib/pricing/effectivePrice';
 import ListingPrice from '@/components/pricing/ListingPrice';
 
 const normalizeDayTrips = (value: unknown, untitledTour: string): Tour[] => {
@@ -193,9 +193,9 @@ const DayTripCard = ({
         </div>
         
         <div className="flex items-baseline justify-end mt-auto pt-2">
-          {trip.originalPrice && listingFromPrice(trip) !== null && trip.originalPrice > (listingFromPrice(trip) ?? 0) && (
+          {listingCompareAtPrice(trip) !== null && (
             <span className="text-xs sm:text-sm text-slate-500 line-through mr-1 sm:mr-2">
-              {formatPrice(trip.originalPrice)}
+              {formatPrice(listingCompareAtPrice(trip) ?? 0)}
             </span>
           )}
           <span className="font-extrabold text-lg sm:text-xl md:text-2xl text-slate-900">

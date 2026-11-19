@@ -116,7 +116,10 @@ describe('tour card "from" price', () => {
   it('keeps a real listing summary untouched', () => {
     expect(listingFromPrice({ pricingSummary: { fromPrice: 21.66 }, discountPrice: 16 })).toBe(21.66);
     expect(listingFromPrice({ discountPrice: 49 })).toBe(49);
-    expect(listingFromPrice({ discountPrice: 0, originalPrice: 70 })).toBe(70);
+    // 19 Nov 2026 rule: the card shows what can be booked. A 0 base is not
+    // bookable (checkout refuses it), so its old "original" 70 is not a price.
+    expect(listingFromPrice({ discountPrice: 0, originalPrice: 70 })).toBeNull();
+    expect(listingFromPrice({ price: 70 })).toBe(70);
   });
 
   it('is null when nothing is priced', () => {

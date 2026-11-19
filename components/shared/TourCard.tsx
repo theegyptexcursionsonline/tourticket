@@ -15,7 +15,7 @@ import { useSettings } from '@/hooks/useSettings';
 import { useWishlist } from '@/contexts/WishlistContext';
 import toast from 'react-hot-toast';
 import { contentPath, tourContentPath } from '@/lib/content/contentUrl';
-import { listingFromPrice } from '@/lib/pricing/effectivePrice';
+import { listingFromPrice, listingCompareAtPrice } from '@/lib/pricing/effectivePrice';
 import ListingPrice from '@/components/pricing/ListingPrice';
 
 interface TourCardProps {
@@ -193,11 +193,11 @@ const TourCard: React.FC<TourCardProps> = ({
 
               <div className="bg-white/95 backdrop-blur-sm px-3 py-2 rounded-xl shadow-lg text-right">
                 <div className="text-lg font-bold text-slate-900">
-                  <ListingPrice value={displayedPrice} formatPrice={formatPrice} prefix={<span className="text-[10px] font-medium text-slate-500">From </span>} />
+                  <ListingPrice value={displayedPrice} formatPrice={formatPrice} fromClassName="text-[10px] font-medium text-slate-500" />
                 </div>
-                {tour.originalPrice && displayedPrice !== null && tour.originalPrice > displayedPrice && (
+                {listingCompareAtPrice(tour) !== null && (
                   <div className="text-xs text-slate-500 line-through">
-                    {formatPrice(tour.originalPrice)}
+                    {formatPrice(listingCompareAtPrice(tour) ?? 0)}
                   </div>
                 )}
               </div>

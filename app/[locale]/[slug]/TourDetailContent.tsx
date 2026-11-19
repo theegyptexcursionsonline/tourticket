@@ -131,7 +131,7 @@ async function getRelatedTours(
   })
     .populate('destination', 'name')
     .populate('category', 'name')
-    .select('title slug image discountPrice originalPrice duration destination category rating reviewCount tags')
+    .select('title slug image discountPrice originalPrice discountPercent pricingSummary bookingOptions.price bookingOptions.type bookingOptions.applyTourDiscount bookingOptions.timeSlots.price duration destination category rating reviewCount tags')
     .limit(3)
     .lean();
 
@@ -152,7 +152,7 @@ async function getRelatedTours(
     })
       .populate('destination', 'name slug translations')
       .populate('category', 'name slug translations')
-      .select('title slug image discountPrice originalPrice duration destination category rating reviewCount tags translations tenantId')
+      .select('title slug image discountPrice originalPrice discountPercent pricingSummary bookingOptions.price bookingOptions.type bookingOptions.applyTourDiscount bookingOptions.timeSlots.price duration destination category rating reviewCount tags translations tenantId')
       .lean();
 
     serializedRelatedCandidates = JSON.parse(JSON.stringify(localizedRelatedTours)) as Record<string, unknown>[];

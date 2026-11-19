@@ -210,7 +210,11 @@
     "maxGuests": "Max. {count}",
     "departureSelected": "{time} Uhr ausgewählt",
     "optionPriceUnavailable": "Diese Option ist online noch nicht buchbar. Fragen Sie uns gern nach dem Preis.",
-    "chooseOptionForTotal": "Wählen Sie eine Option, um den Gesamtpreis zu sehen"
+    "chooseOptionForTotal": "Wählen Sie eine Option, um den Gesamtpreis zu sehen",
+    "noDeparturesToday": "Heute sind keine Abfahrten verfügbar. Bitte wählen Sie ein anderes verfügbares Datum.",
+    "unavailableDatesNote": "Nicht verfügbare Tage können nicht gewählt werden. Wählen Sie einen Tag mit freier Abfahrt.",
+    "noDeparturesThisMonth": "In diesem Monat sind keine Abfahrten verfügbar. Bitte versuchen Sie einen anderen Monat.",
+    "noDeparturesThisDate": "An diesem Tag sind keine Abfahrten verfügbar. Bitte wählen Sie ein anderes Datum."
   },
   "offers": {
     "save": "Sparen Sie bis zu 20% bei Kombi-Deals und City-Passen!"

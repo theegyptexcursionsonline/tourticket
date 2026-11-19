@@ -12,7 +12,7 @@ import { Link } from '@/i18n/routing';
 import { useLocale, useTranslations } from 'next-intl';
 import { isRTL } from '@/i18n/config';
 import { tourContentPath } from '@/lib/content/contentUrl';
-import { listingFromPrice } from '@/lib/pricing/effectivePrice';
+import { listingFromPrice, listingCompareAtPrice } from '@/lib/pricing/effectivePrice';
 import ListingPrice from '@/components/pricing/ListingPrice';
 
 const BookingSidebar = dynamic(() => import('@/components/BookingSidebar'), { ssr: false });
@@ -172,10 +172,10 @@ const TourCard = ({ tour, onAddToCartClick }: { tour: Tour; onAddToCartClick: (t
         {/* Price Badge */}
         <div className="absolute left-4 bottom-4 z-20">
           <div className="rounded-full border-2 border-white/20 bg-red-600 px-3 py-2 text-sm font-black text-white sm:text-base" style={{ boxShadow: 'none' }}>
-            <ListingPrice value={listingFromPrice(tour)} formatPrice={formatPrice} prefix={<span className="text-xs font-medium">From </span>} />
-            {tour.originalPrice && tour.discountPrice && tour.originalPrice > tour.discountPrice && (
+            <ListingPrice value={listingFromPrice(tour)} formatPrice={formatPrice} fromClassName="text-xs font-medium" />
+            {listingCompareAtPrice(tour) !== null && (
               <span className="ml-2 text-xs font-medium line-through text-red-100">
-                {formatPrice(tour.originalPrice)}
+                {formatPrice(listingCompareAtPrice(tour) ?? 0)}
               </span>
             )}
           </div>
@@ -227,11 +227,11 @@ const TourCard = ({ tour, onAddToCartClick }: { tour: Tour; onAddToCartClick: (t
             <div className="text-xs text-gray-500 mb-0.5">{t('startingFrom')}</div>
             <div className="flex items-baseline gap-2">
               <span className="text-lg sm:text-xl md:text-2xl font-black text-gray-900">
-                <ListingPrice value={listingFromPrice(tour)} formatPrice={formatPrice} prefix={<span className="text-xs font-medium">From </span>} />
+                <ListingPrice value={listingFromPrice(tour)} formatPrice={formatPrice} fromClassName="text-xs font-medium" />
               </span>
-              {tour.originalPrice && tour.discountPrice && tour.originalPrice > tour.discountPrice && (
+              {listingCompareAtPrice(tour) !== null && (
                 <span className="text-xs text-gray-400 line-through">
-                  {formatPrice(tour.originalPrice)}
+                  {formatPrice(listingCompareAtPrice(tour) ?? 0)}
                 </span>
               )}
             </div>

@@ -274,10 +274,30 @@ describe('assistant panels', () => {
 
 describe('autoOpenAllowedOnPath', () => {
   it.each([
-    ['/', true], ['/de', true], ['/tours', true], ['/destinations/luxor', true],
+    ['/', true], ['/de', true], ['/fr', true],
+    // Never over results: list, search, category and destination pages.
+    ['/tours', false], ['/destinations/luxor', false], ['/search', false], ['/ar/search', false], ['/categories/desert', false],
     ['/checkout', false], ['/fr/offer/abc', false], ['/tour/pyramids', false], ['/admin', false],
     ['/ai-voice', false], ['/ar/ai-voice', false], ['/assistants', false],
   ])('%s → %s', (path, allowed) => {
     expect(autoOpenAllowedOnPath(path)).toBe(allowed);
+  });
+});
+
+describe('the card never covers search results', () => {
+  it('does not open by itself on the search page at desktop', () => {
+    jest.useFakeTimers();
+    setDesktop(true);
+    mockPathname = '/search';
+    renderEntry();
+    act(() => { jest.advanceTimersByTime(APP_ENTRY_AUTO_OPEN_DELAY_MS * 2); });
+    expect(screen.queryByTestId('app-entry-card')).not.toBeInTheDocument();
+  });
+
+  it('still opens from its header button on the search page', () => {
+    mockPathname = '/search';
+    renderEntry();
+    fireEvent.click(screen.getByRole('button', { name: 'buttonLabel' }));
+    expect(screen.getByTestId('app-entry-card')).toBeInTheDocument();
   });
 });

@@ -18,6 +18,8 @@ import { normalizePageTemplate, type PageTemplate } from '@/lib/content/pageTemp
 import { useTranslations } from 'next-intl';
 import { useAttractionTemplateCopy } from '@/lib/content/attractionTemplateCopy';
 import { tourContentPath } from '@/lib/content/contentUrl';
+import ListingPrice from '@/components/pricing/ListingPrice';
+import { listingFromPrice, listingCompareAtPrice } from '@/lib/pricing/effectivePrice';
 import { imageMetadataFor } from '@/lib/content/imageMetadata';
 import LinkedPageCardsSection from '@/components/content/LinkedPageCardsSection';
 
@@ -73,11 +75,11 @@ const TourCard = ({ tour, index }: { tour: Tour; index: number }) => {
           {/* Price Badge */}
           <div className="absolute bottom-3 right-3 bg-white/95 backdrop-blur-sm px-3 py-2 rounded-xl shadow-lg">
             <div className="text-lg font-bold text-slate-900">
-              {formatPrice(tour.discountPrice || tour.price || 0)}
+              <ListingPrice value={listingFromPrice(tour)} formatPrice={formatPrice} />
             </div>
-            {tour.originalPrice && tour.originalPrice > (tour.discountPrice || tour.price || 0) && (
+            {listingCompareAtPrice(tour) !== null && (
               <div className="text-xs text-slate-500 line-through text-center">
-                {formatPrice(tour.originalPrice)}
+                {formatPrice(listingCompareAtPrice(tour) ?? 0)}
               </div>
             )}
           </div>
@@ -206,11 +208,11 @@ const TourListItem = ({ tour, index }: { tour: Tour; index: number }) => {
           
           <div className="text-end flex-shrink-0">
             <div className="text-2xl font-bold text-slate-900">
-              {formatPrice(tour.discountPrice || tour.price || 0)}
+              <ListingPrice value={listingFromPrice(tour)} formatPrice={formatPrice} />
             </div>
-            {tour.originalPrice && tour.originalPrice > (tour.discountPrice || tour.price || 0) && (
+            {listingCompareAtPrice(tour) !== null && (
               <div className="text-sm text-slate-500 line-through">
-                {formatPrice(tour.originalPrice)}
+                {formatPrice(listingCompareAtPrice(tour) ?? 0)}
               </div>
             )}
             <ArrowRight className="h-5 w-5 text-slate-400 group-hover:text-red-600 transition-colors mt-2 ms-auto rtl:rotate-180" />
@@ -474,10 +476,10 @@ export default function AttractionPageTemplate({ page, linkedPages = [] }: Attra
     // Sort tours
     switch (sortBy) {
       case 'price_low':
-        filtered.sort((a, b) => (a.discountPrice || a.price || 0) - (b.discountPrice || b.price || 0));
+        filtered.sort((a, b) => (listingFromPrice(a) ?? Number.POSITIVE_INFINITY) - (listingFromPrice(b) ?? Number.POSITIVE_INFINITY));
         break;
       case 'price_high':
-        filtered.sort((a, b) => (b.discountPrice || b.price || 0) - (a.discountPrice || a.price || 0));
+        filtered.sort((a, b) => (listingFromPrice(b) ?? -1) - (listingFromPrice(a) ?? -1));
         break;
       case 'rating':
         filtered.sort((a, b) => (b.rating || 0) - (a.rating || 0));

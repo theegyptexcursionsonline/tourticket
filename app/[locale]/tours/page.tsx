@@ -92,6 +92,12 @@ async function loadAllTours(locale: string): Promise<ITour[]> {
         'image',
         'pricingSummary',
         'discountPrice',
+        'discountPercent',
+        // Option prices: the card shows the trip page figure (customerFromPrice).
+        'bookingOptions.price',
+        'bookingOptions.type',
+        'bookingOptions.applyTourDiscount',
+        'bookingOptions.timeSlots.price',
         'originalPrice',
         'rating',
         'reviewCount',

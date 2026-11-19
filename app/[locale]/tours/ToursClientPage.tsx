@@ -10,7 +10,7 @@ import { useSettings } from '@/hooks/useSettings';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLocale } from 'next-intl';
 import { tourContentPath } from '@/lib/content/contentUrl';
-import { listingFromPrice } from '@/lib/pricing/effectivePrice';
+import { listingFromPrice, listingCompareAtPrice } from '@/lib/pricing/effectivePrice';
 import ListingPrice from '@/components/pricing/ListingPrice';
 
 type TourWithDetails = Omit<ITour, 'destination'> & {
@@ -132,8 +132,9 @@ const TOURS_PAGE_COPY: Record<'en' | 'ar' | 'de', ToursPageCopy> = {
 const TourCard = ({ tour, copy, rtl }: { tour: TourWithDetails; copy: ToursPageCopy; rtl: boolean }) => {
   const { formatPrice } = useSettings();
   const displayedPrice = listingFromPrice(tour);
-  const discountPercent = tour.originalPrice && tour.discountPrice
-    ? Math.round(((tour.originalPrice - tour.discountPrice) / tour.originalPrice) * 100)
+  const compareAt = listingCompareAtPrice(tour);
+  const discountPercent = compareAt !== null && displayedPrice !== null
+    ? Math.round(((compareAt - displayedPrice) / compareAt) * 100)
     : 0;
 
   return (
@@ -216,14 +217,14 @@ const TourCard = ({ tour, copy, rtl }: { tour: TourWithDetails; copy: ToursPageC
           {/* Price Section */}
           <div className="pt-4 border-t border-slate-100 flex justify-between items-end">
             <div>
-              {tour.originalPrice && displayedPrice !== null && displayedPrice < tour.originalPrice && (
+              {listingCompareAtPrice(tour) !== null && (
                 <div className="text-sm text-slate-400 line-through">
-                  {formatPrice(tour.originalPrice)}
+                  {formatPrice(listingCompareAtPrice(tour) ?? 0)}
                 </div>
               )}
               <div className="flex items-baseline gap-1">
                 <span className="text-2xl font-bold text-red-600">
-                  <ListingPrice value={displayedPrice} formatPrice={formatPrice} prefix={<span className="text-xs font-medium text-slate-500">From </span>} />
+                  <ListingPrice value={displayedPrice} formatPrice={formatPrice} fromClassName="text-xs font-medium text-slate-500" />
                 </span>
                 <span className="text-xs text-slate-500">{copy.perPerson}</span>
               </div>

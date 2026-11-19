@@ -210,7 +210,11 @@
     "maxGuests": "Max {count}",
     "departureSelected": "{time} selected",
     "optionPriceUnavailable": "This option can't be booked online yet. Contact us for a price.",
-    "chooseOptionForTotal": "Choose an option to see the total"
+    "chooseOptionForTotal": "Choose an option to see the total",
+    "noDeparturesToday": "No departures are available today. Please choose another available date.",
+    "unavailableDatesNote": "Unavailable dates cannot be selected. Choose a date with an available departure.",
+    "noDeparturesThisMonth": "No departures are available this month. Please try another month.",
+    "noDeparturesThisDate": "No departures are available for this date. Please choose another date."
   },
   "offers": {
     "save": "Save up to 20% on combi deals and city passes!"

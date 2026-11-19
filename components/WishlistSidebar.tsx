@@ -9,6 +9,8 @@ import { Link } from '@/i18n/routing';
 import { useSettings } from '@/hooks/useSettings';
 import { useModalBehavior } from '@/hooks/useModalBehavior';
 import { tourContentPath } from '@/lib/content/contentUrl';
+import ListingPrice from '@/components/pricing/ListingPrice';
+import { listingFromPrice } from '@/lib/pricing/effectivePrice';
 
 export default function WishlistSidebar() {
   const { isWishlistSidebarOpen, closeWishlistSidebar, wishlist, removeFromWishlist } = useWishlist();
@@ -87,7 +89,7 @@ export default function WishlistSidebar() {
                         </h4>
                       </Link>
                       <p className="text-sm text-slate-600 mt-1 font-semibold">
-                        {formatPrice(tour.discountPrice)}
+                        <ListingPrice value={listingFromPrice(tour)} formatPrice={formatPrice} />
                       </p>
                     </div>
                     <button

@@ -19,6 +19,7 @@ import { futureDepartureSlots, isFutureDeparture } from '@/lib/revenue/departure
 import { toDateOnlyString } from '@/utils/date';
 import { useLocale } from 'next-intl';
 import { formatDuration, formatLanguageList, formatLanguageName } from '@/lib/i18n/displayValues';
+import { calendarMonthTitle, calendarWeekdayNames } from '@/lib/i18n/bookingDates';
 import { isRTL } from '@/i18n/config';
 import type { CartItem } from '@/types';
 import { getErrorMessage } from './componentTypes';
@@ -406,12 +407,8 @@ export const CalendarWidget: React.FC<{
   const firstDayOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1).getDay();
   const today = egyptCalendarDate();
 
-  const monthNames = [
-    'January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December'
-  ];
-
-  const dayNames = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
+  // Month and weekday names follow the page language (calendarMonthTitle).
+  const dayNames = calendarWeekdayNames(locale);
   const nextAvailableKey = Object.keys(availabilityData).sort().find(key =>
     key >= toDateOnlyString(today) && availabilityData[key] !== 'full'
     && (!availableDays?.length || availableDays.includes(new Date(`${key}T12:00:00`).getDay()))
@@ -520,7 +517,7 @@ export const CalendarWidget: React.FC<{
       <div className="flex items-center justify-between mb-4 sm:mb-6">
         <div>
           <h3 className="text-lg sm:text-xl font-bold text-gray-800">
-            {monthNames[currentMonth.getMonth()]} {currentMonth.getFullYear()}
+            {calendarMonthTitle(currentMonth, locale)}
           </h3>
           <p className="text-xs sm:text-sm text-gray-500 mt-1">{t('booking.selectAdventureDate')}</p>
         </div>
@@ -576,14 +573,14 @@ export const CalendarWidget: React.FC<{
             </div>
           </div>
 
-          <p role="status" className="mb-3 rounded-lg bg-slate-50 p-3 text-xs text-slate-600">{availabilityData[toDateOnlyString(today)] === 'full' ? 'No departures are available today. Please choose another available date.' : 'Unavailable dates cannot be selected. Choose a date with an available departure.'}</p>
+          <p role="status" className="mb-3 rounded-lg bg-slate-50 p-3 text-xs text-slate-600">{availabilityData[toDateOnlyString(today)] === 'full' ? t('booking.noDeparturesToday') : t('booking.unavailableDatesNote')}</p>
           {nextAvailableKey && (
             <button type="button" className="mb-3 w-full rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-semibold text-red-700" onClick={() => {
               const [year, month, day] = nextAvailableKey.split('-').map(Number);
               onDateSelect(new Date(year, month - 1, day));
             }}>{t('booking.nextAvailableDate', { date: new Date(`${nextAvailableKey}T12:00:00`).toLocaleDateString(`${locale}-u-nu-latn`, { day: 'numeric', month: 'short' }) })}</button>
           )}
-          {!nextAvailableKey && <p className="mb-3 text-xs text-slate-600">No departures are available this month. Please try another month.</p>}
+          {!nextAvailableKey && <p className="mb-3 text-xs text-slate-600">{t('booking.noDeparturesThisMonth')}</p>}
           {/* Day names */}
           <div className="grid grid-cols-7 gap-1 mb-3">
             {dayNames.map(day => (
@@ -1097,7 +1094,7 @@ export const TourOptionCard: React.FC<{
 
         {!hasAvailableSlots && !option.isStopSaleBlocked && (
           <div role="status" className="mb-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-            No departures are available for this date. Please choose another date.
+            {t('booking.noDeparturesThisDate')}
           </div>
         )}
 

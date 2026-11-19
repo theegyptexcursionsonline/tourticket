@@ -22,7 +22,7 @@ import type { LinkedPageCard } from '@/lib/attractionPages/pageContent';
 import { contentPath, tourContentPath } from '@/lib/content/contentUrl';
 import ContextualDiscoveryLinks from '@/components/seo/ContextualDiscoveryLinks';
 import type { ContextualDiscoveryLink } from '@/lib/seo/contextualDiscovery';
-import { listingFromPrice } from '@/lib/pricing/effectivePrice';
+import { listingFromPrice, listingCompareAtPrice } from '@/lib/pricing/effectivePrice';
 import ListingPrice from '@/components/pricing/ListingPrice';
 
 type CategoryPageCopy = {
@@ -831,8 +831,8 @@ const TourCard = ({
         </div>
         <div className="flex items-center justify-between mt-auto">
           <div>
-            {tour.originalPrice && displayedPrice !== null && tour.originalPrice > displayedPrice && (
-              <span className="text-slate-500 line-through text-sm mr-2">{formatPrice(tour.originalPrice)}</span>
+            {listingCompareAtPrice(tour) !== null && (
+              <span className="text-slate-500 line-through text-sm mr-2">{formatPrice(listingCompareAtPrice(tour) ?? 0)}</span>
             )}
             <span className="text-xl font-bold text-red-600"><ListingPrice value={displayedPrice} formatPrice={formatPrice} /></span>
           </div>

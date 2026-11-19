@@ -17,6 +17,8 @@ import PopularInterestsGrid from './PopularInterestsGrid';
 import { useLocale } from 'next-intl';
 import { isRTL } from '@/i18n/config';
 import { tourContentPath } from '@/lib/content/contentUrl';
+import ListingPrice from '@/components/pricing/ListingPrice';
+import { listingFromPrice, listingCompareAtPrice } from '@/lib/pricing/effectivePrice';
 
 interface InterestData {
   name: string;
@@ -74,7 +76,7 @@ const TourCard = ({ tour, index }: { tour: Tour; index: number }) => {
 
           <div className="absolute bottom-3 right-3 bg-white px-2 py-1 rounded shadow-lg">
             <div className="text-sm font-bold text-gray-900">
-              {formatPrice(tour.discountPrice || tour.price || 0)}
+              <ListingPrice value={listingFromPrice(tour)} formatPrice={formatPrice} />
             </div>
           </div>
 
@@ -123,13 +125,13 @@ const TourCard = ({ tour, index }: { tour: Tour; index: number }) => {
 
           <div className="flex items-center justify-between">
             <div>
-              {tour.originalPrice && tour.originalPrice > (tour.discountPrice || tour.price || 0) && (
+              {listingCompareAtPrice(tour) !== null && (
                 <span className="text-sm text-gray-500 line-through">
-                  {formatPrice(tour.originalPrice)}
+                  {formatPrice(listingCompareAtPrice(tour) ?? 0)}
                 </span>
               )}
               <div className="text-lg font-bold text-gray-900">
-                {formatPrice(tour.discountPrice || tour.price || 0)}
+                <ListingPrice value={listingFromPrice(tour)} formatPrice={formatPrice} />
               </div>
             </div>
             <div className="text-xs text-gray-500">per person</div>
@@ -484,7 +486,7 @@ export default function InterestLandingPage({ interest }: InterestLandingPagePro
 
       // Price filter
       if (priceRange) {
-        const price = tour.discountPrice || tour.price || 0;
+        const price = listingFromPrice(tour) ?? 0;
         if (priceRange === '0-100' && price > 100) return false;
         if (priceRange === '100-300' && (price < 100 || price > 300)) return false;
         if (priceRange === '300+' && price < 300) return false;
@@ -496,10 +498,10 @@ export default function InterestLandingPage({ interest }: InterestLandingPagePro
     // Sort tours
     switch (sortBy) {
       case 'price_low':
-        filtered.sort((a, b) => (a.discountPrice || a.price || 0) - (b.discountPrice || b.price || 0));
+        filtered.sort((a, b) => (listingFromPrice(a) ?? Number.POSITIVE_INFINITY) - (listingFromPrice(b) ?? Number.POSITIVE_INFINITY));
         break;
       case 'price_high':
-        filtered.sort((a, b) => (b.discountPrice || b.price || 0) - (a.discountPrice || a.price || 0));
+        filtered.sort((a, b) => (listingFromPrice(b) ?? -1) - (listingFromPrice(a) ?? -1));
         break;
       case 'duration':
         filtered.sort((a, b) => a.duration.localeCompare(b.duration));

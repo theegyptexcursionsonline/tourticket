@@ -9,7 +9,7 @@ import BookingSidebar from '@/components/BookingSidebar';
 import { Tour } from '@/types';
 import { useSettings } from '@/hooks/useSettings';
 import { contentPath } from '@/lib/content/contentUrl';
-import { listingFromPrice } from '@/lib/pricing/effectivePrice';
+import { listingFromPrice, listingCompareAtPrice } from '@/lib/pricing/effectivePrice';
 import ListingPrice from '@/components/pricing/ListingPrice';
 
 interface EgyptToursClientProps {
@@ -140,9 +140,9 @@ const SimpleTourCard = ({ tour, onAddToCartClick }: { tour: Tour; onAddToCartCli
         <div className="absolute left-4 bottom-4 z-20">
           <div className="bg-gradient-to-r from-amber-500 to-amber-400 text-black px-3 py-2 rounded-full font-black text-sm sm:text-base border-2 border-white/20">
             <ListingPrice value={displayedPrice} formatPrice={formatPrice} />
-            {displayedPrice !== null && tour.originalPrice && tour.discountPrice && tour.originalPrice > tour.discountPrice && (
+            {listingCompareAtPrice(tour) !== null && (
               <span className="ml-2 text-xs font-medium line-through opacity-70">
-                {formatPrice(tour.originalPrice)}
+                {formatPrice(listingCompareAtPrice(tour) ?? 0)}
               </span>
             )}
           </div>
@@ -195,9 +195,9 @@ const SimpleTourCard = ({ tour, onAddToCartClick }: { tour: Tour; onAddToCartCli
               <span className="text-xl font-black text-gray-900">
                 <ListingPrice value={displayedPrice} formatPrice={formatPrice} />
               </span>
-              {displayedPrice !== null && tour.originalPrice && tour.discountPrice && tour.originalPrice > tour.discountPrice && (
+              {listingCompareAtPrice(tour) !== null && (
                 <span className="text-xs text-gray-400 line-through">
-                  {formatPrice(tour.originalPrice)}
+                  {formatPrice(listingCompareAtPrice(tour) ?? 0)}
                 </span>
               )}
             </div>

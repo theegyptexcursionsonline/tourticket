@@ -122,10 +122,23 @@ describe('category trip cards render from the lean payload (#2591)', () => {
       expect(card).toBeTruthy();
       expect(within(card).getByText(`${n + 4} hours`)).toBeInTheDocument();
       expect(within(card).getByText(String(4 + n / 10))).toBeInTheDocument();
-      expect(within(card).getByText(`$${75 + n}.00`)).toBeInTheDocument();
+      // 19 Nov 2026: the card lists what the trip page heading shows, the
+      // cheapest option ($81), not a summary that disagrees with the options.
+      expect(within(card).getByText(`$${80 + n}.00`)).toBeInTheDocument();
+      expect(within(card).queryByText(`$${75 + n}.00`)).not.toBeInTheDocument();
       expect(within(card).getByText(`$${120 + n}.00`)).toBeInTheDocument();
       expect(within(card).getByRole('img', { name: `Aswan trip ${n}` })).toHaveAttribute('src', `/trip-${n}.jpg`);
     }
+  });
+
+  it('no struck-through price when the listed price is not the stored pair', () => {
+    const cheaperOption = tours.map((tour) => ({ ...tour, bookingOptions: [{ price: 70 }] }));
+    render(<CategoryPageClient category={pageCategory} categoryTours={cheaperOption as never} />);
+    const card = screen.getAllByRole('link', { name: 'Aswan trip 1' })
+      .map((link) => link.closest('div.bg-white'))
+      .find(Boolean) as HTMLElement;
+    expect(within(card).getByText('$70.00')).toBeInTheDocument();
+    expect(within(card).queryByText('$121.00')).not.toBeInTheDocument();
   });
 
   it('quick book opens the sidebar with the booking fields of that trip', () => {

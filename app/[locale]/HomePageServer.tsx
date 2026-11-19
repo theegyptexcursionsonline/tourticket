@@ -86,7 +86,7 @@ async function getHomePageData(locale: string) {
       // Featured tours (exclude German tenant tours)
       Tour.find({ isPublished: true, isFeatured: true, archivedAt: null, ...DEFAULT_TENANT_FILTER })
         .populate('destination', 'name slug')
-        .select('title slug urlType parentPage image discountPrice originalPrice pricingSummary duration rating reviewCount bookings translations')
+        .select('title slug urlType parentPage image discountPrice originalPrice discountPercent pricingSummary bookingOptions.price bookingOptions.type bookingOptions.applyTourDiscount bookingOptions.timeSlots.price duration rating reviewCount bookings translations')
         .sort({ updatedAt: -1, createdAt: -1 })
         .limit(8)
         .lean(),
@@ -132,7 +132,7 @@ async function getHomePageData(locale: string) {
       // Day trips (all published tours, limited to 12, exclude German tenant tours)
       Tour.find({ isPublished: true, archivedAt: null, ...DEFAULT_TENANT_FILTER })
         .populate('destination', 'name slug')
-        .select('title slug urlType parentPage destination image discountPrice originalPrice pricingSummary duration rating reviewCount bookings tags translations')
+        .select('title slug urlType parentPage destination image discountPrice originalPrice discountPercent pricingSummary bookingOptions.price bookingOptions.type bookingOptions.applyTourDiscount bookingOptions.timeSlots.price duration rating reviewCount bookings tags translations')
         .sort({ updatedAt: -1, createdAt: -1 })
         .limit(12)
         .lean(),

@@ -1,3 +1,4 @@
+import { compactPriceOptions } from '@/lib/pricing/effectivePrice';
 type UnknownRecord = Record<string, unknown>;
 
 const asRecord = (value: unknown): UnknownRecord | null =>
@@ -150,6 +151,9 @@ export function toToursIndexPayload(tour: UnknownRecord): UnknownRecord {
     pricingSummary: tour.pricingSummary,
     discountPrice: tour.discountPrice,
     originalPrice: tour.originalPrice,
+    discountPercent: tour.discountPercent,
+    // The option prices the card needs to show the trip page figure.
+    bookingOptions: compactPriceOptions(tour.bookingOptions),
     rating: tour.rating,
     reviewCount: tour.reviewCount,
     duration: tour.duration,

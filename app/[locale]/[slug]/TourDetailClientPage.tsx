@@ -48,7 +48,8 @@ import {
   itineraryStoredDirectionsUrl,
 } from '@/lib/tours/itineraryMap';
 import { meetingPointEmbedUrl, meetingPointMapUrl } from '@/lib/tours/meetingPointMap';
-import { bookableTripPrice, effectiveTourPrice, isRealPrice } from '@/lib/pricing/effectivePrice';
+import { bookableTripPrice, effectiveTourPrice, isRealPrice, listingFromPrice } from '@/lib/pricing/effectivePrice';
+import ListingPrice from '@/components/pricing/ListingPrice';
 import { provableRating, ratingLabel, reviewCountLabel } from '@/lib/tours/ratingDisplay';
 import { askHostedAISearch } from '@/lib/hostedAISearch';
 import { useLocale, useTranslations } from 'next-intl';
@@ -1606,7 +1607,7 @@ export default function TourPageClient({ tour, relatedTours, initialReviews = []
                                 <Star size={12} className="text-yellow-500 fill-current" />
                                 <span className="text-xs font-bold">{relatedTour.rating}</span>
                               </div>
-                              <span className="font-bold text-red-600">{formatPrice(relatedTour.discountPrice)}</span>
+                              <span className="font-bold text-red-600"><ListingPrice value={listingFromPrice(relatedTour as Parameters<typeof listingFromPrice>[0])} formatPrice={formatPrice} /></span>
                             </div>
                           </div>
                         </div>

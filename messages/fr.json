@@ -210,7 +210,11 @@
     "maxGuests": "Max. {count}",
     "departureSelected": "{time} sélectionné",
     "optionPriceUnavailable": "Cette option n'est pas encore réservable en ligne. Contactez-nous pour connaître le prix.",
-    "chooseOptionForTotal": "Choisissez une option pour voir le total"
+    "chooseOptionForTotal": "Choisissez une option pour voir le total",
+    "noDeparturesToday": "Aucun départ n’est disponible aujourd’hui. Veuillez choisir une autre date disponible.",
+    "unavailableDatesNote": "Les dates indisponibles ne peuvent pas être choisies. Choisissez une date avec un départ disponible.",
+    "noDeparturesThisMonth": "Aucun départ n’est disponible ce mois-ci. Veuillez essayer un autre mois.",
+    "noDeparturesThisDate": "Aucun départ n’est disponible à cette date. Veuillez choisir une autre date."
   },
   "offers": {
     "save": "Economisez jusqu'a 20% sur les offres combinees et les pass ville!"

@@ -10,7 +10,7 @@ import BookingSidebar from '@/components/BookingSidebar';
 import { Link } from '@/i18n/routing';
 import { getErrorMessage } from './componentTypes';
 import { tourContentPath } from '@/lib/content/contentUrl';
-import { listingFromPrice } from '@/lib/pricing/effectivePrice';
+import { listingFromPrice, listingCompareAtPrice } from '@/lib/pricing/effectivePrice';
 import ListingPrice from '@/components/pricing/ListingPrice';
 
 /**
@@ -154,10 +154,10 @@ const TourCard = ({ tour, onAddToCartClick }: { tour: Tour; onAddToCartClick: (t
         {/* Price pill (overlay bottom-left) */}
         <div className="absolute left-4 bottom-4 z-20">
           <div className="bg-gradient-to-r from-red-600 to-red-500 text-white px-4 py-3 rounded-full font-black shadow-xl text-lg border-2 border-white/20">
-            <ListingPrice value={listingFromPrice(tour)} formatPrice={formatPrice} prefix={<span className="text-xs font-medium">From </span>} />
-            {tour.originalPrice && tour.discountPrice && tour.originalPrice > tour.discountPrice && (
+            <ListingPrice value={listingFromPrice(tour)} formatPrice={formatPrice} fromClassName="text-xs font-medium" />
+            {listingCompareAtPrice(tour) !== null && (
               <span className="ml-3 text-sm font-medium line-through text-red-100">
-                {formatPrice(tour.originalPrice)}
+                {formatPrice(listingCompareAtPrice(tour) ?? 0)}
               </span>
             )}
           </div>
@@ -212,11 +212,11 @@ const TourCard = ({ tour, onAddToCartClick }: { tour: Tour; onAddToCartClick: (t
             <div className="text-sm text-gray-500 mb-1">Starting from</div>
             <div className="flex items-baseline gap-2">
               <span className="text-2xl md:text-3xl font-black text-gray-900">
-                <ListingPrice value={listingFromPrice(tour)} formatPrice={formatPrice} prefix={<span className="text-xs font-medium">From </span>} />
+                <ListingPrice value={listingFromPrice(tour)} formatPrice={formatPrice} fromClassName="text-xs font-medium" />
               </span>
-              {tour.originalPrice && tour.discountPrice && tour.originalPrice > tour.discountPrice && (
+              {listingCompareAtPrice(tour) !== null && (
                 <span className="text-sm text-gray-400 line-through">
-                  {formatPrice(tour.originalPrice)}
+                  {formatPrice(listingCompareAtPrice(tour) ?? 0)}
                 </span>
               )}
             </div>

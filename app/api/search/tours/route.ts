@@ -6,6 +6,7 @@ import Fuse from 'fuse.js';
 import { durationValuesMatchingBuckets, parseDurationBuckets } from '@/lib/tours/durationFilter';
 import { DEFAULT_TENANT_FILTER } from '@/lib/tenant/defaultTenantFilter';
 import { PUBLIC_CONTENT_FILTER } from '@/lib/content/publicContentFilter';
+import { listingFromPrice } from '@/lib/pricing/effectivePrice';
 
 // Fuse.js configuration for fuzzy search fallback
 const fuseOptions = {
@@ -139,10 +140,12 @@ export async function GET(request: Request) {
             if (minPrice) priceQuery.$gte = Number(minPrice);
             if (maxPrice) priceQuery.$lte = Number(maxPrice);
             if (!additionalFilters.$and) additionalFilters.$and = [];
+            // Filter on the price the card shows (the server summary,
+            // customerFromPrice); the stored base only for a tour without one.
             additionalFilters.$and.push({
                 $or: [
-                    { discountPrice: priceQuery },
-                    { price: priceQuery }
+                    { 'pricingSummary.fromPrice': priceQuery },
+                    { 'pricingSummary.fromPrice': { $exists: false }, discountPrice: priceQuery },
                 ]
             });
         }
@@ -192,9 +195,9 @@ export async function GET(request: Request) {
             const sortBy = searchParams.get('sortBy');
             
             if (sortBy === 'price-asc') {
-                sortOption = { discountPrice: 1, price: 1 };
+                sortOption = { 'pricingSummary.fromPrice': 1, discountPrice: 1 };
             } else if (sortBy === 'price-desc') {
-                sortOption = { discountPrice: -1, price: -1 };
+                sortOption = { 'pricingSummary.fromPrice': -1, discountPrice: -1 };
             } else if (sortBy === 'rating') {
                 sortOption = { rating: -1, bookings: -1 };
             }
@@ -211,9 +214,9 @@ export async function GET(request: Request) {
         const sortBy = searchParams.get('sortBy');
         if (tours.length > 0 && sortBy && searchQuery) {
             if (sortBy === 'price-asc') {
-                tours.sort((a, b) => (a.discountPrice || a.price || 0) - (b.discountPrice || b.price || 0));
+                tours.sort((a, b) => (listingFromPrice(a) ?? Number.POSITIVE_INFINITY) - (listingFromPrice(b) ?? Number.POSITIVE_INFINITY));
             } else if (sortBy === 'price-desc') {
-                tours.sort((a, b) => (b.discountPrice || b.price || 0) - (a.discountPrice || a.price || 0));
+                tours.sort((a, b) => (listingFromPrice(b) ?? -1) - (listingFromPrice(a) ?? -1));
             } else if (sortBy === 'rating') {
                 tours.sort((a, b) => (b.rating || 0) - (a.rating || 0));
             }

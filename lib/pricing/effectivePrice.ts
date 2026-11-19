@@ -179,33 +179,115 @@ export function lowestPerPersonPrice(
   return best;
 }
 
+export interface PricingSummaryLike {
+  /** Server projection: lowest catalogue price, or a lower price set for upcoming dates. */
+  fromPrice?: number | null;
+  /** Above 0 when date-specific prices fed the summary. */
+  version?: number | null;
+  /** Last date a date-specific price applies to. */
+  validThrough?: Date | string | null;
+}
+
+export type CustomerPricedTour = PricedTour & {
+  bookingOptions?: PricedBookingOption[] | null;
+  pricingSummary?: PricingSummaryLike | null;
+};
+
 /**
- * The per-person price the trip page, the booking panel and the phone bar
- * show: the bookable minimum, else the tour's own base price — or null when
- * neither is a real price, so the page shows "price on request" instead of
- * advertising $0.00.
+ * A date-specific price below the catalogue that a customer can still book:
+ * the server summary includes only active prices for upcoming dates that are
+ * not stopped or sold out (refreshTourPricingSummary). Ignored once its last
+ * date has passed, or when the summary was not built from such prices.
  */
-export function bookableTripPrice(
-  tour: (PricedTour & { bookingOptions?: PricedBookingOption[] | null }) | null | undefined,
-): { price: number; originalPrice: number; discountApplied: boolean } | null {
-  const lowest = lowestPerPersonPrice(tour);
-  if (lowest) return lowest;
-  const base = effectiveTourPrice(tour);
-  return isRealPrice(base.price) ? base : null;
+function upcomingDatePrice(summary: PricingSummaryLike | null | undefined, now: Date): number | null {
+  if (!summary || !(Number(summary.version) > 0) || !isRealPrice(summary.fromPrice)) return null;
+  if (summary.validThrough) {
+    const last = new Date(summary.validThrough);
+    const today = new Date(`${now.toISOString().slice(0, 10)}T00:00:00.000Z`);
+    if (Number.isFinite(last.getTime()) && last.getTime() < today.getTime()) return null;
+  }
+  return summary.fromPrice;
 }
 
 /**
- * A tour card's "from" price: the stored listing summary, else the tour's own
- * prices, skipping any that are 0 or blank. A summary built before 0 quotes
- * were excluded still holds 0 for a tour whose options price only some start
- * times; that is never the price to advertise. Null means no real price.
+ * THE price a customer sees before choosing a date, everywhere: listing and
+ * search cards, the trip page heading, the phone bar and the first step of the
+ * booking panel. "From" the lowest per-person price that can actually be
+ * booked: the cheapest bookable option or start time, or a lower price set for
+ * an upcoming bookable date. Display only; checkout prices every booking on
+ * the server. Null when nothing on the trip is priced ("price on request").
+ *
+ * Payloads without the booking options (most listing queries) use the server
+ * summary, which is built from the same options; the stored base price is used
+ * only when neither is available, because on 70 of 217 live tours it was a
+ * figure no option sells at (19 Nov 2026: a $16.00 card for a $21.66 trip).
  */
-export function listingFromPrice(tour: {
-  pricingSummary?: { fromPrice?: number | null } | null;
-  discountPrice?: number | null;
-  originalPrice?: number | null;
-} | null | undefined): number | null {
-  return firstRealPrice(tour?.pricingSummary?.fromPrice, tour?.discountPrice, tour?.originalPrice);
+export function customerFromPrice(
+  tour: CustomerPricedTour | null | undefined,
+  now: Date = new Date(),
+): { price: number; originalPrice: number; discountApplied: boolean } | null {
+  if (!tour) return null;
+  const hasOptions = Array.isArray(tour.bookingOptions) && tour.bookingOptions.length > 0;
+  let catalogue: { price: number; originalPrice: number; discountApplied: boolean } | null;
+  if (hasOptions) {
+    catalogue = lowestPerPersonPrice(tour);
+    if (!catalogue && isRealPrice(tour.pricingSummary?.fromPrice)) {
+      // Only whole-group options are priced: the summary holds their lowest.
+      const summary = tour.pricingSummary!.fromPrice as number;
+      catalogue = { price: summary, originalPrice: summary, discountApplied: false };
+    }
+    if (!catalogue) {
+      const base = effectiveTourPrice(tour);
+      catalogue = isRealPrice(base.price) ? base : null;
+    }
+  } else if (isRealPrice(tour.pricingSummary?.fromPrice)) {
+    const summary = tour.pricingSummary!.fromPrice as number;
+    catalogue = { price: summary, originalPrice: summary, discountApplied: false };
+  } else {
+    const base = effectiveTourPrice(tour);
+    catalogue = isRealPrice(base.price) ? base : null;
+  }
+  const dated = upcomingDatePrice(tour.pricingSummary, now);
+  if (dated !== null && (!catalogue || dated < catalogue.price)) {
+    return { price: dated, originalPrice: dated, discountApplied: false };
+  }
+  return catalogue;
+}
+
+/**
+ * The per-person price the trip page, the booking panel and the phone bar
+ * show: the customer "from" price (customerFromPrice), or null when nothing is
+ * a real price, so the page shows "price on request" instead of $0.00.
+ */
+export function bookableTripPrice(
+  tour: CustomerPricedTour | null | undefined,
+): { price: number; originalPrice: number; discountApplied: boolean } | null {
+  return customerFromPrice(tour);
+}
+
+/**
+ * A tour card's "from" price: the same rule as the trip page heading
+ * (customerFromPrice). Null means no real price ("price on request").
+ */
+export function listingFromPrice(tour: CustomerPricedTour | null | undefined): number | null {
+  return customerFromPrice(tour)?.price ?? null;
+}
+
+/**
+ * The struck-through "was" price a listing card may show beside the customer
+ * price: only a real reduction of the price actually shown (a discounted
+ * option, or the stored base pair when the base is what is shown). A stored
+ * original price beside a different, option-derived price is not a discount.
+ */
+export function listingCompareAtPrice(tour: CustomerPricedTour | null | undefined): number | null {
+  const shown = customerFromPrice(tour);
+  if (!shown) return null;
+  if (shown.discountApplied && shown.originalPrice > shown.price) return shown.originalPrice;
+  const base = effectiveTourPrice(tour);
+  if (Math.abs(base.price - shown.price) < 0.005 && base.discountApplied && base.originalPrice > shown.price) {
+    return base.originalPrice;
+  }
+  return null;
 }
 
 /** What the trip page shows as its per-person price: the bookable minimum, else the base price. */
@@ -213,4 +295,27 @@ export function displayedTripPrice(
   tour: (PricedTour & { bookingOptions?: PricedBookingOption[] | null }) | null | undefined,
 ): { price: number; originalPrice: number; discountApplied: boolean } {
   return lowestPerPersonPrice(tour) ?? effectiveTourPrice(tour);
+}
+
+/**
+ * The few option fields customerFromPrice reads (price, type, discount opt-in
+ * and start-time prices), for listing payloads that do not carry full options.
+ * With them a card computes exactly the figure the trip page heading shows.
+ */
+export const OPTION_PRICE_FIELDS = [
+  'bookingOptions.price', 'bookingOptions.type', 'bookingOptions.applyTourDiscount', 'bookingOptions.timeSlots.price',
+] as const;
+
+export function compactPriceOptions(options: unknown): PricedBookingOption[] | undefined {
+  if (!Array.isArray(options)) return undefined;
+  return options.map((option) => {
+    const record = (option ?? {}) as Record<string, unknown>;
+    const slots = Array.isArray(record.timeSlots) ? record.timeSlots : [];
+    return {
+      price: typeof record.price === 'number' ? record.price : null,
+      type: typeof record.type === 'string' ? record.type : null,
+      applyTourDiscount: record.applyTourDiscount === true,
+      timeSlots: slots.map((slot) => ({ price: typeof (slot as Record<string, unknown>)?.price === 'number' ? (slot as Record<string, number>).price : null })),
+    };
+  });
 }

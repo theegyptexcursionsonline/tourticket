@@ -36,7 +36,7 @@ import HostedAISearchEntry from '@/components/HostedAISearchEntry';
 import { contentPath, tourContentPath } from '@/lib/content/contentUrl';
 import ContextualDiscoveryLinks from '@/components/seo/ContextualDiscoveryLinks';
 import type { ContextualDiscoveryLink } from '@/lib/seo/contextualDiscovery';
-import { listingFromPrice } from '@/lib/pricing/effectivePrice';
+import { listingFromPrice, listingCompareAtPrice } from '@/lib/pricing/effectivePrice';
 import ListingPrice from '@/components/pricing/ListingPrice';
 
 interface DestinationPageClientProps {
@@ -2022,7 +2022,7 @@ const Top10Card = ({ tour, index, onAddToCartClick }: { tour: Tour, index: numbe
           )}
         </div>
         <div className="mt-2 text-sm flex items-center gap-2">
-          {tour.originalPrice && displayedPrice !== null && tour.originalPrice > displayedPrice && <span className="text-slate-500 line-through text-xs sm:text-sm">{formatPrice(tour.originalPrice)}</span>}
+          {listingCompareAtPrice(tour) !== null && <span className="text-slate-500 line-through text-xs sm:text-sm">{formatPrice(listingCompareAtPrice(tour) ?? 0)}</span>}
           <span className="text-red-600 font-bold text-lg sm:text-xl"><ListingPrice value={displayedPrice} formatPrice={formatPrice} /></span>
         </div>
       </div>
@@ -2088,7 +2088,7 @@ const CombiDealCard = ({ tour, onAddToCartClick }: { tour: Tour, onAddToCartClic
           {(tour.bookings || 0) > 0 && <span>{tour.bookings} {copy.bookings}</span>}
         </div>
         <div className="flex items-end justify-end mt-3 sm:mt-4">
-          {tour.originalPrice && displayedPrice !== null && tour.originalPrice > displayedPrice && <span className="text-slate-500 line-through mr-2 text-sm">{formatPrice(tour.originalPrice)}</span>}
+          {listingCompareAtPrice(tour) !== null && <span className="text-slate-500 line-through mr-2 text-sm">{formatPrice(listingCompareAtPrice(tour) ?? 0)}</span>}
           <span className="text-lg sm:text-xl font-extrabold text-red-600"><ListingPrice value={displayedPrice} formatPrice={formatPrice} /></span>
         </div>
       </div>

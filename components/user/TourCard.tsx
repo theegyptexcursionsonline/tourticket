@@ -9,6 +9,8 @@ import { useWishlist } from '@/contexts/WishlistContext';
 import { Star, Clock, Trash2, Heart } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { tourContentPath } from '@/lib/content/contentUrl';
+import ListingPrice from '@/components/pricing/ListingPrice';
+import { listingFromPrice } from '@/lib/pricing/effectivePrice';
 
 interface TourCardProps {
   tour: Tour;
@@ -55,9 +57,11 @@ const TourCard: React.FC<{ tour: Tour }> = ({ tour }) => {
             <div className="flex items-center gap-1.5"><Clock size={14} /><span>{tour.duration}</span></div>
             <div className="flex items-center gap-1.5"><Star size={14} className="text-yellow-400 fill-current" /><span>{tour.rating?.toFixed(1) || 'N/A'}</span></div>
           </div>
-          <div className="mt-auto flex items-center justify-between">
-            <p className="text-sm text-slate-500">From</p>
-            <span className="text-xl font-bold text-red-600">{formatPrice(tour.discountPrice)}</span>
+          {/* The same "from" price as the trip page heading (customerFromPrice). */}
+          <div className="mt-auto flex items-baseline justify-end">
+            <span className="text-xl font-bold text-red-600" data-testid="search-card-price">
+              <ListingPrice value={listingFromPrice(tour)} formatPrice={formatPrice} fromClassName="text-sm font-normal text-slate-500" />
+            </span>
           </div>
         </div>
       </Link>
@@ -110,7 +114,7 @@ export const UserTourCard: React.FC<TourCardProps> = ({ tour, onRemove }) => {
           </div>
           <div className="mt-auto flex items-end justify-between">
             <div className="text-right">
-                <span className="text-xl font-bold text-red-600">{formatPrice(tour.discountPrice)}</span>
+                <span className="text-xl font-bold text-red-600"><ListingPrice value={listingFromPrice(tour)} formatPrice={formatPrice} /></span>
             </div>
             <button
               onClick={handleRemove}

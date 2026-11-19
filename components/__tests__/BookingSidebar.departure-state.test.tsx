@@ -19,7 +19,15 @@ jest.mock('framer-motion', () => {
 const option = { id: 'option-owned', title: 'Shared tour', price: 10, duration: '5 hours', languages: ['English'], description: 'A guided tour', timeSlots: [] };
 const tour = { title: 'Tour', image: '/tour.jpg', discountPrice: 10 };
 const props = { option, tour, onSelect: jest.fn(), selectedTimeSlot: null, adults: 1, childCount: 0, infantCount: 0 };
-const emptyMessage = 'No departures are available for this date. Please choose another date.';
+// The wording comes from the message files (it was fixed English on every
+// language); the English text is unchanged.
+const emptyMessage = 'booking.noDeparturesThisDate';
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const englishBooking = require('../../messages/en.json').booking;
+it('keeps the English wording of the date-state messages', () => {
+  expect(englishBooking.noDeparturesThisDate).toBe('No departures are available for this date. Please choose another date.');
+  expect(englishBooking.noDeparturesToday).toBe('No departures are available today. Please choose another available date.');
+});
 
 it('shows an honest next action for a date whose departures have all elapsed, without a selection prompt', () => {
   render(<TourOptionCard {...props} />);
@@ -96,7 +104,7 @@ describe('calendar admission states', () => {
     render(<CalendarWidget selectedDate={null} onDateSelect={onDateSelect} availabilityData={{ '2026-10-02': 'full', '2026-10-03': 'high' }} />);
     const closed = screen.getByRole('button', { name: '2 — booking.unavailable' });
     expect(closed).toBeDisabled();
-    expect(screen.getByText('No departures are available today. Please choose another available date.')).toBeInTheDocument();
+    expect(screen.getByText('booking.noDeparturesToday')).toBeInTheDocument();
     fireEvent.click(closed);
     expect(onDateSelect).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole('button', { name: '3' }));
