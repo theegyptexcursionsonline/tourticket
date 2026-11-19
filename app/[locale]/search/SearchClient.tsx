@@ -31,6 +31,28 @@ const parseNumberArray = (val: string | null | undefined) => {
     .filter((n) => !Number.isNaN(n));
 };
 
+/**
+ * The filters a results URL asks for. Read once for the first render and again
+ * whenever the URL changes, so the page starts from the link it was opened
+ * with (a shared or bookmarked /search?q=... link) instead of from empty
+ * filters that it would then write back over the URL.
+ */
+export function filtersFromParams(params: { get(name: string): string | null } | null | undefined) {
+  const minPrice = Number(params?.get('minPrice'));
+  const maxPrice = Number(params?.get('maxPrice'));
+  const hasPrice = Boolean(params?.get('minPrice') && params?.get('maxPrice'))
+    && !Number.isNaN(minPrice) && !Number.isNaN(maxPrice);
+  return {
+    q: params?.get('q') ?? '',
+    categories: normalizeArrayParam(params?.get('categories')),
+    destinations: normalizeArrayParam(params?.get('destinations')),
+    priceRange: hasPrice ? [minPrice, maxPrice] as [number, number] : null,
+    durations: normalizeArrayParam(params?.get('durations')),
+    ratings: parseNumberArray(params?.get('ratings')),
+    sortBy: params?.get('sortBy') ?? 'relevance',
+  };
+}
+
 // Skeleton Loader Component
 const TourCardSkeleton = () => (
   <div className="bg-white rounded-lg shadow-md overflow-hidden animate-pulse">
@@ -63,14 +85,17 @@ const SearchClient: React.FC<SearchClientProps> = ({ initialTours = [], categori
     { value: 3, label: t('ratings.threeStarsAndUp') },
   ];
 
-  // Filters & UI state
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
-  const [selectedDestinations, setSelectedDestinations] = useState<string[]>([]);
-  const [priceRange, setPriceRange] = useState<[number, number]>([0, 500]);
-  const [selectedDurations, setSelectedDurations] = useState<string[]>([]);
-  const [selectedRatings, setSelectedRatings] = useState<number[]>([]);
-  const [sortBy, setSortBy] = useState('relevance');
+  // Filters & UI state, starting from the URL. Starting empty let the first
+  // fetch rewrite /search?q=makadi to /search?sortBy=relevance before the
+  // query reached the box (the query was lost on most loads, 19 Nov 2026).
+  const [initialFilters] = useState(() => filtersFromParams(searchParams));
+  const [searchQuery, setSearchQuery] = useState(initialFilters.q);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>(initialFilters.categories);
+  const [selectedDestinations, setSelectedDestinations] = useState<string[]>(initialFilters.destinations);
+  const [priceRange, setPriceRange] = useState<[number, number]>(initialFilters.priceRange ?? [0, 500]);
+  const [selectedDurations, setSelectedDurations] = useState<string[]>(initialFilters.durations);
+  const [selectedRatings, setSelectedRatings] = useState<number[]>(initialFilters.ratings);
+  const [sortBy, setSortBy] = useState(initialFilters.sortBy);
 
   // component logic state
   const [tours, setTours] = useState<TourType[]>(initialTours || []);
@@ -101,14 +126,7 @@ const SearchClient: React.FC<SearchClientProps> = ({ initialTours = [], categori
 
   // parse initial filters from URL on mount
   useEffect(() => {
-    const q = searchParams?.get('q') ?? '';
-    const cats = normalizeArrayParam(searchParams?.get('categories'));
-    const dests = normalizeArrayParam(searchParams?.get('destinations'));
-    const minPrice = searchParams?.get('minPrice');
-    const maxPrice = searchParams?.get('maxPrice');
-    const durations = normalizeArrayParam(searchParams?.get('durations'));
-    const ratings = parseNumberArray(searchParams?.get('ratings'));
-    const sort = searchParams?.get('sortBy') ?? 'relevance';
+    const { q, categories: cats, destinations: dests, priceRange: price, durations, ratings, sortBy: sort } = filtersFromParams(searchParams);
 
     // normalizeArrayParam builds a fresh array each call, so setting state
     // unconditionally would hand the fetch effect new dependency identities for
@@ -119,12 +137,9 @@ const SearchClient: React.FC<SearchClientProps> = ({ initialTours = [], categori
     setSearchQuery((previous) => (previous === q ? previous : q));
     setSelectedCategories((previous) => (sameList(previous, cats) ? previous : cats));
     setSelectedDestinations((previous) => (sameList(previous, dests) ? previous : dests));
-    if (minPrice && maxPrice) {
-      const min = Number(minPrice);
-      const max = Number(maxPrice);
-      if (!Number.isNaN(min) && !Number.isNaN(max)) {
-        setPriceRange((previous) => (previous[0] === min && previous[1] === max ? previous : [min, max]));
-      }
+    if (price) {
+      const [min, max] = price;
+      setPriceRange((previous) => (previous[0] === min && previous[1] === max ? previous : [min, max]));
     }
     setSelectedDurations((previous) => (sameList(previous, durations) ? previous : durations));
     setSelectedRatings((previous) => (sameList(previous, ratings) ? previous : ratings));
