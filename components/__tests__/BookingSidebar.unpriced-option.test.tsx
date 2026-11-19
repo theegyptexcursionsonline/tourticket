@@ -131,8 +131,13 @@ describe('the drawer footer total', () => {
 describe('the running-total estimate before a departure is chosen', () => {
   const slot = (price: number, available = 10) => ({ id: `s-${price}`, time: '10:00', available, price });
 
-  it('an option with its own price is quoted at it (unchanged behaviour)', () => {
-    expect(optionEstimatePrice({ price: 60, timeSlots: [slot(75)] })).toBe(60);
+  it('an option with its own price is quoted at it when its start time costs the same', () => {
+    expect(optionEstimatePrice({ price: 60, timeSlots: [slot(60)] })).toBe(60);
+  });
+
+  it('a start time priced apart from the base is quoted at that start time (what its card shows and checkout charges)', () => {
+    expect(optionEstimatePrice({ price: 60, timeSlots: [slot(75)] })).toBe(75);
+    expect(optionEstimatePrice({ price: 60, timeSlots: [] })).toBe(60);
   });
 
   it('a 0-base option is quoted at the departure its card shows', () => {
@@ -148,7 +153,7 @@ describe('the running-total estimate before a departure is chosen', () => {
 
   const source = fs.readFileSync(path.join(process.cwd(), 'components', 'BookingSidebar.tsx'), 'utf8');
   it('the footer uses the guarded total and the estimate skips unpriced options', () => {
-    expect(source).toContain('<BookingFooterTotal total={total} totalSavings={totalSavings} />');
+    expect(source).toContain('<BookingFooterTotal total={total} totalSavings={totalSavings} isFrom={totalIsFrom} />');
     expect(source).toMatch(/const quoted = optionEstimatePrice\(candidate\);\s*\n\s*if \(quoted === null\) return \[\];/);
     expect(source).toContain('{t(\'booking.chooseOptionForTotal\')}');
   });

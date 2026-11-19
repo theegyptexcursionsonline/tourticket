@@ -627,26 +627,114 @@ export const CalendarWidget: React.FC<{
   );
 };
 
+export type OptionQuote = {
+  /** The start time every figure for this option is taken from. */
+  slot: TimeSlot | undefined;
+  /** Adult price quoted for the option; null when it has no real price. */
+  price: number | null;
+  /** Several bookable prices and none picked: the figure is the lowest, read "From". */
+  isFrom: boolean;
+};
+
+/**
+ * Which start time an option is quoted at. Once the customer picks one of its
+ * start times, that one: it is what checkout charges. Before a pick, the
+ * lowest real price among start times with places left (all start times when
+ * none has places), so the card and the footer quote the same figure as the
+ * page heading, which is the lowest bookable price of the trip. Equal prices
+ * keep the earliest start time. Display only: nothing here changes a charge.
+ */
+export function optionQuote(
+  option: Pick<TourOption, 'id' | 'price' | 'priceUnavailable' | 'timeSlots'>,
+  selectedTimeSlot: TimeSlot | null | undefined,
+): OptionQuote {
+  const picked = option.timeSlots.find((timeSlot) => isSelectedTimeSlot(selectedTimeSlot ?? null, option.id, timeSlot.id));
+  if (picked) return { slot: picked, price: isRealPrice(picked.price) ? picked.price : null, isFrom: false };
+  if (option.priceUnavailable) return { slot: undefined, price: null, isFrom: false };
+  const priced = option.timeSlots.filter((timeSlot) => isRealPrice(timeSlot.price));
+  const bookable = priced.filter((timeSlot) => timeSlot.available > 0);
+  const pool = bookable.length > 0 ? bookable : priced;
+  if (pool.length === 0) {
+    // No start time left to quote (for example every one has passed today):
+    // the own price of the option, when it has one.
+    return { slot: undefined, price: isRealPrice(option.price) ? option.price : null, isFrom: false };
+  }
+  const lowest = pool.reduce((best, timeSlot) => (timeSlot.price < best.price ? timeSlot : best));
+  return { slot: lowest, price: lowest.price, isFrom: new Set(pool.map((timeSlot) => timeSlot.price)).size > 1 };
+}
+
 /**
  * What an option is quoted at in the running total before a departure is
- * picked: its own price, else the price of the departure its card shows (an
- * option with a 0 base priced per start time). null when it has no real
- * price: such an option is not an estimate of anything, and counting it made
- * the footer read $0.00 beside a priced option.
+ * picked: the same start time its card quotes (optionQuote). null when it has
+ * no real price: such an option is not an estimate of anything, and counting
+ * it made the footer read $0.00 beside a priced option.
  */
-export function optionEstimatePrice(option: Pick<TourOption, 'price' | 'priceUnavailable' | 'timeSlots'>): number | null {
-  if (option.priceUnavailable) return null;
-  if (isRealPrice(option.price)) return option.price;
-  const shown = option.timeSlots.find((timeSlot) => timeSlot.available > 0) || option.timeSlots[0];
-  return shown && isRealPrice(shown.price) ? shown.price : null;
+export function optionEstimatePrice(option: Pick<TourOption, 'price' | 'priceUnavailable' | 'timeSlots'> & { id?: string }): number | null {
+  return optionQuote({ id: option.id ?? '', ...option }, null).price;
 }
+
+/**
+ * The figures an option card prints for a party, from the start time its
+ * quote names. The footer estimate uses the same figures, so the two agree.
+ */
+export function optionCardFigures(
+  option: Pick<TourOption, 'price' | 'originalPrice' | 'guestPrices' | 'type' | 'minCapacity' | 'maxCapacity'>,
+  quote: Pick<OptionQuote, 'slot'>,
+  adults: number,
+  childCount: number,
+  infantCount: number,
+) {
+  const representativeSlot = quote.slot;
+  const basePrice = representativeSlot?.price ?? option.price;
+  // Child price comes from the guest prices of the slot; when the operator
+  // set none, half the adult price is not a guess — it is what checkout
+  // charges (effectiveSlotGuestPrices).
+  const cardGuestPrices = representativeSlot?.guestPrices
+    ?? effectiveSlotGuestPrices({ adult: basePrice, base: option.guestPrices });
+  // Per Couple/Family/Group options charge whole units rounded UP over the
+  // total participant count — never price-per-participant (client sheet
+  // 2026-08-20: a per-group price was being multiplied per guest).
+  const units = isUnitPricedType(option.type)
+    ? unitCount(adults + childCount + infantCount, effectiveUnitSize(option))
+    : null;
+  const subtotal = units !== null
+    ? units * basePrice
+    : guestPricedSubtotal(cardGuestPrices, adults, childCount, infantCount);
+  // A struck-through price needs a real compare-at: the original price of
+  // the option above its own price, else the original price of the start
+  // time. A start time that is simply cheaper than the option base is not
+  // a discount and must not read as "was $29.78".
+  const optionCompareAt = isRealPrice(option.price) && isRealPrice(option.originalPrice) && option.originalPrice > option.price
+    ? option.originalPrice
+    : null;
+  const compareAt = optionCompareAt
+    ?? (representativeSlot && isRealPrice(representativeSlot.originalPrice) && representativeSlot.originalPrice > basePrice ? representativeSlot.originalPrice : null);
+  const originalSubtotal = compareAt !== null
+    ? (units !== null
+      ? units * compareAt
+      : subtotal
+        + (adults * (compareAt - basePrice))
+        + (childCount * (compareAt - basePrice) * 0.5))
+    : subtotal;
+  return { basePrice, cardGuestPrices, units, subtotal, originalSubtotal };
+}
+
+/** The small "From" line above a price that is the lowest of several. */
+export const FromPriceLabel: React.FC<{ className?: string }> = ({ className = '' }) => {
+  const t = useTranslations();
+  return (
+    <span data-testid="price-from-label" className={`block text-[10px] font-medium text-gray-500 leading-tight first-letter:uppercase ${className}`}>
+      {t('price.from')}
+    </span>
+  );
+};
 
 /**
  * The money line in the drawer footer. A total that is not a real price (no
  * priced option chosen or estimable yet) is never printed as $0.00; the
  * customer is asked to choose an option instead.
  */
-export const BookingFooterTotal: React.FC<{ total: number; totalSavings: number }> = ({ total, totalSavings }) => {
+export const BookingFooterTotal: React.FC<{ total: number; totalSavings: number; isFrom?: boolean }> = ({ total, totalSavings, isFrom = false }) => {
   const t = useTranslations();
   const { formatPrice } = useSettings();
   if (!isRealPrice(total)) {
@@ -657,7 +745,8 @@ export const BookingFooterTotal: React.FC<{ total: number; totalSavings: number 
     );
   }
   return (
-    <div data-testid="booking-footer-total" data-total-state="priced">
+    <div data-testid="booking-footer-total" data-total-state="priced" data-total-from={isFrom ? 'true' : undefined}>
+      {isFrom && <FromPriceLabel className="text-xs" />}
       <span className="block font-bold text-lg text-red-600">{formatPrice(total)}</span>
       <span className="text-xs text-gray-500">
         {t('booking.totalPrice')} {totalSavings > 0 && `(${t('booking.saveAmount', { amount: formatPrice(totalSavings) })})`}
@@ -734,36 +823,19 @@ export const TourOptionCard: React.FC<{
   // Departures can be priced differently (08:00 $69.17 vs 10:00 $222.89 on
   // the same option), so once the customer picks one, every figure on this
   // card follows THAT slot — which is also what checkout charges. Before a
-  // pick, the first bookable departure represents the option.
+  // pick, the lowest bookable price of the option represents it, read "From" when
+  // its start times are priced differently (optionQuote), so the card agrees
+  // with the page heading and the footer.
   const selectedSlotForOption = option.timeSlots.find((timeSlot) =>
     isSelectedTimeSlot(selectedTimeSlot, option.id, timeSlot.id));
-  const representativeSlot = selectedSlotForOption
-    || option.timeSlots.find((timeSlot) => timeSlot.available > 0)
-    || option.timeSlots[0];
-  const basePrice = representativeSlot?.price ?? option.price;
-  // Child price comes from the slot's own guest prices; when the operator
-  // set none, half the adult price is not a guess — it is what checkout
-  // charges (effectiveSlotGuestPrices).
-  const cardGuestPrices = representativeSlot?.guestPrices
-    ?? effectiveSlotGuestPrices({ adult: basePrice, base: option.guestPrices });
+  const quote = optionQuote(option, selectedTimeSlot);
+  const { basePrice, cardGuestPrices, subtotal, originalSubtotal } = optionCardFigures(option, quote, adults, childCount, infantCount);
+  // Child price comes from the slot's own guest prices (optionCardFigures).
   const childPrice = cardGuestPrices.child;
   const infantPrice = cardGuestPrices.infant;
-  // Per Couple/Family/Group options charge whole units rounded UP over the
-  // total participant count — never price-per-participant (client sheet
-  // 2026-08-20: a per-group price was being multiplied per guest).
   const totalParticipants = adults + childCount + infantCount;
   const isUnitPriced = isUnitPricedType(option.type);
   const units = isUnitPriced ? unitCount(totalParticipants, effectiveUnitSize(option)) : null;
-  const subtotal = units !== null
-    ? units * basePrice
-    : guestPricedSubtotal(cardGuestPrices, adults, childCount, infantCount);
-  const originalSubtotal = option.originalPrice
-    ? (units !== null
-      ? units * option.originalPrice
-      : subtotal
-        + (adults * (option.originalPrice - basePrice))
-        + (childCount * (option.originalPrice - basePrice) * 0.5))
-    : subtotal;
   const savings = originalSubtotal - subtotal;
   // Availability gates: disabled until the group meets the option's minimum,
   // and again past its maximum (client rule).
@@ -864,7 +936,8 @@ export const TourOptionCard: React.FC<{
           <div className="text-xs font-bold text-slate-700 leading-tight">{t('price.onRequest')}</div>
         </div>
         ) : (
-        <div className="flex-shrink-0 text-right bg-gray-50 rounded-xl px-2.5 py-2 w-[96px] sm:w-[104px]">
+        <div className="flex-shrink-0 text-right bg-gray-50 rounded-xl px-2.5 py-2 w-[96px] sm:w-[104px]" data-price-state={quote.isFrom ? 'from' : 'exact'}>
+          {quote.isFrom && <FromPriceLabel />}
           {originalSubtotal > subtotal && (
             <div className="text-xs text-gray-400 line-through whitespace-nowrap">
               {formatPrice(originalSubtotal)}
@@ -2087,7 +2160,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
   }, [generateTimeSlotsFromAvailability, stopSaleDates, tour, tourDisplayData, t]);
 
   // Enhanced price calculations with savings
-  const { subtotal, addOnsTotal, total, totalSavings, tourPriceLabel } = useMemo(() => {
+  const { subtotal, addOnsTotal, total, totalSavings, tourPriceLabel, totalIsFrom } = useMemo(() => {
     let basePrice = 0;
     let originalBasePrice = 0;
     // Per-person add-ons: the guest's chosen units, capped at one per paying
@@ -2097,6 +2170,10 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
     let unitSizeForTotals: number | null = null;
     let unitTypeForTotals: string | null = null;
     let optionIsUnitPriced = false;
+    // Before a pick: whether the estimate is the lowest of several prices of
+    // its option, and the guest prices its card uses.
+    let estimateIsFrom = false;
+    let estimateFigures: ReturnType<typeof optionCardFigures> | null = null;
     if (bookingData.selectedTimeSlot) {
       basePrice = bookingData.selectedTimeSlot.price;
 
@@ -2130,12 +2207,14 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
         .flatMap((candidate) => {
           const quoted = optionEstimatePrice(candidate);
           if (quoted === null) return [];
+          // The start time and the figures the card of the option shows for this
+          // party (optionCardFigures), so the footer and the card agree.
+          const quote = optionQuote(candidate, null);
+          const figures = optionCardFigures(candidate, quote, bookingData.adults, bookingData.children, bookingData.infants);
           const unitPriced = isUnitPricedType(candidate.type);
           const units = unitPriced ? unitCount(party, effectiveUnitSize(candidate)) : null;
-          const price = units !== null
-            ? units * quoted
-            : (bookingData.adults * quoted) + (bookingData.children * quoted * 0.5);
-          return [{ candidate, quoted, price, unitPriced }];
+          const price = units !== null ? units * quoted : figures.subtotal;
+          return [{ candidate, quoted, price, unitPriced, isFrom: quote.isFrom, figures }];
         })
         .sort((a, b) => a.price - b.price)[0];
       if (!estimate && tourOptionsForEstimate.length > 0 && tourOptionsForEstimate.every((candidate) => optionEstimatePrice(candidate) === null)) {
@@ -2145,10 +2224,10 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
         originalBasePrice = 0;
       }
       if (estimate) {
+        estimateIsFrom = estimate.isFrom;
+        estimateFigures = estimate.figures;
         basePrice = estimate.quoted;
-        originalBasePrice = isRealPrice(estimate.candidate.price)
-          ? (estimate.candidate.originalPrice || estimate.candidate.price)
-          : estimate.quoted;
+        originalBasePrice = estimate.quoted;
         if (estimate.unitPriced) {
           optionIsUnitPriced = true;
           unitSizeForTotals = effectiveUnitSize(estimate.candidate);
@@ -2165,12 +2244,18 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
     const chargedUnits = optionIsUnitPriced
       ? unitCount(totalParticipants, unitSizeForTotals)
       : null;
-    const subtotalCalc = chargedUnits !== null
+    // Before a pick the footer prints exactly what the card of the estimated option
+    // card prints (same start time, guest prices and compare-at price).
+    const subtotalCalc = estimateFigures
+      ? estimateFigures.subtotal
+      : chargedUnits !== null
       ? chargedUnits * basePrice
       : (bookingData.adults * basePrice)
         + (bookingData.children * childPrice)
         + (bookingData.infants * infantPrice);
-    const originalSubtotal = chargedUnits !== null
+    const originalSubtotal = estimateFigures
+      ? estimateFigures.originalSubtotal
+      : chargedUnits !== null
       ? chargedUnits * originalBasePrice
       : (bookingData.adults * originalBasePrice) + (bookingData.children * originalBasePrice * 0.5);
 
@@ -2202,6 +2287,9 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
       totalSavings: totalSavingsCalc,
       // A unit-priced option is not a per-head charge, so the breakdown must
       // not word it as one: "5 Adults — $650" reads as $130 each.
+      // Before a pick, the estimate is the lowest of several prices of its
+      // option: the footer reads "From". A picked start time is exact.
+      totalIsFrom: !bookingData.selectedTimeSlot && estimateIsFrom,
       tourPriceLabel: chargedUnits !== null
         ? unitCountLabel(unitTypeForTotals, chargedUnits)
         : `${bookingData.adults} Adults${bookingData.children > 0 ? `, ${bookingData.children} Children` : ''}`,
@@ -3340,7 +3428,7 @@ const BookingSidebar: React.FC<BookingSidebarProps> = ({ isOpen, onClose, tour, 
                 >
                   {/* Price Display */}
                   <div className="flex items-center justify-between mb-4">
-                    <BookingFooterTotal total={total} totalSavings={totalSavings} />
+                    <BookingFooterTotal total={total} totalSavings={totalSavings} isFrom={totalIsFrom} />
                     
                     {/* Action Buttons */}
                     <div className="flex gap-2">

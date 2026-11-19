@@ -156,8 +156,11 @@ describe('option card quotes adult and child rates that follow the departure', (
     expect(sidebar).toContain('effectiveSlotGuestPrices({ adult: basePrice, base: option.guestPrices })');
   });
 
-  it('falls back to the first BOOKABLE departure before one is chosen', () => {
-    expect(sidebar).toContain('option.timeSlots.find((timeSlot) => timeSlot.available > 0)');
+  it('falls back to the lowest-priced BOOKABLE departure before one is chosen', () => {
+    // 19 Nov 2026: the first bookable departure ($29.78) contradicted the
+    // heading ($21.66); the quote is now the cheapest one with places left.
+    expect(sidebar).toContain('const bookable = priced.filter((timeSlot) => timeSlot.available > 0);');
+    expect(sidebar).toContain('const quote = optionQuote(option, selectedTimeSlot);');
   });
 
   it('charges the quoted child rate instead of a hardcoded half', () => {
