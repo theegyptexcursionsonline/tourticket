@@ -14,6 +14,8 @@ describe('client Sentry wiring', () => {
     expect(mockInit).toHaveBeenCalledTimes(1);
     expect(mockReplayIntegration).toHaveBeenCalledTimes(1);
     expect(mockInit).toHaveBeenCalledWith(expect.objectContaining({
+      // The test run is not a Netlify production deploy, so nothing may report.
+      enabled: false,
       enableLogs: false,
       beforeSend: expect.any(Function),
       tracesSampler: expect.any(Function),
