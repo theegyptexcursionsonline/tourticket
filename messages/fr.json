@@ -29,7 +29,11 @@
     "searchToursInEgypt": "Rechercher une excursion en Égypte…",
     "noMatchingTours": "Aucune excursion ne correspond",
     "tryDestination": "Essayez une destination comme Le Caire, Louxor ou Charm el-Cheikh.",
-    "whatAreYouLookingFor": "Que recherchez-vous ?"
+    "whatAreYouLookingFor": "Que recherchez-vous ?",
+    "askAISearch": "Demander à la recherche IA",
+    "trendingTours": "Excursions populaires",
+    "popularSearches": "Recherches populaires",
+    "searchResults": "Résultats de recherche"
   },
   "currency": {
     "title": "Selectionner une Devise"

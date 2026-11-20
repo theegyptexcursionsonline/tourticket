@@ -113,13 +113,12 @@ function storefrontVersionUrl(): string {
 export const SHOWCASE_CAPABILITIES: readonly ShowcaseCapability[] = [
   {
     id: 'ai-voice',
-    // Preview until the EEO voice tenant is active on the voice platform again
-    // (its trial has lapsed): the service health probe alone would read "Live"
-    // while /ai-voice cannot reach a call.
-    tier: 'preview',
+    // Accepted: Nile answers on /ai-voice in English and Arabic (walked on the
+    // live site 2026-11-20). "Live" still needs the voice service to answer.
+    tier: 'accepted',
     copyKey: 'ai-voice',
     href: '/ai-voice',
-    probes: [],
+    probes: [probe('voice-service', 'https://voice.foxestechnology.com/api/version', { kind: 'json-object' })],
   },
   {
     id: 'ai-search',

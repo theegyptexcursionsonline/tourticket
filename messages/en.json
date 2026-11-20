@@ -29,7 +29,11 @@
     "searchToursInEgypt": "Search tours in Egypt…",
     "noMatchingTours": "No matching tours found",
     "tryDestination": "Try a destination such as Cairo, Luxor or Sharm El Sheikh.",
-    "whatAreYouLookingFor": "What are you looking for?"
+    "whatAreYouLookingFor": "What are you looking for?",
+    "askAISearch": "Ask AI Search",
+    "trendingTours": "Trending tours",
+    "popularSearches": "Popular searches",
+    "searchResults": "Search results"
   },
   "currency": {
     "title": "Select a Currency"

@@ -20,7 +20,7 @@ const payload = (overrides: Partial<Record<string, Observation['status']>> = {})
   expiresAt: '2026-09-18T10:01:00.000Z',
   capabilities: (
     [
-      ['ai-voice', 'preview'],
+      ['ai-voice', 'accepted'],
       ['ai-search', 'accepted'],
       ['online-booking', 'accepted'],
       ['mobile-apps', 'preview'],
@@ -58,14 +58,14 @@ describe('TechnologyPageContent', () => {
     render(<TechnologyPageContent locale={locale} />);
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(title);
     expect(screen.getAllByRole('heading', { level: 3 })).toHaveLength(4);
-    await waitFor(() => expect(screen.getAllByTestId('status-badge-live')).toHaveLength(2));
+    await waitFor(() => expect(screen.getAllByTestId('status-badge-live')).toHaveLength(3));
   });
 
   it('falls back to English for an unknown locale', async () => {
     mockStatus(async () => ({ ok: true, status: 200, json: async () => payload() }));
     render(<TechnologyPageContent locale="it" />);
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('The technology behind your Egypt trip');
-    await waitFor(() => expect(screen.getAllByTestId('status-badge-live')).toHaveLength(2));
+    await waitFor(() => expect(screen.getAllByTestId('status-badge-live')).toHaveLength(3));
   });
 
   it('shows a checking state before the status answers, then Live / Preview from the payload', async () => {
@@ -73,13 +73,13 @@ describe('TechnologyPageContent', () => {
     mockStatus(() => new Promise<Partial<Response>>((r) => { resolve = r; }));
     render(<TechnologyPageContent locale="en" />);
 
-    expect(screen.getAllByTestId('status-badge-checking')).toHaveLength(2);
-    expect(screen.getAllByTestId('status-badge-preview')).toHaveLength(2);
+    expect(screen.getAllByTestId('status-badge-checking')).toHaveLength(3);
+    expect(screen.getAllByTestId('status-badge-preview')).toHaveLength(1);
 
     await act(async () => {
       resolve({ ok: true, status: 200, json: async () => payload() });
     });
-    await waitFor(() => expect(screen.getAllByTestId('status-badge-live')).toHaveLength(2));
+    await waitFor(() => expect(screen.getAllByTestId('status-badge-live')).toHaveLength(3));
     expect(screen.queryByTestId('status-badge-checking')).toBeNull();
     // Preview is never promoted by health and has no call to action.
     const mobile = screen.getByTestId('capability-mobile-apps');
@@ -90,14 +90,15 @@ describe('TechnologyPageContent', () => {
   it('renders an unavailable badge (never hidden) when a capability probe fails', async () => {
     mockStatus(async () => ({ ok: true, status: 200, json: async () => payload({ 'ai-search': 'unavailable' }) }));
     render(<TechnologyPageContent locale="en" />);
-    await waitFor(() => expect(screen.getAllByTestId('status-badge-live')).toHaveLength(1));
+    await waitFor(() => expect(screen.getAllByTestId('status-badge-live')).toHaveLength(2));
     const search = screen.getByTestId('capability-ai-search');
     expect(search).toHaveTextContent('Status unavailable');
     expect(search).toHaveTextContent('This service is not answering right now');
-    // A preview card that has a real page keeps its link and never shows the
-    // download-style "coming soon" hint.
+    // Voice is a working service with its own page: it reads Live with its
+    // link, never Preview or the download-style "coming soon" hint.
     const voice = screen.getByTestId('capability-ai-voice');
-    expect(voice).toHaveTextContent('Preview');
+    expect(voice).toHaveTextContent('Live');
+    expect(voice).not.toHaveTextContent('Preview');
     expect(voice).not.toHaveTextContent('Coming soon');
     expect(voice.querySelector('a')).toHaveAttribute('href', '/ai-voice');
   });
@@ -106,8 +107,8 @@ describe('TechnologyPageContent', () => {
     mockStatus(async () => ({ ok: false, status: 500, json: async () => ({}) }));
     render(<TechnologyPageContent locale="en" />);
     await waitFor(() => expect(screen.getByRole('alert')).toBeInTheDocument());
-    expect(screen.getAllByTestId('status-badge-unavailable')).toHaveLength(2);
-    expect(screen.getAllByTestId('status-badge-preview')).toHaveLength(2);
+    expect(screen.getAllByTestId('status-badge-unavailable')).toHaveLength(3);
+    expect(screen.getAllByTestId('status-badge-preview')).toHaveLength(1);
     expect(screen.queryByTestId('status-badge-live')).toBeNull();
   });
 
@@ -121,7 +122,7 @@ describe('TechnologyPageContent', () => {
   it('keeps the primary and secondary calls to action as real links', async () => {
     mockStatus(async () => ({ ok: true, status: 200, json: async () => payload() }));
     render(<TechnologyPageContent locale="en" />);
-    await waitFor(() => expect(screen.getAllByTestId('status-badge-live')).toHaveLength(2));
+    await waitFor(() => expect(screen.getAllByTestId('status-badge-live')).toHaveLength(3));
     expect(screen.getByRole('link', { name: 'Explore tours' })).toHaveAttribute('href', '/tours');
     expect(screen.getByRole('link', { name: /try the voice concierge/i })).toHaveAttribute('href', '/ai-voice');
     expect(screen.getByRole('link', { name: 'Talk to Nile' })).toHaveAttribute('href', '/ai-voice');
@@ -137,7 +138,7 @@ describe('TechnologyPageContent', () => {
       render(<TechnologyPageContent locale="en" />);
       // Let the mocked status fetch settle under fake timers.
       await act(async () => { await Promise.resolve(); });
-      expect(screen.getAllByTestId('status-badge-live')).toHaveLength(2);
+      expect(screen.getAllByTestId('status-badge-live')).toHaveLength(3);
 
       fireEvent.click(screen.getByRole('button', { name: 'Ask the trip search' }));
       expect(opened).toHaveBeenCalledTimes(1);

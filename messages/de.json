@@ -29,7 +29,11 @@
     "searchToursInEgypt": "Touren in Ägypten suchen …",
     "noMatchingTours": "Keine passenden Touren gefunden",
     "tryDestination": "Versuchen Sie ein Reiseziel wie Kairo, Luxor oder Sharm El Sheikh.",
-    "whatAreYouLookingFor": "Wonach suchen Sie?"
+    "whatAreYouLookingFor": "Wonach suchen Sie?",
+    "askAISearch": "KI-Suche fragen",
+    "trendingTours": "Beliebte Touren",
+    "popularSearches": "Beliebte Suchen",
+    "searchResults": "Suchergebnisse"
   },
   "currency": {
     "title": "Wahrung Auswahlen"

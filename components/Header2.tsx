@@ -15,7 +15,8 @@ import {
   Menu,
   User,
   LogOut,
-  Calendar
+  Calendar,
+  Sparkles
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
@@ -31,6 +32,8 @@ import { useLocale, useTranslations } from 'next-intl';
 import type { SearchHit } from './componentTypes';
 import { contentPath, localizedTourContentPath } from '@/lib/content/contentUrl';
 import { safeLocalStorage } from '@/lib/browserStorage';
+import { useRouter } from 'next/navigation';
+import { askHostedAISearch } from '@/lib/hostedAISearch';
 
 type AuthUser = NonNullable<ReturnType<typeof useAuth>['user']>;
 
@@ -260,6 +263,8 @@ const TourResultSkeleton = () => (
 // Mobile Inline Search Component
 const MobileInlineSearch: FC<{ isOpen: boolean; onClose: () => void }> = React.memo(({ isOpen, onClose }) => {
   const t = useTranslations();
+  const locale = useLocale();
+  const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<SearchHit[]>([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -309,6 +314,18 @@ const MobileInlineSearch: FC<{ isOpen: boolean; onClose: () => void }> = React.m
     };
   }, [searchQuery]);
 
+  // The instant results only match catalogue titles, so a question or Arabic
+  // text ended at "No matching tours" with nowhere to go. Enter, and the
+  // button in that empty state, hand the words to the AI trip search.
+  const handleAskAI = () => {
+    const question = searchQuery.trim();
+    if (question.length < 2) return;
+    onClose();
+    setSearchQuery('');
+    setSearchResults([]);
+    askHostedAISearch({ query: question, locale }, (href) => router.push(href));
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -344,6 +361,12 @@ const MobileInlineSearch: FC<{ isOpen: boolean; onClose: () => void }> = React.m
                         setIsSearching(false);
                       }
                     }}
+                    onKeyDown={(e) => {
+                      if (e.key !== 'Enter' || e.nativeEvent.isComposing) return;
+                      e.preventDefault();
+                      handleAskAI();
+                    }}
+                    enterKeyHint="search"
                     placeholder={t('search.searchToursInEgypt')}
                     className="w-full rounded-xl bg-transparent py-3.5 pl-12 pr-14 text-base font-medium text-slate-900 outline-none placeholder:text-slate-400"
                     autoFocus
@@ -388,6 +411,14 @@ const MobileInlineSearch: FC<{ isOpen: boolean; onClose: () => void }> = React.m
                     <div className="px-6 py-8 text-center">
                       <p className="font-semibold text-slate-800">{t('search.noMatchingTours')}</p>
                       <p className="mt-1 text-sm text-slate-500">{t('search.tryDestination')}</p>
+                      <button
+                        type="button"
+                        onClick={handleAskAI}
+                        className="mt-4 inline-flex items-center gap-2 rounded-full bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-700"
+                      >
+                        <Sparkles className="h-4 w-4" aria-hidden />
+                        {t('search.askAISearch')}
+                      </button>
                     </div>
                   )}
                 </motion.div>
@@ -404,7 +435,7 @@ const MobileInlineSearch: FC<{ isOpen: boolean; onClose: () => void }> = React.m
                 <div className="flex items-center gap-2 mb-3">
                   <Zap className="w-4 h-4 text-blue-500" />
                   <span className="text-xs font-bold text-gray-700 uppercase tracking-wider">
-                    Trending Tours
+                    {t('search.trendingTours')}
                   </span>
                 </div>
                 <div className="flex flex-wrap gap-2">

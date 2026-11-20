@@ -76,9 +76,7 @@ describe('technology status evaluation', () => {
     const payload = await evaluateTechnologyStatus({ fetchImpl, now: () => 1_000 });
     const map = byId(payload);
 
-    // Preview never reads live, whatever the endpoints say (voice is preview
-    // until the EEO voice tenant is active again).
-    expect(map['ai-voice']).toMatchObject({ tier: 'preview', status: 'unavailable' });
+    expect(map['ai-voice']).toMatchObject({ tier: 'accepted', status: 'live' });
     expect(map['ai-search'].status).toBe('live');
     expect(map['online-booking'].status).toBe('live');
     expect(map['mobile-apps']).toMatchObject({ tier: 'preview', status: 'unavailable' });

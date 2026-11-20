@@ -17,10 +17,7 @@ describe('showcase registry', () => {
         expect(capability.probes.length).toBeGreaterThan(0);
         expect(capability.href).toMatch(/^\/[a-z-]+$/);
       } else {
-        // Previews carry no call to action and nothing to probe.
-        // A preview capability never probes (nothing to claim live), but it may
-        // still link to its page when one exists (/ai-voice ships ahead of the
-        // EEO voice tenant being active again).
+        // A preview capability never probes: there is nothing to claim live.
         expect(capability.probes).toHaveLength(0);
       }
     }
@@ -58,8 +55,11 @@ describe('showcase registry', () => {
   });
 
   it('exposes the four showcased capabilities with the reviewed tiers', () => {
-    // Preview until the EEO voice tenant is active again on the voice platform.
-    expect(showcaseCapabilityById('ai-voice')?.tier).toBe('preview');
+    // Nile answers on /ai-voice again, so voice reads Live when its service does.
+    expect(showcaseCapabilityById('ai-voice')?.tier).toBe('accepted');
+    expect(showcaseCapabilityById('ai-voice')?.probes.map((probe) => probe.url)).toEqual([
+      'https://voice.foxestechnology.com/api/version',
+    ]);
     expect(showcaseCapabilityById('ai-search')?.tier).toBe('accepted');
     expect(showcaseCapabilityById('online-booking')?.tier).toBe('accepted');
     expect(showcaseCapabilityById('mobile-apps')?.tier).toBe('preview');

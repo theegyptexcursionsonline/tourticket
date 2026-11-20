@@ -29,7 +29,11 @@
     "searchToursInEgypt": "Buscar excursiones en Egipto…",
     "noMatchingTours": "No hay excursiones que coincidan",
     "tryDestination": "Prueba con un destino como El Cairo, Luxor o Sharm El Sheikh.",
-    "whatAreYouLookingFor": "¿Qué estás buscando?"
+    "whatAreYouLookingFor": "¿Qué estás buscando?",
+    "askAISearch": "Preguntar a la búsqueda IA",
+    "trendingTours": "Tours populares",
+    "popularSearches": "Búsquedas populares",
+    "searchResults": "Resultados de búsqueda"
   },
   "currency": {
     "title": "Seleccionar una Moneda"

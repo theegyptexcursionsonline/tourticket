@@ -42,7 +42,7 @@ import { type SearchHit } from '@/components/componentTypes';
 import 'instantsearch.css/themes/satellite.css';
 import ThemeToggle from '@/components/ThemeToggle';
 import AppDownloadEntry from '@/components/AppDownloadEntry';
-import { useLocale } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { askHostedAISearch } from '@/lib/hostedAISearch';
 import { contentPath, localizedTourContentPath } from '@/lib/content/contentUrl';
@@ -406,6 +406,7 @@ const MobileInlineSearch: FC<{ isOpen: boolean; onClose: () => void }> = React.m
   const containerRef = useRef<HTMLDivElement>(null);
   const locale = useLocale();
   const router = useRouter();
+  const t = useTranslations();
 
   useOnClickOutside(containerRef, onClose);
 
@@ -432,6 +433,16 @@ const MobileInlineSearch: FC<{ isOpen: boolean; onClose: () => void }> = React.m
     setInputValue('');
     setSearchQuery('');
     askHostedAISearch({ query: question, locale }, (href) => router.push(href));
+  };
+
+  // Enter hands the words to the AI trip search too: the instant results below
+  // only match catalogue titles, so a question (or Arabic text) found nothing
+  // and Enter used to do nothing at all.
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key !== 'Enter' || e.nativeEvent.isComposing) return;
+    e.preventDefault();
+    if (inputValue.trim().length < 2) return;
+    handleAskAI();
   };
 
   if (!isOpen) return null;
@@ -461,7 +472,9 @@ const MobileInlineSearch: FC<{ isOpen: boolean; onClose: () => void }> = React.m
                     type="text"
                     value={inputValue}
                     onChange={(e) => handleInputChange(e.target.value)}
-                    placeholder="Search tours, destinations..."
+                    onKeyDown={handleKeyDown}
+                    enterKeyHint="search"
+                    placeholder={t('search.searchToursInEgypt')}
                     className="w-full pl-14 pr-32 py-4 text-base text-gray-900 placeholder:text-gray-400/70 placeholder:font-normal font-medium bg-transparent outline-none rounded-full"
                     autoFocus
                   />
@@ -483,7 +496,7 @@ const MobileInlineSearch: FC<{ isOpen: boolean; onClose: () => void }> = React.m
                     <motion.button
                       type="button"
                       onClick={handleAskAI}
-                      aria-label="Ask AI about Egypt tours"
+                      aria-label={t('search.askAISearch')}
                       animate={{ rotate: [0, 15, -15, 0] }}
                       transition={{ duration: 4, repeat: Infinity }}
                       className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-blue-500 to-purple-600 text-white font-semibold text-xs flex items-center gap-1.5 hover:shadow-lg"
@@ -499,7 +512,7 @@ const MobileInlineSearch: FC<{ isOpen: boolean; onClose: () => void }> = React.m
                         setSearchQuery('');
                       }}
                       className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-                      aria-label="Close search"
+                      aria-label={t('header.closeSearch')}
                     >
                       <X className="w-5 h-5 text-gray-400" />
                     </button>
@@ -524,7 +537,7 @@ const MobileInlineSearch: FC<{ isOpen: boolean; onClose: () => void }> = React.m
                     <div className="flex items-center gap-2">
                       <Sparkles className="w-4 h-4 text-blue-500" />
                       <span className="text-xs font-bold text-gray-700 uppercase tracking-wider">
-                        {searchQuery ? 'Search Results' : 'Popular Searches'}
+                        {searchQuery ? t('search.searchResults') : t('search.popularSearches')}
                       </span>
                     </div>
                   </div>
@@ -561,7 +574,7 @@ const MobileInlineSearch: FC<{ isOpen: boolean; onClose: () => void }> = React.m
                       <div className="flex items-center gap-2 mb-4">
                         <Sparkles className="w-4 h-4 text-blue-500" />
                         <span className="text-xs font-bold text-gray-700 uppercase tracking-wider">
-                          Trending Egypt Tours
+                          {t('search.trendingTours')}
                         </span>
                       </div>
                       <div className="flex flex-wrap gap-2">
@@ -1025,7 +1038,7 @@ export default function Header({
           )}
         </button>
 
-        <button onClick={handleMobileSearchOpen} className={`${headerText} ${linkHoverColor} lg:hidden group p-2`} aria-label="Open search">
+        <button onClick={handleMobileSearchOpen} className={`${headerText} ${linkHoverColor} lg:hidden group p-2`} aria-label={t('header.openSearch')}>
           <Search size={22} className="group-hover:text-red-500" />
         </button>
 

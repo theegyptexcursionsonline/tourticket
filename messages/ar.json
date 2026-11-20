@@ -29,7 +29,11 @@
     "searchToursInEgypt": "ابحث عن جولات في مصر…",
     "noMatchingTours": "لا توجد جولات مطابقة",
     "tryDestination": "جرّب وجهة مثل القاهرة أو الأقصر أو شرم الشيخ.",
-    "whatAreYouLookingFor": "عمّ تبحث؟"
+    "whatAreYouLookingFor": "عمّ تبحث؟",
+    "askAISearch": "اسأل البحث الذكي",
+    "trendingTours": "رحلات رائجة",
+    "popularSearches": "عمليات بحث شائعة",
+    "searchResults": "نتائج البحث"
   },
   "currency": {
     "title": "اختر العملة"

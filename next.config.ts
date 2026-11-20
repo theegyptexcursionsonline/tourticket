@@ -166,6 +166,19 @@ const nextConfig = {
         destination: '/:slug',
         permanent: true,
       },
+      // The booking and search assistants are shown together on /assistants.
+      // The short product addresses used to end on the not-found page; send
+      // them there instead. Temporary, so a dedicated page can replace them.
+      {
+        source: '/:unit(ai-booking|ai-search)',
+        destination: '/assistants',
+        permanent: false,
+      },
+      {
+        source: '/:locale(en|ar|es|fr|de)/:unit(ai-booking|ai-search)',
+        destination: '/:locale/assistants',
+        permanent: false,
+      },
       // NOTE: '/tour/:slug' is now a real route (see app/[locale]/tour/[slug]);
       // it is handled by the URL-type resolver, which renders tours set to the
       // "/tour" URL type and 301-redirects everything else to its canonical URL.
