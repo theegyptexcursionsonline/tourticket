@@ -100,6 +100,9 @@ export default async function BlogIndexPage({
   params: Promise<{ locale: string }>;
 }) {
   const { locale } = await params;
+  // The page body builds localized links too, so it checks the locale itself: a path such as
+  // /api/blog reaches this page with "api" as the locale and must be a 404, not a server error.
+  requireRouteLocale(locale);
   const t = await getTranslations({ locale, namespace: 'blog.list' });
   const { blogs, categoryCounts, featuredPosts } = await getBlogsWithCategoryCounts();
 
